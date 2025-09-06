@@ -1,103 +1,46 @@
 import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import { Badge, DownloadIcon, Mic, PlayIcon } from "lucide-react";
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  return <main className="w-full flex flex-col lg:p-10 px-6">
+    <section className="w-full">
+      <h1 className="pb-3 border-b border-black text-2xl font-semibold">Movie of the Week</h1>
+      <div className=" grid grid-cols-6 gap-10 py-6">
+        <figure className="col-span-4 flex flex-col gap-4">
+          <Image src="/assets/webp/elj.webp" alt="Hero" width={500} height={500} className="w-full h-90 rounded-lg bg-black object-contain" />
+        </figure>
+        <div className="col-span-2 flex flex-col gap-2">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-xl font-medium">Everybody Loves Jenifa</h2>
+            <span className="text-xs font-light">Run Time: 1h 30min</span>
+            <span className="text-xs font-light">Theatrical Release Date: 2000</span>
+            <span className="text-xs font-light">Genre: Comedy</span>
+          </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+          <div className="flex flex-col gap-1">
+            <header className="text-lg font-medium">
+              Synopsis
+            </header>
+
+            <p className="text-sm font-light">
+              Jenifa&apos;s popularity fades when a shady new neighbor, Lobster, outshines her charity work. In Ghana, Jenifa and friends face a deadly drug baron after a bag of drugs is mistakenly left in their rental.
+            </p>
+          </div>
+
+          <div className="w-full pt-2 grid grid-cols-2 items-center gap-2">
+            <Button variant={'secondary'} className="w-full bg-red-500 text-white">
+              <PlayIcon className="w-4 h-4" />
+              Stream on Netflix
+            </Button>
+            <Button variant={'outline'} className="w-full bg-black text-white">
+              <Mic className="w-4 h-4" />
+              Join the Space
+            </Button>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+
+      </div>
+    </section>
+  </main>
 }
