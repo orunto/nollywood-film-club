@@ -28,7 +28,7 @@ export default function Home() {
                   className="w-full lg:h-full h-70 object-contain" 
                 />
                 <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/50 transition-colors">
-                  <div className="bg-white/90 rounded-full p-4 group-hover:bg-white transition-colors">
+                  <div className="bg-white/50 rounded-full p-4 group-hover:bg-white transition-colors">
                     <PlayIcon className="w-8 h-8 text-black ml-1" />
                   </div>
                 </div>
