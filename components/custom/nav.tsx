@@ -17,7 +17,7 @@ export default function Nav() {
                     <MenuIcon />
                 </Button>
             </div>
-            <ul className={`${menu ? 'translate-y-0' : '-translate-y-full'} duration-300 relative text-base font-medium flex lg:flex-row flex-col lg:p-0 p-6 gap-8 items-center lg:w-max w-full bg-black`}>
+            <ul className={`${menu ? 'translate-y-0' : '-translate-y-full lg:translate-y-0'} duration-300 relative text-base font-medium flex lg:flex-row flex-col lg:p-0 p-6 gap-8 items-center lg:w-max w-full bg-black`}>
                 <li>
                     <Link href="/spaces">Spaces</Link>
                 </li>

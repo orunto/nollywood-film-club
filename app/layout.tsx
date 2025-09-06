@@ -3,7 +3,7 @@ import { StackProvider, StackTheme } from "@stackframe/stack";
 import { stackServerApp } from "../stack";
 import { Geist, Geist_Mono, Lexend_Deca } from "next/font/google";
 import "./globals.css";
-import { Nav } from "@/components/custom";
+import { Nav, Footer } from "@/components/custom";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,6 +37,7 @@ export default function RootLayout({
       ><StackProvider app={stackServerApp}><StackTheme>
         <Nav />
         {children}
+        <Footer />
       </StackTheme></StackProvider></body>
     </html>
   );
