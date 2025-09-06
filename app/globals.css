@@ -4,6 +4,9 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@theme {
+  --color-prime-video: oklch(0.5324 0.1933 257.83);
+}
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
