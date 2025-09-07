@@ -15,7 +15,7 @@ export default function PastSpaces() {
                 <div className="flex justify-between items-center w-full border-b border-black">
                     <h1 className="pb-3 border-black text-2xl font-semibold">Past Spaces</h1>
 
-                    <Link href="/spaces" className="underline text-sm hover:">View All</Link>
+                    <Link href="#spaces" className="underline text-sm hover:">View All</Link>
                 </div>
                 <div className="grid lg:grid-cols-4 md:grid-cols-2 lg:py-10 py-6 gap-4">
                     {Array.from({ length: 4 }).map((_, index) => (
@@ -46,7 +46,7 @@ export default function PastSpaces() {
                 <div className="flex justify-between items-center w-full border-b border-black">
                     <h1 className="pb-3 border-black text-2xl font-semibold">Past Spaces</h1>
 
-                    <Link href="/spaces" className="underline text-sm hover:">View All</Link>
+                    <Link href="#spaces" className="underline text-sm hover:">View All</Link>
                 </div>
                 <div className="py-6 text-center">
                     <p className="text-red-500">Failed to load past spaces</p>
@@ -59,13 +59,13 @@ export default function PastSpaces() {
         <div className="flex justify-between items-center w-full border-b border-black">
             <h1 className="pb-3 border-black text-2xl font-semibold">Past Spaces</h1>
 
-            <Link href="/spaces" className="underline text-sm hover:">View All</Link>
+            <Link href="#spaces" className="underline text-sm hover:">View All</Link>
         </div>
 
         {pastSpaces && pastSpaces.length > 0 ? (
             <div className="grid lg:grid-cols-4 md:grid-cols-2 lg:py-10 py-6 gap-4">
                 {pastSpaces.map((space, index) => (
-                    <Link key={index} href={`/spaces/${space.id}`}>
+                    <Link key={index} href={`#spaces/${space.id}`}>
                         <Card className="rounded-sm shadow-none p-0 gap-8">
                             <CardHeader className="px-4 bg-primary/50 max-h-30 overflow-y-visible relative z-10 overflow-visible rounded-t-sm">
                                 <CldImage
