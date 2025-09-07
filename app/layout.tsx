@@ -34,7 +34,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${lexendDeca.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${lexendDeca.variable} antialiased min-h-screen`}
       ><StackProvider app={stackServerApp}><StackTheme>
         <QueryProvider>
           <Nav />
