@@ -4,6 +4,7 @@ import { stackServerApp } from "../stack";
 import { Geist, Geist_Mono, Lexend_Deca } from "next/font/google";
 import "./globals.css";
 import { Nav, Footer } from "@/components/custom";
+import QueryProvider from "@/lib/providers/query-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,9 +36,11 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${lexendDeca.variable} antialiased`}
       ><StackProvider app={stackServerApp}><StackTheme>
-        <Nav />
-        {children}
-        <Footer />
+        <QueryProvider>
+          <Nav />
+          {children}
+          <Footer />
+        </QueryProvider>
       </StackTheme></StackProvider></body>
     </html>
   );

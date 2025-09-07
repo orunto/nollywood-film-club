@@ -1,18 +1,53 @@
 'use client';
-import Image from "next/image";
+import { CldImage } from 'next-cloudinary';
 import { Button } from "@/components/ui/button";
 import { Mic, PlayIcon, Star } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useMovieOfTheWeek } from "@/lib/hooks/use-content";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function MovieOfTheWeek() {
     const [isPlaying, setIsPlaying] = useState(false);
+    const { data: movie, isLoading, error } = useMovieOfTheWeek();
 
     const handlePlay = () => {
         setIsPlaying(true);
     };
+
+    if (isLoading) {
+        return (
+            <section className="w-full">
+                <h1 className="pb-3 border-b border-black text-2xl font-semibold">Movie of the Week</h1>
+                <div className="grid lg:grid-cols-6 gap-10 py-6">
+                    <div className="lg:col-span-4">
+                        <Skeleton className="w-full aspect-video rounded-lg" />
+                    </div>
+                    <div className="lg:col-span-2 space-y-4">
+                        <Skeleton className="h-8 w-3/4" />
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-20 w-full" />
+                    </div>
+                </div>
+            </section>
+        );
+    }
+
+    if (error || !movie) {
+        return (
+            <section className="w-full">
+                <h1 className="pb-3 border-b border-black text-2xl font-semibold">Movie of the Week</h1>
+                <div className="py-6 text-center">
+                    <p className="text-red-500">Failed to load movie of the week</p>
+                </div>
+            </section>
+        );
+    }
+
     return <section className="w-full">
         <h1 className="pb-3 border-b border-black text-2xl font-semibold">Movie of the Week</h1>
         <div className=" grid lg:grid-cols-6 gap-10 py-6">
@@ -20,12 +55,14 @@ export default function MovieOfTheWeek() {
                 <div className="relative w-full aspect-video rounded-lg bg-black overflow-hidden cursor-pointer group" onClick={handlePlay}>
                     {!isPlaying ? (
                         <>
-                            <Image
-                                src="/assets/webp/elj.webp"
-                                alt="Hero"
+                            <CldImage
+                                src={movie.posterImage || "nollywood-film-club/elj"}
+                                alt={`${movie.title} Movie Poster`}
                                 width={500}
                                 height={500}
                                 className="w-full lg:h-full h-70 object-cover"
+                                quality="auto"
+                                format="auto"
                             />
                             <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/50 group-hover:text-white lg:text-white/50 text-white transition-colors gap-4">
                                 <span className="lg:text-lg text-base">Watch Trailer</span>
@@ -35,25 +72,30 @@ export default function MovieOfTheWeek() {
                             </div>
                         </>
                     ) : (
-                        <iframe
-                            width="100%"
-                            height="100%"
-                            src="https://www.youtube.com/embed/x4JIoP5FlhU?si=s-yYKArOOO6QD42e?autoplay=1&rel=0"
-                            title="YouTube video player"
-                            frameBorder="0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                            className="w-full h-full"
-                        />
+                        <div className="relative w-full h-full bg-black rounded-lg overflow-hidden">
+                            <iframe
+                                width="100%"
+                                height="100%"
+                                src={`${movie.trailerUrl}&autoplay=1&rel=0&controls=1&modestbranding=1&showinfo=0&iv_load_policy=3&fs=1`}
+                                title="YouTube video player"
+                                frameBorder="0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                                className="w-full h-full"
+                            />
+                        </div>
                     )}
                 </div>
             </figure>
             <div className="lg:col-span-2 flex flex-col gap-2">
                 <div className="flex flex-col gap-1">
-                    <h2 className="text-xl font-medium flex items-center gap-2">Everybody Loves Jenifa <Badge className="text-xs text-black bg-transparent border border-black">PG-13</Badge></h2>
-                    <span className="text-xs font-light">Run Time: 2 h 15 min</span>
-                    <span className="text-xs font-light">Theatrical Release Date: 2000</span>
-                    <span className="text-xs font-light">Genre: Comedy, Drama</span>
+                    <h2 className="text-xl font-medium flex items-center gap-2">{movie.title} <Badge className="text-xs text-black bg-transparent border border-black">{movie.rating}</Badge></h2>
+                    <span className="text-xs font-light">Run Time: {movie.runtime ? `${Math.floor(movie.runtime / 60)} h ${movie.runtime % 60} min` : 'N/A'}</span>
+                    <span className="text-xs font-light">Theatrical Release Date: {movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : 'N/A'}</span>
+                    <span className="text-xs font-light">Type: {movie.contentType === 'movie' ? 'Movie' : 'TV Show'}</span>
+                    {movie.genre && movie.genre.length > 0 && (
+                        <span className="text-xs font-light">Genre: {movie.genre.join(', ')}</span>
+                    )}
                 </div>
 
                 {/* Mobile Accordion */}
@@ -64,7 +106,7 @@ export default function MovieOfTheWeek() {
                         </AccordionTrigger>
                         <AccordionContent>
                             <p className="text-sm font-light">
-                                Jenifa must navigate through jealousy and suspicion when her philanthropy position is threatened by her new neighbour in the estate. A trip to Ghana with friends turns dangerous when they are caught up in a drug scandal, forcing Jenifa to confront betrayal and danger, risking everything to protect her reputation and life.
+                                {movie.synopsis || 'No synopsis available.'}
                             </p>
                         </AccordionContent>
                     </AccordionItem>
@@ -76,23 +118,27 @@ export default function MovieOfTheWeek() {
                         Synopsis
                     </header>
                     <p className="text-sm font-light">
-                        Jenifa must navigate through jealousy and suspicion when her philanthropy position is threatened by her new neighbour in the estate. A trip to Ghana with friends turns dangerous when they are caught up in a drug scandal, forcing Jenifa to confront betrayal and danger, risking everything to protect her reputation and life.
+                        {movie.synopsis || 'No synopsis available.'}
                     </p>
                 </div>
 
                 <div className="w-full pt-2 grid items-center gap-2">
-                    <Link target="_blank" href="https://www.primevideo.com/detail/Everybody-Loves-Jenifa/0G4DEZL3GDUGGLRPTKG19ZFEEE">
-                        <Button variant={'secondary'} className="w-full bg-prime-video text-white">
-                            <PlayIcon className="w-4 h-4" />
-                            Stream on Prime Video
-                        </Button>
-                    </Link>
-                    <Link target="_blank" href="https://x.com/i/spaces/1djGXWjZOORKZ">
-                        <Button variant={'outline'} className="w-full bg-black text-white">
-                            <Mic className="w-4 h-4" />
-                            Join the Space
-                        </Button>
-                    </Link>
+                    {movie.streamingUrl && (
+                        <Link target="_blank" href={movie.streamingUrl}>
+                            <Button variant={'secondary'} className="w-full bg-prime-video text-white">
+                                <PlayIcon className="w-4 h-4" />
+                                Stream on {movie.streamingPlatform === 'prime_video' ? 'Prime Video' : movie.otherPlatform || 'Platform'}
+                            </Button>
+                        </Link>
+                    )}
+                    {movie.spaceUrl && (
+                        <Link target="_blank" href={movie.spaceUrl}>
+                            <Button variant={'outline'} className="w-full bg-black text-white">
+                                <Mic className="w-4 h-4" />
+                                Join the Space
+                            </Button>
+                        </Link>
+                    )}
                 </div>
 
                 <div title="Come back after our space 😉" className="w-full">
