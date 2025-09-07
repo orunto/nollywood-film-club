@@ -14,6 +14,7 @@ export default function Reviews() {
                 <h1 className="pb-3 border-b border-black text-2xl font-semibold">Reviews</h1>
                 <div className="grid lg:grid-cols-4 md:grid-cols-2 lg:py-10 py-6 lg:gap-4 gap-6">
                     {Array.from({ length: 4 }).map((_, index) => (
+                        <div key={index} className={`${index >= 1 ? 'hidden md:block' : ''}`}>
                         <Card key={index} className="rounded-sm shadow-none p-0 gap-4 border-none">
                             <CardHeader className="p-0 relative z-10 rounded-t-sm">
                                 <Skeleton className="w-full aspect-video rounded-sm relative z-10" />
@@ -27,6 +28,7 @@ export default function Reviews() {
                                 <Skeleton className="h-6 w-16" />
                             </CardFooter>
                         </Card>
+                        </div>
                     ))}
                 </div>
             </section>
@@ -61,6 +63,8 @@ export default function Reviews() {
                                     className="w-full aspect-video object-cover rounded-sm relative z-10"
                                     quality="auto"
                                     format="auto"
+                                    sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                                    loading="lazy"
                                 />
                             </CardHeader>
 
@@ -87,7 +91,8 @@ export default function Reviews() {
             <div className="lg:py-10 py-6">
                 <div className="grid lg:grid-cols-4 md:grid-cols-2 lg:gap-4 gap-6">
                     {Array.from({ length: 4 }).map((_, index) => (
-                        <div key={index} className="rounded-sm shadow-none p-0 gap-4 flex flex-col">
+                        <div key={index} className={`${index >= 1 ? 'hidden md:block' : ''}`}>
+                            <div className="rounded-sm shadow-none p-0 gap-4 flex flex-col">
                             <div className="p-0 relative z-10 rounded-t-sm">
                                 <div className="w-full aspect-video bg-gray-200 rounded-sm relative z-10 flex items-center justify-center">
                                     <div className="text-4xl">📝</div>
@@ -100,6 +105,7 @@ export default function Reviews() {
                             </div>
                             <div className="pt-1 flex justify-between border-t items-start">
                                 <div className="h-6 bg-gray-200 rounded w-10"></div>
+                            </div>
                             </div>
                         </div>
                     ))}

@@ -19,6 +19,7 @@ export default function PastSpaces() {
                 </div>
                 <div className="grid lg:grid-cols-4 md:grid-cols-2 lg:py-10 py-6 gap-4">
                     {Array.from({ length: 4 }).map((_, index) => (
+                        <div key={index} className={`${index >= 1 ? 'hidden md:block' : ''}`}>
                         <Card key={index} className="rounded-sm shadow-none p-0 gap-8">
                             <CardHeader className="px-4 bg-primary/50 max-h-30 overflow-y-visible relative z-10 overflow-visible rounded-t-sm">
                                 <Skeleton className="w-full aspect-video rounded-sm translate-y-4 relative z-10" />
@@ -32,6 +33,7 @@ export default function PastSpaces() {
                                 <Skeleton className="h-8 w-12" />
                             </CardFooter>
                         </Card>
+                        </div>
                     ))}
                 </div>
             </section>
@@ -74,6 +76,8 @@ export default function PastSpaces() {
                                     className="w-full aspect-video object-cover rounded-sm translate-y-4 relative z-10"
                                     quality="auto"
                                     format="auto"
+                                    sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                                    loading="lazy"
                                 />
                             </CardHeader>
 
@@ -100,7 +104,8 @@ export default function PastSpaces() {
             <div className="lg:py-10 py-6">
                 <div className="grid lg:grid-cols-4 md:grid-cols-2 gap-4">
                     {Array.from({ length: 4 }).map((_, index) => (
-                        <div key={index} className="rounded-sm shadow-none p-0 gap-8 flex flex-col border">
+                        <div key={index} className={`${index >= 1 ? 'hidden md:block' : ''}`}>
+                            <div className="rounded-sm shadow-none p-0 gap-8 flex flex-col border">
                             <div className="px-4 bg-primary/50 max-h-30 overflow-y-visible relative z-10 overflow-visible rounded-t-sm">
                                 <div className="w-full aspect-video bg-gray-200 rounded-sm translate-y-4 relative z-10 flex items-center justify-center">
                                     <div className="text-4xl">🎬</div>
@@ -113,6 +118,7 @@ export default function PastSpaces() {
                             <div className="p-4 flex justify-between border-t items-start">
                                 <div className="h-4 bg-gray-200 rounded w-20"></div>
                                 <div className="h-8 bg-gray-200 rounded w-12"></div>
+                            </div>
                             </div>
                         </div>
                     ))}

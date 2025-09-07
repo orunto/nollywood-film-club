@@ -63,6 +63,8 @@ export default function MovieOfTheWeek() {
                                 className="w-full lg:h-full h-70 object-cover"
                                 quality="auto"
                                 format="auto"
+                                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                                loading="lazy"
                             />
                             <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/50 group-hover:text-white lg:text-white/50 text-white transition-colors gap-4">
                                 <span className="lg:text-lg text-base">Watch Trailer</span>
