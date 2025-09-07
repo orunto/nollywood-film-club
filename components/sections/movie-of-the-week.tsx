@@ -89,12 +89,17 @@ export default function MovieOfTheWeek() {
             </figure>
             <div className="lg:col-span-2 flex flex-col gap-2">
                 <div className="flex flex-col gap-1">
-                    <h2 className="text-xl font-medium flex items-center gap-2">{movie.title} <Badge className="text-xs text-black bg-transparent border border-black">{movie.rating}</Badge></h2>
+                    <h2 className="text-xl font-medium flex items-center gap-2">
+                        {movie.title} 
+                        <Badge className="text-xs text-black bg-transparent border border-black">{movie.rating}</Badge>
+                        <Badge className="text-xs text-black bg-transparent border border-black">
+                            {movie.contentType === 'movie' ? 'Movie' : 'TV Show'}
+                        </Badge>
+                    </h2>
                     <span className="text-xs font-light">Run Time: {movie.runtime ? `${Math.floor(movie.runtime / 60)} h ${movie.runtime % 60} min` : 'N/A'}</span>
                     <span className="text-xs font-light">Theatrical Release Date: {movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : 'N/A'}</span>
-                    <span className="text-xs font-light">Type: {movie.contentType === 'movie' ? 'Movie' : 'TV Show'}</span>
                     {movie.genre && movie.genre.length > 0 && (
-                        <span className="text-xs font-light">Genre: {movie.genre.join(', ')}</span>
+                        <span className="text-xs font-light">Genre: {movie.genre.map(g => g.charAt(0).toUpperCase() + g.slice(1)).join(', ')}</span>
                     )}
                 </div>
 
