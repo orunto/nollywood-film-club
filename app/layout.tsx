@@ -35,13 +35,17 @@ export default function RootLayout({
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${lexendDeca.variable} antialiased min-h-screen`}
-      ><StackProvider app={stackServerApp}><StackTheme>
-        <QueryProvider>
-          <Nav />
-          {children}
-          <Footer />
-        </QueryProvider>
-      </StackTheme></StackProvider></body>
+      >
+        <StackProvider app={stackServerApp}><StackTheme>
+          <QueryProvider>
+            <Nav />
+            <main className="min-h-screen"
+            >
+              {children}
+            </main>
+            <Footer />
+          </QueryProvider>
+        </StackTheme></StackProvider></body>
     </html>
   );
 }
