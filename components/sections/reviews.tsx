@@ -107,7 +107,7 @@ export default function Reviews() {
                 <div className="text-center mt-8">
                     <h2 className="text-xl font-semibold mb-2">Coming Soon...</h2>
                     <p className="text-gray-600 text-sm">
-                        Reviews will appear here once we start publishing them. Check back soon for our latest movie and TV show reviews!
+                        Reviews will appear here once we start publishing them.
                     </p>
                 </div>
             </div>
