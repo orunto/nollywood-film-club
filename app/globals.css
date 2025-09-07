@@ -95,6 +95,7 @@
   font-family: "Lexend Deca", sans-serif;
   font-optical-sizing: auto;
   transition: all 0.15s ease;
+  scroll-behavior: smooth;
 }
 
 a {

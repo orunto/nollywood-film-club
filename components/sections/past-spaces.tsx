@@ -11,7 +11,7 @@ export default function PastSpaces() {
 
     if (isLoading) {
         return (
-            <section className="w-full">
+            <section id="spaces" className="w-full">
                 <div className="flex justify-between items-center w-full border-b border-black">
                     <h1 className="pb-3 border-black text-2xl font-semibold">Past Spaces</h1>
 
@@ -40,7 +40,7 @@ export default function PastSpaces() {
 
     if (error) {
         return (
-            <section className="w-full">
+            <section id="spaces" className="w-full">
                 <div className="flex justify-between items-center w-full border-b border-black">
                     <h1 className="pb-3 border-black text-2xl font-semibold">Past Spaces</h1>
 
@@ -53,7 +53,7 @@ export default function PastSpaces() {
         );
     }
 
-    return <section className="w-full">
+    return <section id="spaces" className="w-full">
         <div className="flex justify-between items-center w-full border-b border-black">
             <h1 className="pb-3 border-black text-2xl font-semibold">Past Spaces</h1>
 

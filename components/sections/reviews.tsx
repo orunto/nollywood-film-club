@@ -10,7 +10,7 @@ export default function Reviews() {
 
     if (isLoading) {
         return (
-            <section className="w-full">
+            <section id="reviews" className="w-full">
                 <h1 className="pb-3 border-b border-black text-2xl font-semibold">Reviews</h1>
                 <div className="grid lg:grid-cols-4 md:grid-cols-2 lg:py-10 py-6 lg:gap-4 gap-6">
                     {Array.from({ length: 4 }).map((_, index) => (
@@ -35,7 +35,7 @@ export default function Reviews() {
 
     if (error) {
         return (
-            <section className="w-full">
+            <section id="reviews" className="w-full">
                 <h1 className="pb-3 border-b border-black text-2xl font-semibold">Reviews</h1>
                 <div className="py-6 text-center">
                     <p className="text-red-500">Failed to load reviews</p>
@@ -44,7 +44,7 @@ export default function Reviews() {
         );
     }
 
-    return <section className="w-full">
+    return <section id="reviews" className="w-full">
         <h1 className="pb-3 border-b border-black text-2xl font-semibold">Reviews</h1>
 
         {reviews && reviews.length > 0 ? (
