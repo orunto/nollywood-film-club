@@ -25,9 +25,8 @@ export default function Nav() {
                     <Link href="#reviews">Reviews</Link>
                 </li>
                 <li>
-                    <Link href="#">
+                    <Link href="/auth">
                         <Button variant={'default'} className="text-base">
-
                             Join the Club
                         </Button>
                     </Link>

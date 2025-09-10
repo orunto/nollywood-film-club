@@ -30,11 +30,19 @@ export const content = pgTable('content', {
 
 
 
+// Usernames table - simple table to track unique usernames
+export const usernames = pgTable('usernames', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  stackUserId: text('stack_user_id').notNull().unique(), // Stack user ID
+  username: text('username').notNull().unique(), // Unique username
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
 // User ratings/reviews table
 export const userRatings = pgTable('user_ratings', {
   id: uuid('id').primaryKey().defaultRandom(),
   contentId: uuid('content_id').references(() => content.id, { onDelete: 'cascade' }),
-  userId: text('user_id').notNull(), // assuming you'll have user authentication
+  userId: text('user_id').notNull(), // Stack user ID
   rating: decimal('rating', { precision: 2, scale: 1 }), // 1.0 to 5.0
   review: text('review'),
   createdAt: timestamp('created_at').defaultNow(),
@@ -61,6 +69,10 @@ export const reviews = pgTable('reviews', {
 export const contentRelations = relations(content, ({ many }) => ({
   ratings: many(userRatings),
   reviews: many(reviews),
+}));
+
+export const usernameRelations = relations(usernames, ({ many }) => ({
+  ratings: many(userRatings),
 }));
 
 export const userRatingRelations = relations(userRatings, ({ one }) => ({
