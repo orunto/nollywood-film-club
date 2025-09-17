@@ -3,57 +3,13 @@ import { Card, CardTitle, CardHeader, CardContent, CardDescription, CardFooter }
 import Link from "next/link";
 import { CldImage } from "next-cloudinary";
 import { Badge } from "../ui/badge";
-import { usePastSpaces } from "@/lib/hooks/use-content";
-import { Skeleton } from "@/components/ui/skeleton";
-// import { Button } from "../ui/button";
-export default function PastSpaces() {
-    const { data: pastSpaces, isLoading, error } = usePastSpaces();
+import { Content } from "@/lib/server-queries";
 
-    if (isLoading) {
-        return (
-            <section id="spaces" className="w-full">
-                <div className="flex justify-between items-center w-full border-b border-black">
-                    <h1 className="pb-3 border-black text-2xl font-semibold">Past Spaces</h1>
+interface PastSpacesProps {
+    pastSpaces: Content[];
+}
 
-                    <Link href="#spaces" className="underline text-sm hover:">View All</Link>
-                </div>
-                <div className="grid lg:grid-cols-4 md:grid-cols-2 lg:py-10 py-6 gap-4">
-                    {Array.from({ length: 4 }).map((_, index) => (
-                        <div key={index} className={`${index >= 1 ? 'hidden md:block' : ''}`}>
-                        <Card key={index} className="rounded-sm shadow-none p-0 gap-8">
-                            <CardHeader className="px-4 bg-primary/50 max-h-30 overflow-y-visible relative z-10 overflow-visible rounded-t-sm">
-                                <Skeleton className="w-full aspect-video rounded-sm translate-y-4 relative z-10" />
-                            </CardHeader>
-                            <CardContent className="p-4 relative flex flex-col gap-2 lg:mt-0 mt-8">
-                                <Skeleton className="h-6 w-3/4" />
-                                <Skeleton className="h-4 w-1/2" />
-                            </CardContent>
-                            <CardFooter className="p-4 flex justify-between border-t items-start">
-                                <Skeleton className="h-4 w-20" />
-                                <Skeleton className="h-8 w-12" />
-                            </CardFooter>
-                        </Card>
-                        </div>
-                    ))}
-                </div>
-            </section>
-        );
-    }
-
-    if (error) {
-        return (
-            <section id="spaces" className="w-full">
-                <div className="flex justify-between items-center w-full border-b border-black">
-                    <h1 className="pb-3 border-black text-2xl font-semibold">Past Spaces</h1>
-
-                    <Link href="#spaces" className="underline text-sm hover:">View All</Link>
-                </div>
-                <div className="py-6 text-center">
-                    <p className="text-red-500">Failed to load past spaces</p>
-                </div>
-            </section>
-        );
-    }
+export default function PastSpaces({ pastSpaces }: PastSpacesProps) {
 
     return <section id="spaces" className="w-full">
         <div className="flex justify-between items-center w-full border-b border-black">

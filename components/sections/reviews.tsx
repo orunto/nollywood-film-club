@@ -3,48 +3,13 @@ import { Card, CardTitle, CardHeader, CardContent, CardDescription, CardFooter }
 import Link from "next/link";
 import { CldImage } from "next-cloudinary";
 import { Badge } from "../ui/badge";
-import { useReviews } from "@/lib/hooks/use-content";
-import { Skeleton } from "@/components/ui/skeleton";
-export default function Reviews() {
-    const { data: reviews, isLoading, error } = useReviews();
+import { Review } from "@/lib/server-queries";
 
-    if (isLoading) {
-        return (
-            <section id="reviews" className="w-full">
-                <h1 className="pb-3 border-b border-black text-2xl font-semibold">Reviews</h1>
-                <div className="grid lg:grid-cols-4 md:grid-cols-2 lg:py-10 py-6 lg:gap-4 gap-6">
-                    {Array.from({ length: 4 }).map((_, index) => (
-                        <div key={index} className={`${index >= 1 ? 'hidden md:block' : ''}`}>
-                        <Card key={index} className="rounded-sm shadow-none p-0 gap-4 border-none">
-                            <CardHeader className="p-0 relative z-10 rounded-t-sm">
-                                <Skeleton className="w-full aspect-video rounded-sm relative z-10" />
-                            </CardHeader>
-                            <CardContent className="p-0 relative flex flex-col gap-2 lg:mt-0 mt-8">
-                                <Skeleton className="h-6 w-3/4" />
-                                <Skeleton className="h-4 w-1/2" />
-                                <Skeleton className="h-12 w-full" />
-                            </CardContent>
-                            <CardFooter className="p-0 flex justify-between border-t items-start">
-                                <Skeleton className="h-6 w-16" />
-                            </CardFooter>
-                        </Card>
-                        </div>
-                    ))}
-                </div>
-            </section>
-        );
-    }
+interface ReviewsProps {
+    reviews: Review[];
+}
 
-    if (error) {
-        return (
-            <section id="reviews" className="w-full">
-                <h1 className="pb-3 border-b border-black text-2xl font-semibold">Reviews</h1>
-                <div className="py-6 text-center">
-                    <p className="text-red-500">Failed to load reviews</p>
-                </div>
-            </section>
-        );
-    }
+export default function Reviews({ reviews }: ReviewsProps) {
 
     return <section id="reviews" className="w-full">
         <h1 className="pb-3 border-b border-black text-2xl font-semibold">Reviews</h1>
