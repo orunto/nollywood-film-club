@@ -3,7 +3,6 @@ import { StackProvider, StackTheme } from "@stackframe/stack";
 import { stackServerApp } from "../stack";
 import { Geist, Geist_Mono, Lexend_Deca } from "next/font/google";
 import "./globals.css";
-import { Nav, Footer } from "@/components/custom";
 import QueryProvider from "@/lib/providers/query-provider";
 
 const geistSans = Geist({
@@ -38,12 +37,8 @@ export default function RootLayout({
       >
         <StackProvider app={stackServerApp}><StackTheme>
           <QueryProvider>
-            <Nav />
-            <main className="min-h-screen"
-            >
-              {children}
-            </main>
-            <Footer />
+            {children}
+            
           </QueryProvider>
         </StackTheme></StackProvider></body>
     </html>

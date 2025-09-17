@@ -15,7 +15,7 @@ import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 // import { StackAuth } from '@stackframe/stack';
 import { useStackApp } from '@stackframe/stack';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 const signUpSchema = z.object({
@@ -94,7 +94,11 @@ export default function AuthPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen flex py-7 justify-center bg-gray-50 px-4 sm:px-6 lg:px-8">
+            <Button onClick={() => router.back()} className="absolute top-6 left-6 bg-white text-black">
+                <ArrowLeft className="h-4 w-4" />
+                Go Back
+            </Button>
             <div className="max-w-md w-full space-y-8">
 
                 <Tabs defaultValue="signup" className="w-full">
