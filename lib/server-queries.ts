@@ -38,6 +38,18 @@ export interface Review {
   updatedAt: string;
 }
 
+export interface BlogPost {
+  id: string;
+  title: string;
+  content: string;
+  excerpt: string | null;
+  slug: string;
+  published: boolean;
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Server-side data fetching functions
 export async function getMovieOfTheWeek(): Promise<Content | null> {
   try {

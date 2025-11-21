@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { usernames } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { stackServerApp } from '../../../stack';
 
 export async function POST(request: NextRequest) {
   try {
@@ -66,6 +67,21 @@ export async function POST(request: NextRequest) {
         username: username.toLowerCase(),
       })
       .returning();
+
+    // Also save username in user metadata
+    try {
+      const user = await stackServerApp.getUser(stackUserId);
+      if (user) {
+        await user.update({
+          clientMetadata: {
+            username: username.toLowerCase(),
+          },
+        });
+      }
+    } catch (metadataError) {
+      console.error('Error updating user metadata:', metadataError);
+      // Don't fail the request if metadata update fails
+    }
 
     return NextResponse.json(
       { success: true, username: newUsername[0] },

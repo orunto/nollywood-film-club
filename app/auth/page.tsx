@@ -41,6 +41,10 @@ export default function AuthPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
+    
+    // Get return URL from query params
+    const searchParams = new URLSearchParams(window.location.search);
+    const returnTo = searchParams.get('returnTo') || '/';
 
     const app = useStackApp();
     const signUpForm = useForm<SignUpForm>({
@@ -83,7 +87,8 @@ export default function AuthPage() {
 
         try {
             // This will be handled by Stack authentication
-            router.push('/');
+            // After successful auth, redirect to callback to determine role-based redirect
+            router.push('/auth/callback');
         } catch (err: unknown) {
             setError('Invalid credentials. Please try again.');
 
@@ -228,7 +233,9 @@ export default function AuthPage() {
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-3">
-                                    <Button onClick={async () => await app.signInWithOAuth('google' )} 
+                                    <Button onClick={async () => {
+                                        await app.signInWithOAuth('google', { redirectTo: '/auth/callback' });
+                                    }} 
                                         variant="outline" 
                                         className="w-full relative overflow-hidden transition-all duration-300 hover:text-black"
                                         style={{
@@ -264,7 +271,7 @@ export default function AuthPage() {
                                         </svg>
                                         Google
                                     </Button>
-                                    <Button onClick={async () => await app.signInWithOAuth('x')} variant="outline" className="w-full shadow-none  hover:bg-black">
+                                    <Button onClick={async () => await app.signInWithOAuth('x', { redirectTo: '/auth/callback' })} variant="outline" className="w-full shadow-none  hover:bg-black">
                                         <svg className="mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
                                             <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                                         </svg>
@@ -368,7 +375,7 @@ export default function AuthPage() {
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-3">
-                                    <Button onClick={async () => await app.signInWithOAuth('google')} 
+                                    <Button onClick={async () => await app.signInWithOAuth('google', { redirectTo: '/auth/callback' })} 
                                         variant="outline" 
                                         className="w-full relative overflow-hidden transition-all duration-300 hover:text-black"
                                         style={{
@@ -404,7 +411,7 @@ export default function AuthPage() {
                                         </svg>
                                         Google
                                     </Button>
-                                    <Button onClick={async () => await app.signInWithOAuth('x')} variant="outline" className="w-full shadow-none  hover:bg-black">
+                                    <Button onClick={async () => await app.signInWithOAuth('x', { redirectTo: '/auth/callback' })} variant="outline" className="w-full shadow-none  hover:bg-black">
                                         <svg className="mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
                                             <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                                         </svg>

@@ -64,6 +64,19 @@ export const reviews = pgTable('reviews', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
+// Blog posts table
+export const blogPosts = pgTable('blog_posts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  title: text('title').notNull(),
+  content: text('content').notNull(),
+  excerpt: text('excerpt'), // Brief description/summary
+  slug: text('slug').notNull().unique(), // URL-friendly version of title
+  published: boolean('published').default(false),
+  publishedAt: timestamp('published_at'), // When the post was published
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
 
 // Relations
 export const contentRelations = relations(content, ({ many }) => ({

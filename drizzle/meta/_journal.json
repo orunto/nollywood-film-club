@@ -22,6 +22,13 @@
       "when": 1757462076689,
       "tag": "0002_late_the_order",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1759698513610,
+      "tag": "0003_perfect_smasher",
+      "breakpoints": true
     }
   ]
 }

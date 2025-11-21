@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle, XCircle, Loader2, User } from 'lucide-react';
-import { useDebounce } from '@/hooks/use-debounce';
+import { useStackApp } from '@stackframe/stack';
 
 interface UsernameCheck {
   available: boolean;
@@ -22,8 +22,24 @@ export default function OnboardingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const app = useStackApp();
 
   const debouncedUsername = useDebounce(username, 500);
+
+  // Check if user already has a username
+  useEffect(() => {
+    const checkExistingUsername = async () => {
+      const user = await app.getUser();
+      if (user) {
+        const usernameInMetadata = user.clientMetadata?.username;
+        if (usernameInMetadata && usernameInMetadata.trim() !== '') {
+          // User already has a username, redirect to home
+          router.push('/');
+        }
+      }
+    };
+    checkExistingUsername();
+  }, [app, router]);
 
   // Check username availability when debounced value changes
   useEffect(() => {
@@ -77,9 +93,12 @@ export default function OnboardingPage() {
     setError(null);
 
     try {
-      // For now, we'll use a mock stackUserId
-      // In a real implementation, this would come from Stack authentication
-      const mockStackUserId = 'mock-user-' + Date.now();
+      // Get the current user from Stack
+      const user = await app.getUser();
+      if (!user) {
+        setError('You must be logged in to create a username');
+        return;
+      }
       
       const response = await fetch('/api/create-username', {
         method: 'POST',
@@ -88,7 +107,7 @@ export default function OnboardingPage() {
         },
         body: JSON.stringify({ 
           username: username,
-          stackUserId: mockStackUserId
+          stackUserId: user.id
         }),
       });
 
