@@ -1,12 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { blogPosts } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const { published, publishedAt } = await request.json();
-    
+    const {id} = await params
     const updatedPost = await db
       .update(blogPosts)
       .set({
@@ -14,7 +17,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         publishedAt: published ? publishedAt : null,
         updatedAt: new Date(),
       })
-      .where(eq(blogPosts.id, params.id))
+      .where(eq(blogPosts.id, id))
       .returning();
 
     if (updatedPost.length === 0) {

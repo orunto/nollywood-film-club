@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle, XCircle, Loader2, User } from 'lucide-react';
 import { useStackApp } from '@stackframe/stack';
+import { useDebounce } from '@/hooks/use-debounce';
 
 interface UsernameCheck {
   available: boolean;
@@ -72,6 +73,7 @@ export default function OnboardingPage() {
         });
       }
     } catch (err) {
+      console.error(err)
       setUsernameStatus({
         available: false,
         message: 'Error checking username'
@@ -118,6 +120,7 @@ export default function OnboardingPage() {
         setError(data.error || 'Failed to create username. Please try again.');
       }
     } catch (err) {
+      console.error(err)
       setError('Failed to create profile. Please try again.');
     } finally {
       setIsSubmitting(false);

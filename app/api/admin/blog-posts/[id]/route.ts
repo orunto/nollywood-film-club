@@ -3,10 +3,13 @@ import { db } from '@/db/client';
 import { blogPosts } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const postData = await request.json();
-    
+    const { id } = await params
     const updatedPost = await db
       .update(blogPosts)
       .set({
@@ -18,53 +21,58 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         publishedAt: postData.publishedAt,
         updatedAt: new Date(),
       })
-      .where(eq(blogPosts.id, params.id))
+      .where(eq(blogPosts.id, id))
       .returning();
 
     if (updatedPost.length === 0) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Blog post not found' 
+      return NextResponse.json({
+        success: false,
+        error: 'Blog post not found'
       }, { status: 404 });
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       data: updatedPost[0],
-      message: 'Blog post updated successfully' 
+      message: 'Blog post updated successfully'
     });
   } catch (error) {
     console.error('Error updating blog post:', error);
-    return NextResponse.json({ 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params;
+    
     const deletedPost = await db
       .delete(blogPosts)
-      .where(eq(blogPosts.id, params.id))
+      .where(eq(blogPosts.id, id))
       .returning();
 
     if (deletedPost.length === 0) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Blog post not found' 
+      return NextResponse.json({
+        success: false,
+        error: 'Blog post not found'
       }, { status: 404 });
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Blog post deleted successfully' 
+    return NextResponse.json({
+      success: true,
+      message: 'Blog post deleted successfully'
     });
   } catch (error) {
     console.error('Error deleting blog post:', error);
-    return NextResponse.json({ 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }

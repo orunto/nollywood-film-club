@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { stackServerApp } from '../../stack';
+import { stackServerApp } from '@/stack';
 import { db } from '@/db/client';
 import { usernames } from '@/db/schema';
 import { eq } from 'drizzle-orm';
@@ -12,7 +12,7 @@ export default async function AuthCallbackPage() {
   }
 
   // Check user role and redirect accordingly
-  const userRole = user.metadata?.role;
+  const userRole = user.clientMetadata?.role;
   
   if (userRole === 'admin') {
     redirect('/admin');

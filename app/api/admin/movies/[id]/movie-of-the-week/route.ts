@@ -1,12 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { content } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const { isMovieOfTheWeek } = await request.json();
-    
+    const {id} = await params;
     // If setting as movie of the week, first unset any existing movie of the week
     if (isMovieOfTheWeek) {
       await db
@@ -21,7 +24,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         isMovieOfTheWeek,
         updatedAt: new Date(),
       })
-      .where(eq(content.id, params.id))
+      .where(eq(content.id, String(id)))
       .returning();
 
     if (updatedMovie.length === 0) {

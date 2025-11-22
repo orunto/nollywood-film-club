@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Edit, Trash2, FileText } from 'lucide-react';
+import { Plus, Edit, Trash2 } from 'lucide-react';
 
 interface BlogPost {
   id: string;
@@ -21,7 +21,6 @@ interface BlogPost {
   updatedAt: string;
 }
 
-interface BlogPostsManagementProps {}
 
 export default function BlogPostsManagement() {
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);

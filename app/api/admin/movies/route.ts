@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { content } from '@/db/schema';
-import { eq } from 'drizzle-orm';
 import { authenticateAdmin } from '@/lib/admin-auth';
 
 export async function GET() {
@@ -26,12 +25,27 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await authenticateAdmin(request);
+    const authResult = await authenticateAdmin();
     if (authResult instanceof NextResponse) {
       return authResult;
     }
 
     const movieData = await request.json();
+    
+    // Basic validation
+    if (!movieData.title || typeof movieData.title !== 'string') {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Title is required and must be a string' 
+      }, { status: 400 });
+    }
+    
+    if (!movieData.contentType || !['movie', 'tv_show'].includes(movieData.contentType)) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Content type must be either "movie" or "tv_show"' 
+      }, { status: 400 });
+    }
     
     const newMovie = await db.insert(content).values({
       title: movieData.title,
@@ -48,7 +62,7 @@ export async function POST(request: NextRequest) {
       otherPlatform: movieData.otherPlatform,
       spaceUrl: movieData.spaceUrl,
       podcastLinks: movieData.podcastLinks,
-      isMovieOfTheWeek: movieData.isMovieOfTheWeek,
+      isMovieOfTheWeek: movieData.isMovieOfTheWeek || false,
     }).returning();
 
     return NextResponse.json({ 

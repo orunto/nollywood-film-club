@@ -1,10 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { reviews } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params
     const reviewData = await request.json();
     
     const updatedReview = await db
@@ -20,7 +24,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         publishedAt: reviewData.publishedAt,
         updatedAt: new Date(),
       })
-      .where(eq(reviews.id, params.id))
+      .where(eq(reviews.id, id))
       .returning();
 
     if (updatedReview.length === 0) {
@@ -44,11 +48,12 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id} = await params
     const deletedReview = await db
       .delete(reviews)
-      .where(eq(reviews.id, params.id))
+      .where(eq(reviews.id, id))
       .returning();
 
     if (deletedReview.length === 0) {

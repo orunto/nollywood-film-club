@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { stackServerApp } from '../stack';
 
-export async function authenticateAdmin() {
+export async function authenticateUser() {
   try {
     const user = await stackServerApp.getUser();
     
@@ -10,17 +10,6 @@ export async function authenticateAdmin() {
         success: false, 
         error: 'Authentication required' 
       }, { status: 401 });
-    }
-
-    // Check user metadata for role
-    const userRole = (user as { clientMetadata?: { role?: string } }).clientMetadata?.role;
-    
-    if (userRole !== 'admin') {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Admin access required',
-        redirectTo: '/user-dashboard'
-      }, { status: 403 });
     }
 
     return { user };

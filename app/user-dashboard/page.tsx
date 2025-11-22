@@ -12,7 +12,7 @@ export default async function UserDashboardPage() {
   // Extract only serializable user data
   const userData = {
     id: user.id,
-    email: user.primaryEmail,
+    email: user.primaryEmail || '',
     clientMetadata: user.clientMetadata,
   };
 
