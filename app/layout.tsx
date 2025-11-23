@@ -5,6 +5,7 @@ import { Geist, Geist_Mono, Lexend_Deca } from "next/font/google";
 import "./globals.css";
 import QueryProvider from "@/lib/providers/query-provider";
 import { Analytics } from "@vercel/analytics/next"
+import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,6 +40,7 @@ export default function RootLayout({
         <StackProvider app={stackServerApp}><StackTheme>
           <QueryProvider>
             {children}
+            <Toaster />
             <Analytics />
           </QueryProvider>
         </StackTheme></StackProvider></body>

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { userRatings, content } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { authenticateUser } from '@/lib/user-auth';
 
 export async function GET() {
@@ -61,19 +61,38 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
     
-    if (!ratingData.rating || isNaN(parseFloat(ratingData.rating.toString()))) {
+    if (ratingData.rating === null || ratingData.rating === undefined || isNaN(parseFloat(ratingData.rating.toString()))) {
       return NextResponse.json({ 
         success: false, 
         error: 'Rating is required and must be a number' 
       }, { status: 400 });
     }
-    
-    const ratingValue = parseFloat(ratingData.rating.toString());
-    if (ratingValue < 1 || ratingValue > 5) {
+
+    const ratingCheck = await db.select().from(userRatings).where(and(
+      eq(userRatings.contentId, ratingData.contentId),
+      eq(userRatings.userId, authResult.user.id)
+    ));
+
+    if (ratingCheck.length > 0) {
+      const updateData: { rating?: number; review?: string | null } = {};
+      
+      if (ratingData.rating !== undefined && ratingData.rating !== null) {
+        updateData.rating = ratingData.rating;
+      }
+      
+      if (ratingData.review && ratingData.review.length > 0) {
+        updateData.review = ratingData.review;
+      }
+      const editRating = await db.update(userRatings).set(updateData).where(and(
+        eq(userRatings.contentId, ratingData.contentId),
+        eq(userRatings.userId, authResult.user.id)
+      )).returning();
+
       return NextResponse.json({ 
-        success: false, 
-        error: 'Rating must be between 1 and 5' 
-      }, { status: 400 });
+        success: true, 
+        data: editRating[0],
+        message: 'Rating updated!' 
+      });
     }
 
     const newRating = await db.insert(userRatings).values({
@@ -86,7 +105,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ 
       success: true, 
       data: newRating[0],
-      message: 'Rating created successfully' 
+      message: 'Rating submitted!' 
     });
   } catch (error) {
     console.error('Error creating rating:', error);

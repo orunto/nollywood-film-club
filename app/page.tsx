@@ -1,4 +1,4 @@
-import { Nav, Footer } from "@/components/custom";
+import { Footer, Nav } from "@/components/custom";
 import { MovieOfTheWeek, PastSpaces, Reviews } from "@/components/sections";
 import { getHomepageData } from "@/lib/server-queries";
 

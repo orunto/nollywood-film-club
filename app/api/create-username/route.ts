@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/db/client';
-import { usernames } from '@/db/schema';
-import { eq } from 'drizzle-orm';
-import { stackServerApp } from '../../../stack';
+import { stackServerApp } from '@/stack';
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,62 +28,55 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if username already exists
-    const existingUser = await db
-      .select()
-      .from(usernames)
-      .where(eq(usernames.username, username.toLowerCase()))
-      .limit(1);
-
-    if (existingUser.length > 0) {
-      return NextResponse.json(
-        { error: 'Username is already taken' },
-        { status: 409 }
-      );
-    }
-
-    // Check if stackUserId already has a username
-    const existingStackUser = await db
-      .select()
-      .from(usernames)
-      .where(eq(usernames.stackUserId, stackUserId))
-      .limit(1);
-
-    if (existingStackUser.length > 0) {
-      return NextResponse.json(
-        { error: 'User already has a username' },
-        { status: 409 }
-      );
-    }
-
-    // Create the username record
-    const newUsername = await db
-      .insert(usernames)
-      .values({
-        stackUserId,
-        username: username.toLowerCase(),
-      })
-      .returning();
-
-    // Also save username in user metadata
+    // Update the user's metadata with the username
     try {
-      const user = await stackServerApp.getUser(stackUserId);
-      if (user) {
-        await user.update({
+      // Get the current user to verify they exist
+      const currentUser = await stackServerApp.getUser();
+      if (!currentUser) {
+        return NextResponse.json(
+          { error: 'Authentication required' },
+          { status: 401 }
+        );
+      }
+
+      // Only allow users to set their own username, or admins to set any username
+      const isCurrentUser = currentUser.id === stackUserId;
+      const isAdmin = currentUser.clientMetadata?.role === 'admin';
+      
+      if (!isCurrentUser && !isAdmin) {
+        return NextResponse.json(
+          { error: 'Unauthorized to set username for this user' },
+          { status: 403 }
+        );
+      }
+
+      // Get the target user (could be the current user or another user if admin)
+      const targetUser = isCurrentUser ? currentUser : await stackServerApp.getUser(stackUserId);
+      
+      if (targetUser) {
+        await targetUser.update({
           clientMetadata: {
             username: username.toLowerCase(),
           },
         });
+        
+        return NextResponse.json(
+          { success: true, username: username.toLowerCase() },
+          { status: 201 }
+        );
+      } else {
+        return NextResponse.json(
+          { error: 'User not found' },
+          { status: 404 }
+        );
       }
     } catch (metadataError) {
       console.error('Error updating user metadata:', metadataError);
-      // Don't fail the request if metadata update fails
+      return NextResponse.json(
+        { error: 'Failed to create username' },
+        { status: 500 }
+      );
     }
-
-    return NextResponse.json(
-      { success: true, username: newUsername[0] },
-      { status: 201 }
-    );
   } catch (error) {
     console.error('Error creating username:', error);
     return NextResponse.json(

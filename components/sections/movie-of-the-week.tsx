@@ -1,4 +1,4 @@
-import MovieOfTheWeekClient from './movie-of-the-week-client';
+import MovieHero from './movie-hero';
 import { Content } from "@/lib/server-queries";
 
 interface MovieOfTheWeekProps {
@@ -6,5 +6,5 @@ interface MovieOfTheWeekProps {
 }
 
 export default function MovieOfTheWeek({ movie }: MovieOfTheWeekProps) {
-    return <MovieOfTheWeekClient movie={movie} />;
+    return <MovieHero movie={movie} title="Movie of the Week" showRating={true} />;
 }

@@ -96,12 +96,7 @@
   font-optical-sizing: auto;
   transition: all 0.15s ease;
   scroll-behavior: smooth;
+  scrollbar-width: none 
 }
 
-a {
-  @apply duration-150;
-  
-}
-a:hover {
-  @apply underline text-primary;
-}
+/* Custom scrollbar styling */
