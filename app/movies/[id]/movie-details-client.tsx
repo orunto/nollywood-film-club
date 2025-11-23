@@ -3,8 +3,10 @@ import MovieHero from "@/components/sections/movie-hero";
 import { Content, UserRating } from "@/lib/server-queries";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 // import { Star } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import Image from "next/image";
-
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 interface MovieDetailsClientProps {
   movie: Content | null;
   userRatings: UserRating[];
@@ -14,6 +16,7 @@ export default function MovieDetailsClient({
   movie,
   userRatings,
 }: MovieDetailsClientProps) {
+  const router = useRouter();
   if (!movie) {
     return (
       <div className="min-h-screen w-full flex flex-col lg:px-10 lg:py-8 py-10 px-6 gap-15">
@@ -30,7 +33,11 @@ export default function MovieDetailsClient({
   }
 
   return (
-    <div className="w-full flex flex-col lg:px-10 lg:py-8 py-10 px-6 gap-15 min-h-screen">
+    <div className="w-full flex flex-col lg:px-10 lg:py-8 py-10 px-6 gap-6 min-h-screen">
+      <Button onClick={() => router.back()} className="w-max bg-white text-black">
+          <ArrowLeft className="h-4 w-4" />
+          Go Back
+      </Button>
       {/* Movie Header Section (using MovieHero) */}
       <MovieHero movie={movie} showRating={false} />
 

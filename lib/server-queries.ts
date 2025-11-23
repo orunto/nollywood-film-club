@@ -1,6 +1,6 @@
 import { db } from "@/db/client";
 import { content, reviews, userRatings } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, avg } from "drizzle-orm";
 import { stackServerApp } from "@/stack";
 
 // Types
@@ -23,6 +23,7 @@ export interface Content {
   isMovieOfTheWeek: boolean;
   createdAt: string;
   updatedAt: string;
+  userRating: number | null;
 }
 
 export interface Review {
@@ -85,6 +86,7 @@ export async function getMovieOfTheWeek(): Promise<Content | null> {
       createdAt: result.createdAt?.toISOString() || "",
       updatedAt: result.updatedAt?.toISOString() || "",
       isMovieOfTheWeek: result.isMovieOfTheWeek ?? false,
+      userRating: null,
     };
   } catch (error) {
     console.error("Error fetching movie of the week:", error);
@@ -95,9 +97,31 @@ export async function getMovieOfTheWeek(): Promise<Content | null> {
 export async function getPastSpaces(): Promise<Content[]> {
   try {
     const pastSpaces = await db
-      .select()
+      .select({
+        id: content.id,
+        title: content.title,
+        contentType: content.contentType,
+        runtime: content.runtime,
+        releaseDate: content.releaseDate,
+        rating: content.rating,
+        synopsis: content.synopsis,
+        genre: content.genre,
+        posterImage: content.posterImage,
+        trailerUrl: content.trailerUrl,
+        streamingUrl: content.streamingUrl,
+        streamingPlatform: content.streamingPlatform,
+        otherPlatform: content.otherPlatform,
+        spaceUrl: content.spaceUrl,
+        podcastLinks: content.podcastLinks,
+        isMovieOfTheWeek: content.isMovieOfTheWeek,
+        createdAt: content.createdAt,
+        updatedAt: content.updatedAt,
+        userRating: avg(userRatings.rating),
+      })
       .from(content)
+      .leftJoin(userRatings, eq(content.id, userRatings.contentId))
       .where(eq(content.isMovieOfTheWeek, false))
+      .groupBy(content.id)
       .orderBy(content.createdAt)
       .limit(4);
 
@@ -110,6 +134,7 @@ export async function getPastSpaces(): Promise<Content[]> {
       createdAt: item.createdAt?.toISOString() || "",
       updatedAt: item.updatedAt?.toISOString() || "",
       isMovieOfTheWeek: item.isMovieOfTheWeek ?? false,
+      userRating: item.userRating ? parseFloat(item.userRating) : null,
     }));
   } catch (error) {
     console.error("Error fetching past spaces:", error);
@@ -174,9 +199,31 @@ export async function getHomepageData() {
 export async function getContentById(id: string): Promise<Content | null> {
   try {
     const result = await db
-      .select()
+      .select({
+        id: content.id,
+        title: content.title,
+        contentType: content.contentType,
+        runtime: content.runtime,
+        releaseDate: content.releaseDate,
+        rating: content.rating,
+        synopsis: content.synopsis,
+        genre: content.genre,
+        posterImage: content.posterImage,
+        trailerUrl: content.trailerUrl,
+        streamingUrl: content.streamingUrl,
+        streamingPlatform: content.streamingPlatform,
+        otherPlatform: content.otherPlatform,
+        spaceUrl: content.spaceUrl,
+        podcastLinks: content.podcastLinks,
+        isMovieOfTheWeek: content.isMovieOfTheWeek,
+        createdAt: content.createdAt,
+        updatedAt: content.updatedAt,
+        userRating: avg(userRatings.rating),
+      })
       .from(content)
+      .leftJoin(userRatings, eq(content.id, userRatings.contentId))
       .where(eq(content.id, id))
+      .groupBy(content.id)
       .limit(1);
 
     const item = result[0];
@@ -191,6 +238,7 @@ export async function getContentById(id: string): Promise<Content | null> {
       createdAt: item.createdAt?.toISOString() || "",
       updatedAt: item.updatedAt?.toISOString() || "",
       isMovieOfTheWeek: item.isMovieOfTheWeek ?? false,
+      userRating: item.userRating ? parseFloat(item.userRating) : null,
     };
   } catch (error) {
     console.error("Error fetching content by ID:", error);

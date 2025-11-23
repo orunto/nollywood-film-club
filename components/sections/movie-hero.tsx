@@ -66,7 +66,7 @@ export default function MovieHero({ movie, title, showRating = true }: MovieHero
                 )
             }
         </h1>
-        <div className=" grid lg:grid-cols-6 gap-10 py-6">
+        <div className=" grid lg:grid-cols-6 lg:gap-10 gap-6 py-6">
             <figure className="lg:col-span-4 flex flex-col gap-4">
                 <div className="relative w-full aspect-video rounded-lg bg-black overflow-hidden cursor-pointer group" onClick={handlePlay}>
                     {!isPlaying ? (
@@ -106,15 +106,26 @@ export default function MovieHero({ movie, title, showRating = true }: MovieHero
                 </div>
             </figure>
             <div className="lg:col-span-2 flex flex-col gap-2">
+              <div className="flex gap-4">
+                    {
+                      (!showRating) && (
+                        <Badge className={`text-3xl p-4 text-white h-20 w-20 ${Number(movie.userRating) > 7 && ('bg-green-900')} ${(Number(movie.userRating) > 4 && Number(movie.userRating) < 7) && ('bg-amber-500')} ${Number(movie.userRating) < 4 && ('bg-red-700')}`}>
+                          {movie.userRating}
+                        </Badge>
+                      )
+                    }
+                
                 <div className="flex flex-col gap-1">
                     {showRating && (
-                        <h2 className="text-xl font-medium flex items-center gap-2">
+                      <Link href={`/movies/${movie.id}`}>
+                        <h2 className="text-xl hover:text-primary font-medium flex items-center gap-2">
                             {movie.title}
                             <Badge className="text-xs text-black bg-transparent border border-black">{movie.rating}</Badge>
                             <Badge className="text-xs text-black bg-transparent border border-black">
                                 {movie.contentType === 'movie' ? 'Movie' : 'TV Show'}
                             </Badge>
                         </h2>
+                      </Link>
                     )}
                     <span className="text-xs font-light">Run Time: {movie.runtime ? `${Math.floor(movie.runtime / 60)} h ${movie.runtime % 60} min` : 'N/A'}</span>
                     <span className="text-xs font-light">Theatrical Release Date: {movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : 'N/A'}</span>
@@ -122,6 +133,7 @@ export default function MovieHero({ movie, title, showRating = true }: MovieHero
                         <span className="text-xs font-light">Genre: {movie.genre.map(g => g.charAt(0).toUpperCase() + g.slice(1)).join(', ')}</span>
                     )}
                 </div>
+              </div>
 
                 {/* Mobile Accordion */}
                 <Accordion type="single" collapsible className="w-full lg:hidden">
