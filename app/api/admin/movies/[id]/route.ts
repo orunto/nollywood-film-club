@@ -24,7 +24,7 @@ export async function PUT(
         title: movieData.title,
         contentType: movieData.contentType,
         runtime: movieData.runtime,
-        releaseDate: movieData.releaseDate,
+        releaseDate: new Date(movieData.releaseDate),
         rating: movieData.rating,
         synopsis: movieData.synopsis,
         genre: movieData.genre,
