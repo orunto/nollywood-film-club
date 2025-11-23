@@ -14,6 +14,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { useRouter } from "next/navigation";
 
 interface MovieRatingSheetProps {
   movieId: string;
@@ -31,6 +32,7 @@ export default function MovieRatingSheet({
   const [rating, setRating] = useState(0);
   // const [hoverRating, setHoverRating] = useState(0);
   const [review, setReview] = useState("");
+  const router = useRouter();
 
   const handleRatingSubmit = async () => {
     try {
@@ -57,7 +59,16 @@ export default function MovieRatingSheet({
           onRatingSubmit();
         }
       } else {
+        if (response.status === 401) {
+          toast.error('You need to be logged in to rate this movie');
+          
+          setTimeout(() => {
+            router.push('/auth');
+          }, 3000);
+        } else {
         toast.error(result.error || 'Failed to submit rating');
+          
+        }
       }
     } catch (error) {
       console.error('Error submitting rating:', error);
