@@ -37,6 +37,12 @@ export default function MoviesManagement() {
     podcastLinks: '',
     isMovieOfTheWeek: false,
   });
+  
+  const formatDate = (date: string | Date | null): string => {
+    if (!date) return '';
+    const parsed = new Date(date);
+    return isNaN(parsed.getTime()) ? '' : parsed.toISOString().split('T')[0];
+  };
 
   useEffect(() => {
     fetchMovies();
@@ -62,7 +68,7 @@ export default function MoviesManagement() {
       const movieData = {
         ...formData,
         runtime: formData.runtime ? parseInt(formData.runtime) : null,
-        releaseDate: formData.releaseDate ? new Date(formData.releaseDate) : null,
+        releaseDate: formData.releaseDate ? formatDate(formData.releaseDate) : null,
         genre: formData.genre ? formData.genre.split(',').map(g => g.trim()) : [],
         podcastLinks: formData.podcastLinks ? formData.podcastLinks.split(',').map(p => p.trim()) : [],
       };
@@ -97,7 +103,7 @@ export default function MoviesManagement() {
       title: movie.title,
       contentType: movie.contentType,
       runtime: movie.runtime?.toString() || '',
-      releaseDate: movie.releaseDate ? new Date(movie.releaseDate).toISOString().split('T')[0] : '',
+      releaseDate: movie.releaseDate ? formatDate(movie.releaseDate) : '',
       rating: movie.rating || '',
       synopsis: movie.synopsis || '',
       genre: movie.genre?.join(', ') || '',

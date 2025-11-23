@@ -162,7 +162,7 @@ export default function MovieHero({ movie, title, showRating = true }: MovieHero
                 <div className="w-full pt-2 grid items-center gap-2">
                     {movie.streamingUrl && (
                         <Link target="_blank" href={movie.streamingUrl}>
-                            <Button variant={'secondary'} className="w-full bg-prime-video text-white">
+                            <Button variant={'secondary'} className={`w-full ${movie.streamingPlatform === 'prime_video' && 'bg-prime-video'} ${movie.streamingPlatform === 'netflix' && 'bg-netflix'} text-white`}>
                                 <PlayIcon className="w-4 h-4" />
                                 Stream on {movie.streamingPlatform === 'prime_video' ? 'Prime Video' : movie.otherPlatform || 'Platform'}
                             </Button>

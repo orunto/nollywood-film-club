@@ -5,7 +5,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --color-prime-video: oklch(0.5324 0.1933 257.83);
+    --color-prime-video: oklch(0.5324 0.1933 257.83);
+  --color-netflix: oklch(0.5814 0.2349 27.99);
 }
 @theme inline {
   --color-background: var(--background);

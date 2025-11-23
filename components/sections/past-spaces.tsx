@@ -1,4 +1,4 @@
-
+'use client'
 import { Card, CardTitle, CardHeader, CardContent, CardDescription, CardFooter } from "../ui/card";
 import Link from "next/link";
 import { CldImage } from "next-cloudinary";
@@ -21,7 +21,7 @@ export default function PastSpaces({ pastSpaces }: PastSpacesProps) {
         {pastSpaces && pastSpaces.length > 0 ? (
             <div className="grid lg:grid-cols-4 md:grid-cols-2 lg:py-10 py-6 gap-4">
                 {pastSpaces.map((space, index) => (
-                    <Link key={index} href={`#spaces/${space.id}`}>
+                  <Link key={index} href={`movies/${space.id}`}>
                         <Card className="rounded-sm shadow-none p-0 gap-8">
                             <CardHeader className="px-4 bg-primary/50 max-h-30 overflow-y-visible relative z-10 overflow-visible rounded-t-sm">
                                 <CldImage
@@ -50,7 +50,7 @@ export default function PastSpaces({ pastSpaces }: PastSpacesProps) {
 
                             <CardFooter className="p-4 flex justify-between border-t items-start">
                                 <span className="text-black/40 text-sm">NFC SCORE</span>
-                                <Badge className="text-xl font-medium bg-green-600 p-4">8.5</Badge>
+                                <Badge className={`text-xl font-medium bg-green-600 h-15 w-15 p-4 ${Number(space.userRating) > 7 && ('bg-green-900')} ${(Number(space.userRating) > 4 && Number(space.userRating) < 7) && ('bg-amber-500')} ${Number(space.userRating) < 4 && ('bg-red-700')}`}>{space.userRating}</Badge>
                             </CardFooter>
                         </Card>
                     </Link>
