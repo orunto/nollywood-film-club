@@ -47,3 +47,47 @@ export function getAverageRatingLabel(average: number): string {
   if (average >= 3) return "Mixed reviews";
   return "Generally disliked";
 }
+
+// Image naming utilities
+/**
+ * Generates a public image name for Cloudinary based on movie title and release year.
+ * Converts to snake_case format.
+ * 
+ * @param title - The movie/content title
+ * @param releaseDate - The release date (Date, string, or null)
+ * @returns A snake_case formatted string suitable for use as a public image name
+ * 
+ * @example
+ * generateImagePublicName("Everybody Loves Jenifa", "2024-01-15")
+ * // Returns: "everybody_loves_jenifa_2024"
+ * 
+ * @example
+ * generateImagePublicName("The King's Man", new Date("2024-12-25"))
+ * // Returns: "the_kings_man_2024"
+ */
+export function generateImagePublicName(title: string, releaseDate?: Date | string | null): string {
+  if (!title) return "";
+  
+  // Extract year from releaseDate
+  let year = "";
+  if (releaseDate) {
+    const date = typeof releaseDate === "string" ? new Date(releaseDate) : releaseDate;
+    if (!isNaN(date.getTime())) {
+      year = date.getFullYear().toString();
+    }
+  }
+  
+  // Convert title to snake_case
+  // 1. Convert to lowercase
+  // 2. Replace special characters and spaces with underscores
+  // 3. Remove consecutive underscores
+  // 4. Remove leading/trailing underscores
+  const snakeCaseTitle = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_") // Replace non-alphanumeric with underscores
+    .replace(/_+/g, "_") // Collapse consecutive underscores
+    .replace(/^_|_$/g, ""); // Remove leading/trailing underscores
+  
+  // Combine title and year
+  return year ? `${snakeCaseTitle}_${year}` : snakeCaseTitle;
+}
