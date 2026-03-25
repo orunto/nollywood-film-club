@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 
 export async function GET() {
   try {
-    const pastSpaces = await db
+    const moviesAndTVSeries = await db
       .select()
       .from(content)
       .where(eq(content.isMovieOfTheWeek, false))
@@ -14,10 +14,10 @@ export async function GET() {
 
     return NextResponse.json({ 
       success: true, 
-      data: pastSpaces 
+      data: moviesAndTVSeries 
     });
   } catch (error) {
-    console.error('Error fetching past spaces:', error);
+    console.error('Error fetching movies and tv series:', error);
     return NextResponse.json({ 
       success: false, 
       error: error instanceof Error ? error.message : 'Unknown error' 

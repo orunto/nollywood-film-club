@@ -46,10 +46,10 @@ async function fetchMovieOfTheWeek(): Promise<Content | null> {
   return data.success ? data.data : null;
 }
 
-async function fetchPastSpaces(): Promise<Content[]> {
-  const response = await fetch('/api/past-spaces');
+async function fetchMoviesAndTVSeries(): Promise<Content[]> {
+  const response = await fetch('/api/movies-and-tv-series');
   if (!response.ok) {
-    throw new Error('Failed to fetch past spaces');
+    throw new Error('Failed to fetch movies and tv series');
   }
   const data = await response.json();
   return data.success ? data.data : [];
@@ -73,10 +73,10 @@ export function useMovieOfTheWeek() {
   });
 }
 
-export function usePastSpaces() {
+export function useMoviesAndTVSeries() {
   return useQuery({
-    queryKey: ['past-spaces'],
-    queryFn: fetchPastSpaces,
+    queryKey: ['movies-and-tv-series'],
+    queryFn: fetchMoviesAndTVSeries,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }

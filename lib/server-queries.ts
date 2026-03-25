@@ -94,9 +94,9 @@ export async function getMovieOfTheWeek(): Promise<Content | null> {
   }
 }
 
-export async function getPastSpaces(): Promise<Content[]> {
+export async function getMoviesAndTVSeries(): Promise<Content[]> {
   try {
-    const pastSpaces = await db
+    const moviesAndTVSeries = await db
       .select({
         id: content.id,
         title: content.title,
@@ -125,7 +125,7 @@ export async function getPastSpaces(): Promise<Content[]> {
       .orderBy(content.createdAt)
       .limit(4);
 
-    return pastSpaces.map((item) => ({
+    return moviesAndTVSeries.map((item) => ({
       ...item,
       id: item.id || "",
       title: item.title || "",
@@ -137,7 +137,7 @@ export async function getPastSpaces(): Promise<Content[]> {
       userRating: item.userRating ? parseFloat(item.userRating) : null,
     }));
   } catch (error) {
-    console.error("Error fetching past spaces:", error);
+    console.error("Error fetching movies and tv series:", error);
     return [];
   }
 }
@@ -171,26 +171,55 @@ export async function getReviews(): Promise<Review[]> {
   }
 }
 
+export async function getDiscussions(): Promise<Content[]> {
+  try {
+    const discussions = await db
+      .select()
+      .from(content)
+      .where(eq(content.contentType, "movie")) // Adjust if there's a specific flag, but for now filtering by those that have spaceUrl or podcastLinks
+      .orderBy(content.createdAt)
+      .limit(4);
+
+    return discussions.map((item) => ({
+      ...item,
+      id: item.id || "",
+      title: item.title || "",
+      contentType: item.contentType || "movie",
+      releaseDate: item.releaseDate?.toISOString() || null,
+      createdAt: item.createdAt?.toISOString() || "",
+      updatedAt: item.updatedAt?.toISOString() || "",
+      isMovieOfTheWeek: item.isMovieOfTheWeek ?? false,
+      userRating: null, // Average rating not needed here for now
+    }));
+  } catch (error) {
+    console.error("Error fetching discussions:", error);
+    return [];
+  }
+}
+
 // Combined function to fetch all homepage data
 export async function getHomepageData() {
   try {
-    const [movieOfTheWeek, pastSpaces, reviews] = await Promise.all([
+    const [movieOfTheWeek, moviesAndTVSeries, reviews, discussions] = await Promise.all([
       getMovieOfTheWeek(),
-      getPastSpaces(),
+      getMoviesAndTVSeries(),
       getReviews(),
+      getDiscussions(),
     ]);
 
     return {
       movieOfTheWeek,
-      pastSpaces,
+      moviesAndTVSeries,
       reviews,
+      discussions,
     };
   } catch (error) {
     console.error("Error fetching homepage data:", error);
     return {
       movieOfTheWeek: null,
-      pastSpaces: [],
+      moviesAndTVSeries: [],
       reviews: [],
+      discussions: [],
     };
   }
 }

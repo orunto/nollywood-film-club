@@ -5,28 +5,28 @@ import { CldImage } from "next-cloudinary";
 import { Badge } from "../ui/badge";
 import { Content } from "@/lib/server-queries";
 
-interface PastSpacesProps {
-    pastSpaces: Content[];
+interface MoviesAndTVSeriesProps {
+    moviesAndTVSeries: Content[];
 }
 
-export default function PastSpaces({ pastSpaces }: PastSpacesProps) {
+export default function MoviesAndTVSeries({ moviesAndTVSeries }: MoviesAndTVSeriesProps) {
 
-    return <section id="spaces" className="w-full">
+    return <section id="movies-and-tv-series" className="w-full">
         <div className="flex justify-between items-center w-full border-b border-black">
-            <h1 className="pb-3 border-black text-2xl font-semibold">Past Spaces</h1>
+            <h1 className="pb-3 border-black text-2xl font-semibold">Movies and TV Series</h1>
 
-            <Link href="#spaces" className="underline text-sm hover:">View All</Link>
+            <Link href="#movies-and-tv-series" className="underline text-sm hover:">View All</Link>
         </div>
 
-        {pastSpaces && pastSpaces.length > 0 ? (
+        {moviesAndTVSeries && moviesAndTVSeries.length > 0 ? (
             <div className="grid lg:grid-cols-4 md:grid-cols-2 lg:py-10 py-6 gap-4">
-                {pastSpaces.map((space, index) => (
-                  <Link key={index} href={`movies/${space.id}`}>
+                {moviesAndTVSeries.map((item, index) => (
+                  <Link key={index} href={`movies/${item.id}`}>
                         <Card className="rounded-sm h-full shadow-none p-0 2xl:gap-14 gap-8">
                             <CardHeader className="px-4 bg-primary/50 max-h-30 overflow-y-visible relative z-10 overflow-visible rounded-t-sm">
                                 <CldImage
-                                    src={space.posterImage || "nollywood-film-club/elj"}
-                                    alt={`${space.title} Poster`}
+                                    src={item.posterImage || "nollywood-film-club/elj"}
+                                    alt={`${item.title} Poster`}
                                     width={400}
                                     height={400}
                                     className="w-full aspect-video object-cover rounded-sm translate-y-4 relative z-10"
@@ -39,18 +39,18 @@ export default function PastSpaces({ pastSpaces }: PastSpacesProps) {
 
                             <CardContent className="p-4 relative flex flex-col gap-2 lg:mt-0 mt-8">
                                 <CardTitle className="lg:text-xl font-semibold flex items-center gap-2">
-                                    {space.title}
-                                    {space.rating && <Badge className="text-xs text-black bg-transparent border border-black">{space.rating}</Badge>}
+                                    {item.title}
+                                    {item.rating && <Badge className="text-xs text-black bg-transparent border border-black">{item.rating}</Badge>}
                                 </CardTitle>
 
                                 <CardDescription className="text-sm font-light">
-                                    {space.contentType === 'movie' ? 'Movie' : 'TV Show'}
+                                    {item.contentType === 'movie' ? 'Movie' : 'TV Show'}
                                 </CardDescription>
                             </CardContent>
 
                             <CardFooter className="p-4 flex justify-between border-t items-start">
                                 <span className="text-black/40 text-sm">NFC SCORE</span>
-                                <Badge className={`text-xl font-medium bg-green-600 h-15 w-15 p-4 ${Number(space.userRating) > 7 && ('bg-green-900')} ${(Number(space.userRating) > 4 && Number(space.userRating) < 7) && ('bg-amber-500')} ${Number(space.userRating) < 4 && ('bg-red-700')}`}>{space.userRating}</Badge>
+                                <Badge className={`text-xl font-medium bg-green-600 h-15 w-15 p-4 ${Number(item.userRating) > 7 && ('bg-green-900')} ${(Number(item.userRating) > 4 && Number(item.userRating) < 7) && ('bg-amber-500')} ${Number(item.userRating) < 4 && ('bg-red-700')}`}>{item.userRating}</Badge>
                             </CardFooter>
                         </Card>
                     </Link>
@@ -82,7 +82,7 @@ export default function PastSpaces({ pastSpaces }: PastSpacesProps) {
                 <div className="text-center mt-8">
                     <h2 className="text-xl font-semibold mb-2">Coming Soon...</h2>
                     <p className="text-gray-600 text-sm mb-4">
-                        Past spaces will appear here once we update them. In the meantime you can check out the recordings:
+                        Movies and TV Series will appear here once we update them. In the meantime you can check out the recordings:
                     </p>
                      <div className="flex justify-center">
                          <Link
