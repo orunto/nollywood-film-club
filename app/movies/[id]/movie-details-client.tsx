@@ -7,7 +7,6 @@ import { ArrowLeft } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { useEffect } from "react";
 
 interface MovieDetailsClientProps {
   movie: Content | null;
@@ -19,20 +18,6 @@ export default function MovieDetailsClient({
   userRatings,
 }: MovieDetailsClientProps) {
   const router = useRouter();
-
-  useEffect(() => {
-    // Small delay to ensure the browser has finished initial rendering
-    const timer = setTimeout(() => {
-      if (window.location.hash) {
-        const id = window.location.hash.substring(1);
-        const element = document.getElementById(id);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }
-    }, 100);
-    return () => clearTimeout(timer);
-  }, [userRatings]);
 
   if (!movie) {
     return (
