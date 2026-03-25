@@ -7,6 +7,8 @@ import { ArrowLeft } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useEffect } from "react";
+
 interface MovieDetailsClientProps {
   movie: Content | null;
   userRatings: UserRating[];
@@ -17,6 +19,21 @@ export default function MovieDetailsClient({
   userRatings,
 }: MovieDetailsClientProps) {
   const router = useRouter();
+
+  useEffect(() => {
+    // Small delay to ensure the browser has finished initial rendering
+    const timer = setTimeout(() => {
+      if (window.location.hash) {
+        const id = window.location.hash.substring(1);
+        const element = document.getElementById(id);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [userRatings]);
+
   if (!movie) {
     return (
       <div className="min-h-screen w-full flex flex-col lg:px-10 lg:py-8 py-10 px-6 gap-15">
@@ -56,7 +73,7 @@ export default function MovieDetailsClient({
           ) : (
             <div className="grid gap-4 lg:grid-cols-2">
               {userRatings.map((userRating) => (
-                <Card className="shadow-none rounded-sm gap-2 bg-gray-50" key={userRating.id}>
+                <Card className="shadow-none rounded-sm gap-2 bg-gray-50 scroll-mt-20" key={userRating.id} id={`review-${userRating.id}`}>
                   <CardHeader>
                     <p className="text-gray-500 mb-4 text-xs">
                       {new Date(
