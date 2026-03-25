@@ -22,7 +22,7 @@ export default function PastSpaces({ pastSpaces }: PastSpacesProps) {
             <div className="grid lg:grid-cols-4 md:grid-cols-2 lg:py-10 py-6 gap-4">
                 {pastSpaces.map((space, index) => (
                   <Link key={index} href={`movies/${space.id}`}>
-                        <Card className="rounded-sm shadow-none p-0 gap-8">
+                        <Card className="rounded-sm h-full shadow-none p-0 2xl:gap-14 gap-8">
                             <CardHeader className="px-4 bg-primary/50 max-h-30 overflow-y-visible relative z-10 overflow-visible rounded-t-sm">
                                 <CldImage
                                     src={space.posterImage || "nollywood-film-club/elj"}
