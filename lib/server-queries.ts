@@ -140,8 +140,11 @@ export async function getMoviesAndTVSeries(): Promise<Content[]> {
       .leftJoin(userRatings, eq(content.id, userRatings.contentId))
       .where(eq(content.isMovieOfTheWeek, false))
       .groupBy(content.id)
-      .orderBy(content.createdAt)
-      .limit(4);
+      .orderBy(
+        sql`${content.catalogNumber} DESC NULLS LAST`,
+        desc(content.createdAt),
+      )
+      .limit(20);
 
     return moviesAndTVSeries.map((item) => ({
       ...item,

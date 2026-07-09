@@ -53,6 +53,7 @@ export const content = pgTable("content", {
   streamingPlatform: streamingPlatformEnum("streaming_platform"), // Platform enum
   otherPlatform: text("other_platform"), // Name if platform is 'other'
   isMovieOfTheWeek: boolean("is_movie_of_the_week").default(false),
+  catalogNumber: integer("catalog_number"), // Order content was added, like discussions.episode_number
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

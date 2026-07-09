@@ -1,58 +1,76 @@
 'use client'
-import { Card, CardTitle, CardHeader, CardContent, CardDescription, CardFooter } from "../ui/card";
 import Link from "next/link";
-import { CldImage } from "next-cloudinary";
-import { Badge } from "../ui/badge";
 import { Content } from "@/lib/server-queries";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useCardScroller } from "@/lib/hooks/use-card-scroller";
+import ContentCard from "../custom/content-card";
 
 interface MoviesAndTVSeriesProps {
     moviesAndTVSeries: Content[];
 }
 
 export default function MoviesAndTVSeries({ moviesAndTVSeries }: MoviesAndTVSeriesProps) {
+    const {
+        scrollerRef,
+        canScrollLeft,
+        canScrollRight,
+        updateScrollState,
+        scrollByPage,
+    } = useCardScroller();
 
     return <section id="movies-and-tv-series" className="w-full">
-        <div className="flex justify-between items-center w-full border-b border-black">
-            <h1 className="pb-3 border-black text-2xl font-semibold">Movies and TV Series</h1>
+        <div className="flex items-end justify-between pb-3 border-b border-black">
+            <h1 className="text-2xl font-semibold">Movies and TV Series</h1>
 
-            <Link href="#movies-and-tv-series" className="underline text-sm hover:">View All</Link>
+            <div className="flex items-center gap-4">
+                <Link href="#movies-and-tv-series" className="underline text-sm">View All</Link>
+                {moviesAndTVSeries && moviesAndTVSeries.length > 0 && (
+                    <div className="flex items-center gap-2">
+                        <button
+                            aria-label="Scroll movies and TV series back"
+                            onClick={() => scrollByPage(-1)}
+                            disabled={!canScrollLeft}
+                            className="w-9 h-9 flex items-center justify-center rounded-full border border-black hover:bg-black hover:text-white transition-colors cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
+                        >
+                            <ChevronLeft className="w-4 h-4" />
+                        </button>
+                        <button
+                            aria-label="Scroll movies and TV series forward"
+                            onClick={() => scrollByPage(1)}
+                            disabled={!canScrollRight}
+                            className="w-9 h-9 flex items-center justify-center rounded-full border border-black hover:bg-black hover:text-white transition-colors cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
+                        >
+                            <ChevronRight className="w-4 h-4" />
+                        </button>
+                    </div>
+                )}
+            </div>
         </div>
 
         {moviesAndTVSeries && moviesAndTVSeries.length > 0 ? (
-            <div className="grid lg:grid-cols-4 md:grid-cols-2 lg:py-10 py-6 gap-4">
-                {moviesAndTVSeries.map((item, index) => (
-                  <Link key={index} href={`movies/${item.id}`}>
-                        <Card className="rounded-sm h-full shadow-none p-0 2xl:gap-14 gap-8">
-                            <CardHeader className="px-4 bg-primary/50 max-h-30 overflow-y-visible relative z-10 overflow-visible rounded-t-sm">
-                                <CldImage
-                                    src={item.posterImage || "nollywood-film-club/elj"}
-                                    alt={`${item.title} Poster`}
-                                    width={400}
-                                    height={400}
-                                    className="w-full aspect-video object-cover rounded-sm translate-y-4 relative z-10"
-                                    sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                                    loading="lazy"
-                                />
-                            </CardHeader>
+            <div className="relative">
+                <div
+                    ref={scrollerRef}
+                    onScroll={updateScrollState}
+                    className="flex lg:py-10 py-6 lg:gap-8 gap-6 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                >
+                    {moviesAndTVSeries.map((item, index) => (
+                        <ContentCard
+                            key={index}
+                            item={item}
+                            className="flex-none lg:w-[calc((100%-160px)/4.4)] w-[calc((100%-48px)/1.4)]"
+                        />
+                    ))}
+                </div>
 
-                            <CardContent className="p-4 relative flex flex-col gap-2 lg:mt-0 mt-8">
-                                <CardTitle className="lg:text-xl font-semibold flex items-center gap-2">
-                                    {item.title}
-                                    {item.rating && <Badge className="text-xs text-black bg-transparent border border-black">{item.rating}</Badge>}
-                                </CardTitle>
-
-                                <CardDescription className="text-sm font-light">
-                                    {item.contentType === 'movie' ? 'Movie' : 'TV Show'}
-                                </CardDescription>
-                            </CardContent>
-
-                            <CardFooter className="p-4 flex justify-between border-t items-start">
-                                <span className="text-black/40 text-sm">NFC SCORE</span>
-                                <Badge className={`text-xl font-medium bg-green-600 h-15 w-15 p-4 ${Number(item.userRating) > 7 && ('bg-green-900')} ${(Number(item.userRating) > 4 && Number(item.userRating) < 7) && ('bg-amber-500')} ${Number(item.userRating) < 4 && ('bg-red-700')}`}>{item.userRating}</Badge>
-                            </CardFooter>
-                        </Card>
-                    </Link>
-                ))}
+                <div
+                    aria-hidden
+                    className={`pointer-events-none absolute inset-y-0 left-0 z-10 w-10 backdrop-blur-[2px] transition-opacity duration-300 [mask-image:linear-gradient(to_right,black,transparent)] ${canScrollLeft ? "opacity-100" : "opacity-0"}`}
+                />
+                <div
+                    aria-hidden
+                    className={`pointer-events-none absolute inset-y-0 right-0 z-10 w-10 backdrop-blur-[2px] transition-opacity duration-300 [mask-image:linear-gradient(to_left,black,transparent)] ${canScrollRight ? "opacity-100" : "opacity-0"}`}
+                />
             </div>
         ) : (
             <div className="lg:py-10 py-6">

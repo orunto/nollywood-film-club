@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import { Card, CardTitle, CardHeader, CardContent, CardDescription, CardFooter } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Discussion } from "@/lib/server-queries";
+import { useCardScroller } from "@/lib/hooks/use-card-scroller";
 import { Calendar, Mic2, Podcast, Youtube, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
 import {
     AlertDialog,
@@ -21,60 +21,13 @@ interface DiscussionsProps {
 }
 
 export default function Discussions({ discussions }: DiscussionsProps) {
-    const scrollerRef = useRef<HTMLDivElement>(null);
-    const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
-    const [canScrollLeft, setCanScrollLeft] = useState(false);
-    const [canScrollRight, setCanScrollRight] = useState(true);
-    // Cards partially cut off by the scroller's edges get blurred
-    const [fullyVisible, setFullyVisible] = useState<Record<number, boolean>>({});
-
-    useEffect(() => {
-        const scroller = scrollerRef.current;
-        if (!scroller) return;
-        const observer = new IntersectionObserver(
-            (entries) => {
-                setFullyVisible((prev) => {
-                    const next = { ...prev };
-                    for (const entry of entries) {
-                        const idx = Number((entry.target as HTMLElement).dataset.index);
-                        next[idx] = entry.intersectionRatio >= 0.9;
-                    }
-                    return next;
-                });
-            },
-            { root: scroller, threshold: [0.9] },
-        );
-        cardRefs.current.forEach((card) => card && observer.observe(card));
-        return () => observer.disconnect();
-    }, [discussions.length]);
-
-    const updateScrollState = () => {
-        const el = scrollerRef.current;
-        if (!el) return;
-        setCanScrollLeft(el.scrollLeft > 0);
-        setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 1);
-    };
-
-    // Page one full set of cards at a time, landing so the window of fully
-    // visible cards is centered with a cut-off card peeking on each side
-    // (except at the very start/end, where the browser clamps the scroll).
-    // Free scrolling (wheel/touch) is untouched — no CSS snapping.
-    const scrollByPage = (direction: -1 | 1) => {
-        const el = scrollerRef.current;
-        if (!el) return;
-        const cards = Array.from(el.children) as HTMLElement[];
-        if (cards.length < 2) return;
-        const step = cards[1].offsetLeft - cards[0].offsetLeft; // card width + gap
-        const gap = step - cards[0].offsetWidth;
-        const perPage = Math.max(1, Math.floor((el.clientWidth + gap) / step));
-        const peek = (el.clientWidth - perPage * step + gap) / 2;
-        const firstVisible = Math.round((el.scrollLeft + peek) / step);
-        const targetFirst = firstVisible + direction * perPage;
-        el.scrollTo({
-            left: targetFirst <= 0 ? 0 : targetFirst * step - peek,
-            behavior: "smooth",
-        });
-    };
+    const {
+        scrollerRef,
+        canScrollLeft,
+        canScrollRight,
+        updateScrollState,
+        scrollByPage,
+    } = useCardScroller();
 
     return <section id="discussions" className="w-full">
         <div className="flex items-end justify-between pb-3 border-b border-black">
@@ -102,17 +55,16 @@ export default function Discussions({ discussions }: DiscussionsProps) {
         </div>
 
         {discussions && discussions.length > 0 ? (
-            <div
-                ref={scrollerRef}
-                onScroll={updateScrollState}
-                className="flex lg:py-10 py-6 lg:gap-8 gap-6 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            >
+            <div className="relative">
+                <div
+                    ref={scrollerRef}
+                    onScroll={updateScrollState}
+                    className="flex lg:py-10 py-6 lg:gap-8 gap-6 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                >
                 {discussions.map((discussion, index) => (
                     <Card
                         key={index}
-                        ref={(node: HTMLDivElement | null) => { cardRefs.current[index] = node; }}
-                        data-index={index}
-                        className={`flex-none lg:w-[calc((100%-160px)/4.4)] w-[calc((100%-48px)/1.4)] rounded-sm shadow-none p-6 border border-black/10 flex flex-col justify-between ${fullyVisible[index] === false ? "blur-[3px] opacity-60" : ""}`}
+                        className="flex-none lg:w-[calc((100%-160px)/4.4)] w-[calc((100%-48px)/1.4)] rounded-sm shadow-none p-6 border border-black/10 flex flex-col justify-between"
                     >
                         <div>
                             <CardHeader className="p-0 mb-4">
@@ -210,6 +162,16 @@ export default function Discussions({ discussions }: DiscussionsProps) {
                         </CardFooter>
                     </Card>
                 ))}
+                </div>
+
+                <div
+                    aria-hidden
+                    className={`pointer-events-none absolute inset-y-0 left-0 z-10 w-10 backdrop-blur-[2px] transition-opacity duration-300 [mask-image:linear-gradient(to_right,black,transparent)] ${canScrollLeft ? "opacity-100" : "opacity-0"}`}
+                />
+                <div
+                    aria-hidden
+                    className={`pointer-events-none absolute inset-y-0 right-0 z-10 w-10 backdrop-blur-[2px] transition-opacity duration-300 [mask-image:linear-gradient(to_left,black,transparent)] ${canScrollRight ? "opacity-100" : "opacity-0"}`}
+                />
             </div>
         ) : (
             <div className="lg:py-10 py-6 text-center">
