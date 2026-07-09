@@ -14,9 +14,10 @@ interface MovieHeroProps {
     movie: Content | null;
     title?: string; // Optional title, defaults to "Movie of the Week" or movie title based on context
     showRating?: boolean; // Whether to show the rating functionality
+    spaceUrl?: string | null; // Twitter/X Space URL from the movie's discussion
 }
 
-export default function MovieHero({ movie, title, showRating = true }: MovieHeroProps) {
+export default function MovieHero({ movie, title, showRating = true, spaceUrl }: MovieHeroProps) {
     const router = useRouter();
     const [isPlaying, setIsPlaying] = useState(false);
 
@@ -77,8 +78,6 @@ export default function MovieHero({ movie, title, showRating = true }: MovieHero
                                 width={500}
                                 height={500}
                                 className="w-full lg:h-full h-70 object-cover"
-                                quality="auto"
-                                format="auto"
                                 sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                                 loading="lazy"
                             />
@@ -168,8 +167,8 @@ export default function MovieHero({ movie, title, showRating = true }: MovieHero
                             </Button>
                         </Link>
                     )}
-                    {movie.spaceUrl && (
-                        <Link target="_blank" href={movie.spaceUrl}>
+                    {spaceUrl && (
+                        <Link target="_blank" href={spaceUrl}>
                             <Button variant={'outline'} className="w-full bg-black text-white">
                                 <Mic className="w-4 h-4" />
                                 Join the Space

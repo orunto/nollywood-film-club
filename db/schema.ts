@@ -52,9 +52,24 @@ export const content = pgTable("content", {
   streamingUrl: text("streaming_url"), // Direct streaming URL
   streamingPlatform: streamingPlatformEnum("streaming_platform"), // Platform enum
   otherPlatform: text("other_platform"), // Name if platform is 'other'
-  spaceUrl: text("space_url"), // Twitter/X Space URL
-  podcastLinks: text("podcast_links").array(), // Array of podcast URLs
   isMovieOfTheWeek: boolean("is_movie_of_the_week").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Discussion spaces table — a discussion may be about a movie/TV show
+// (contentId set) or a standalone topic (contentId null)
+export const discussions = pgTable("discussions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: text("title").notNull(),
+  description: text("description"),
+  contentId: uuid("content_id").references(() => content.id, {
+    onDelete: "set null",
+  }),
+  spaceUrl: text("space_url"), // Twitter/X Space URL
+  podcastLinks: text("podcast_links").array(), // Array of podcast URLs (Spotify, YouTube Music, etc.)
+  episodeNumber: integer("episode_number"), // Podcast episode number (0 = intro); has gaps for private/skipped episodes
+  discussionDate: timestamp("discussion_date"), // When the space was/will be held
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -106,6 +121,14 @@ export const blogPosts = pgTable("blog_posts", {
 export const contentRelations = relations(content, ({ many }) => ({
   ratings: many(userRatings),
   reviews: many(reviews),
+  discussions: many(discussions),
+}));
+
+export const discussionRelations = relations(discussions, ({ one }) => ({
+  content: one(content, {
+    fields: [discussions.contentId],
+    references: [content.id],
+  }),
 }));
 
 export const userRatingRelations = relations(userRatings, ({ one }) => ({

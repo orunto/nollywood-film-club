@@ -10,11 +10,13 @@ import { Button } from "@/components/ui/button";
 interface MovieDetailsClientProps {
   movie: Content | null;
   userRatings: UserRating[];
+  spaceUrl?: string | null;
 }
 
 export default function MovieDetailsClient({
   movie,
   userRatings,
+  spaceUrl,
 }: MovieDetailsClientProps) {
   const router = useRouter();
   if (!movie) {
@@ -39,7 +41,7 @@ export default function MovieDetailsClient({
           Go Back
       </Button>
       {/* Movie Header Section (using MovieHero) */}
-      <MovieHero movie={movie} showRating={false} />
+      <MovieHero movie={movie} showRating={false} spaceUrl={spaceUrl} />
 
       {/* User Ratings/Comments Section */}
       <section className="w-full mt-10">

@@ -3,8 +3,9 @@ import { Content } from "@/lib/server-queries";
 
 interface MovieOfTheWeekProps {
     movie: Content | null;
+    spaceUrl?: string | null;
 }
 
-export default function MovieOfTheWeek({ movie }: MovieOfTheWeekProps) {
-    return <MovieHero movie={movie} title="Movie of the Week" showRating={true} />;
+export default function MovieOfTheWeek({ movie, spaceUrl }: MovieOfTheWeekProps) {
+    return <MovieHero movie={movie} title="Movie of the Week" showRating={true} spaceUrl={spaceUrl} />;
 }

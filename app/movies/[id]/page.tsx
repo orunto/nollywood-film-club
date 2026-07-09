@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { getContentById, getUserRatingsForContent } from '@/lib/server-queries';
+import { getContentById, getDiscussionForContent, getUserRatingsForContent } from '@/lib/server-queries';
 import MovieDetailsClient from './movie-details-client';
 
 interface MovieDetailsPageProps {
@@ -14,13 +14,16 @@ export default async function MovieDetailsPage({ params }: MovieDetailsPageProps
   // Fetch movie details
   const movie = await getContentById(id);
   
-  // Fetch user ratings for this movie
-  const userRatings = await getUserRatingsForContent(id);
-  
+  // Fetch user ratings and the discussion space for this movie
+  const [userRatings, discussion] = await Promise.all([
+    getUserRatingsForContent(id),
+    getDiscussionForContent(id),
+  ]);
+
   // If movie doesn't exist, show not found page
   if (!movie) {
     notFound();
   }
-  
-  return <MovieDetailsClient movie={movie} userRatings={userRatings} />;
+
+  return <MovieDetailsClient movie={movie} userRatings={userRatings} spaceUrl={discussion?.spaceUrl} />;
 }

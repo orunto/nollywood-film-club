@@ -1,6 +1,6 @@
 import { db } from "@/db/client";
-import { content, reviews, userRatings } from "@/db/schema";
-import { eq, avg } from "drizzle-orm";
+import { content, discussions, reviews, userRatings } from "@/db/schema";
+import { eq, avg, desc, sql } from "drizzle-orm";
 import { stackServerApp } from "@/stack";
 
 // Types
@@ -18,12 +18,32 @@ export interface Content {
   streamingUrl: string | null;
   streamingPlatform: string | null;
   otherPlatform: string | null;
-  spaceUrl: string | null;
-  podcastLinks: string[] | null;
   isMovieOfTheWeek: boolean;
   createdAt: string;
   updatedAt: string;
   userRating: number | null;
+}
+
+export interface Discussion {
+  id: string;
+  title: string;
+  description: string | null;
+  contentId: string | null;
+  spaceUrl: string | null;
+  podcastLinks: string[] | null;
+  episodeNumber: number | null;
+  discussionDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+  // Joined info about the related movie/TV show, null for standalone discussions
+  content: {
+    id: string;
+    title: string;
+    contentType: "movie" | "tv_show";
+    releaseDate: string | null;
+    synopsis: string | null;
+    runtime: number | null;
+  } | null;
 }
 
 export interface Review {
@@ -111,8 +131,6 @@ export async function getMoviesAndTVSeries(): Promise<Content[]> {
         streamingUrl: content.streamingUrl,
         streamingPlatform: content.streamingPlatform,
         otherPlatform: content.otherPlatform,
-        spaceUrl: content.spaceUrl,
-        podcastLinks: content.podcastLinks,
         isMovieOfTheWeek: content.isMovieOfTheWeek,
         createdAt: content.createdAt,
         updatedAt: content.updatedAt,
@@ -171,29 +189,71 @@ export async function getReviews(): Promise<Review[]> {
   }
 }
 
-export async function getDiscussions(): Promise<Content[]> {
-  try {
-    const discussions = await db
-      .select()
-      .from(content)
-      .where(eq(content.contentType, "movie")) // Adjust if there's a specific flag, but for now filtering by those that have spaceUrl or podcastLinks
-      .orderBy(content.createdAt)
-      .limit(4);
+function mapDiscussion(
+  item: typeof discussions.$inferSelect,
+  related: typeof content.$inferSelect | null,
+): Discussion {
+  return {
+    id: item.id || "",
+    title: item.title || "",
+    description: item.description,
+    contentId: item.contentId,
+    spaceUrl: item.spaceUrl,
+    podcastLinks: item.podcastLinks,
+    episodeNumber: item.episodeNumber,
+    discussionDate: item.discussionDate?.toISOString() || null,
+    createdAt: item.createdAt?.toISOString() || "",
+    updatedAt: item.updatedAt?.toISOString() || "",
+    content: related
+      ? {
+          id: related.id,
+          title: related.title,
+          contentType: related.contentType || "movie",
+          releaseDate: related.releaseDate?.toISOString() || null,
+          synopsis: related.synopsis,
+          runtime: related.runtime,
+        }
+      : null,
+  };
+}
 
-    return discussions.map((item) => ({
-      ...item,
-      id: item.id || "",
-      title: item.title || "",
-      contentType: item.contentType || "movie",
-      releaseDate: item.releaseDate?.toISOString() || null,
-      createdAt: item.createdAt?.toISOString() || "",
-      updatedAt: item.updatedAt?.toISOString() || "",
-      isMovieOfTheWeek: item.isMovieOfTheWeek ?? false,
-      userRating: null, // Average rating not needed here for now
-    }));
+export async function getDiscussions(): Promise<Discussion[]> {
+  try {
+    const rows = await db
+      .select()
+      .from(discussions)
+      .leftJoin(content, eq(discussions.contentId, content.id))
+      .orderBy(
+        sql`${discussions.episodeNumber} DESC NULLS LAST`,
+        sql`${discussions.discussionDate} DESC NULLS LAST`,
+        desc(discussions.createdAt),
+      )
+      .limit(20);
+
+    return rows.map((row) => mapDiscussion(row.discussions, row.content));
   } catch (error) {
     console.error("Error fetching discussions:", error);
     return [];
+  }
+}
+
+export async function getDiscussionForContent(
+  contentId: string,
+): Promise<Discussion | null> {
+  try {
+    const rows = await db
+      .select()
+      .from(discussions)
+      .leftJoin(content, eq(discussions.contentId, content.id))
+      .where(eq(discussions.contentId, contentId))
+      .orderBy(desc(discussions.createdAt))
+      .limit(1);
+
+    const row = rows[0];
+    return row ? mapDiscussion(row.discussions, row.content) : null;
+  } catch (error) {
+    console.error("Error fetching discussion for content:", error);
+    return null;
   }
 }
 
@@ -207,8 +267,13 @@ export async function getHomepageData() {
       getDiscussions(),
     ]);
 
+    const movieOfTheWeekDiscussion = movieOfTheWeek
+      ? await getDiscussionForContent(movieOfTheWeek.id)
+      : null;
+
     return {
       movieOfTheWeek,
+      movieOfTheWeekDiscussion,
       moviesAndTVSeries,
       reviews,
       discussions,
@@ -217,6 +282,7 @@ export async function getHomepageData() {
     console.error("Error fetching homepage data:", error);
     return {
       movieOfTheWeek: null,
+      movieOfTheWeekDiscussion: null,
       moviesAndTVSeries: [],
       reviews: [],
       discussions: [],
@@ -242,8 +308,6 @@ export async function getContentById(id: string): Promise<Content | null> {
         streamingUrl: content.streamingUrl,
         streamingPlatform: content.streamingPlatform,
         otherPlatform: content.otherPlatform,
-        spaceUrl: content.spaceUrl,
-        podcastLinks: content.podcastLinks,
         isMovieOfTheWeek: content.isMovieOfTheWeek,
         createdAt: content.createdAt,
         updatedAt: content.updatedAt,

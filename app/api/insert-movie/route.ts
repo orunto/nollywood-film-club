@@ -19,8 +19,6 @@ export async function POST(request: NextRequest) {
       streamingUrl: movieData.streamingUrl,
       streamingPlatform: movieData.streamingPlatform,
       otherPlatform: movieData.otherPlatform,
-      spaceUrl: movieData.spaceUrl,
-      podcastLinks: movieData.podcastLinks,
       isMovieOfTheWeek: movieData.isMovieOfTheWeek,
     }).returning();
 

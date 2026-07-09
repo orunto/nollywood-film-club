@@ -26,8 +26,6 @@ export default function Reviews({ reviews }: ReviewsProps) {
                                     width={400} 
                                     height={400} 
                                     className="w-full aspect-video object-cover rounded-sm relative z-10"
-                                    quality="auto"
-                                    format="auto"
                                     sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
                                     loading="lazy"
                                 />

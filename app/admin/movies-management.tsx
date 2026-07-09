@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Edit, Trash2, Star, Play, Mic } from 'lucide-react';
+import { Plus, Edit, Trash2, Star, Play } from 'lucide-react';
 import { Content } from '@/lib/server-queries';
 
 // interface MoviesManagementProps {}
@@ -33,11 +33,9 @@ export default function MoviesManagement() {
     streamingUrl: '',
     streamingPlatform: '',
     otherPlatform: '',
-    spaceUrl: '',
-    podcastLinks: '',
     isMovieOfTheWeek: false,
   });
-  
+
   const formatDate = (date: string | Date | null): string => {
     if (!date) return '';
     const parsed = new Date(date);
@@ -70,7 +68,6 @@ export default function MoviesManagement() {
         runtime: formData.runtime ? parseInt(formData.runtime) : null,
         releaseDate: formData.releaseDate ? formatDate(formData.releaseDate) : null,
         genre: formData.genre ? formData.genre.split(',').map(g => g.trim()) : [],
-        podcastLinks: formData.podcastLinks ? formData.podcastLinks.split(',').map(p => p.trim()) : [],
       };
 
       const url = editingMovie ? `/api/admin/movies/${editingMovie.id}` : '/api/admin/movies';
@@ -112,8 +109,6 @@ export default function MoviesManagement() {
       streamingUrl: movie.streamingUrl || '',
       streamingPlatform: movie.streamingPlatform || '',
       otherPlatform: movie.otherPlatform || '',
-      spaceUrl: movie.spaceUrl || '',
-      podcastLinks: movie.podcastLinks?.join(', ') || '',
       isMovieOfTheWeek: movie.isMovieOfTheWeek,
     });
     setIsEditDialogOpen(true);
@@ -167,8 +162,6 @@ export default function MoviesManagement() {
       streamingUrl: '',
       streamingPlatform: '',
       otherPlatform: '',
-      spaceUrl: '',
-      podcastLinks: '',
       isMovieOfTheWeek: false,
     });
   };
@@ -363,26 +356,6 @@ export default function MoviesManagement() {
                 </div>
               )}
 
-              <div>
-                <Label htmlFor="spaceUrl">Twitter/X Space URL</Label>
-                <Input
-                  id="spaceUrl"
-                  value={formData.spaceUrl}
-                  onChange={(e) => setFormData({ ...formData, spaceUrl: e.target.value })}
-                  placeholder="https://x.com/i/spaces/..."
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="podcastLinks">Podcast Links (comma-separated)</Label>
-                <Input
-                  id="podcastLinks"
-                  value={formData.podcastLinks}
-                  onChange={(e) => setFormData({ ...formData, podcastLinks: e.target.value })}
-                  placeholder="https://spotify.com/..., https://apple.com/..."
-                />
-              </div>
-
               <div className="flex items-center space-x-2">
                 <Switch
                   id="isMovieOfTheWeek"
@@ -464,12 +437,6 @@ export default function MoviesManagement() {
                     <span className="flex items-center">
                       <Play className="w-3 h-3 mr-1" />
                       Available to stream
-                    </span>
-                  )}
-                  {movie.spaceUrl && (
-                    <span className="flex items-center">
-                      <Mic className="w-3 h-3 mr-1" />
-                      Has Space
                     </span>
                   )}
                 </div>
@@ -647,26 +614,6 @@ export default function MoviesManagement() {
                 />
               </div>
             )}
-
-            <div>
-              <Label htmlFor="edit-spaceUrl">Twitter/X Space URL</Label>
-              <Input
-                id="edit-spaceUrl"
-                value={formData.spaceUrl}
-                onChange={(e) => setFormData({ ...formData, spaceUrl: e.target.value })}
-                placeholder="https://x.com/i/spaces/..."
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="edit-podcastLinks">Podcast Links (comma-separated)</Label>
-              <Input
-                id="edit-podcastLinks"
-                value={formData.podcastLinks}
-                onChange={(e) => setFormData({ ...formData, podcastLinks: e.target.value })}
-                placeholder="https://spotify.com/..., https://apple.com/..."
-              />
-            </div>
 
             <div className="flex items-center space-x-2">
               <Switch

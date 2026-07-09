@@ -33,8 +33,6 @@ export async function PUT(
         streamingUrl: movieData.streamingUrl,
         streamingPlatform: movieData.streamingPlatform,
         otherPlatform: movieData.otherPlatform,
-        spaceUrl: movieData.spaceUrl,
-        podcastLinks: movieData.podcastLinks,
         isMovieOfTheWeek: movieData.isMovieOfTheWeek,
         updatedAt: new Date(),
       })

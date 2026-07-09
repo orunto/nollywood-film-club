@@ -15,8 +15,6 @@ export interface Content {
   streamingUrl: string | null;
   streamingPlatform: string | null;
   otherPlatform: string | null;
-  spaceUrl: string | null;
-  podcastLinks: string[] | null;
   isMovieOfTheWeek: boolean;
   createdAt: string;
   updatedAt: string;

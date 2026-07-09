@@ -16,8 +16,6 @@ export async function insertMovieOfTheWeek() {
       trailerUrl: "https://www.youtube.com/embed/x4JIoP5FlhU?si=s-yYKArOOO6QD42e",
       streamingUrl: "https://www.primevideo.com/detail/Everybody-Loves-Jenifa/0G4DEZL3GDUGGLRPTKG19ZFEEE",
       streamingPlatform: "prime_video",
-      spaceUrl: "https://x.com/i/spaces/1djGXWjZOORKZ",
-      podcastLinks: [], // Empty array for now, can add podcast URLs later
       isMovieOfTheWeek: true,
     }).returning();
 
@@ -42,8 +40,6 @@ INSERT INTO content (
   trailer_url,
   streaming_url,
   streaming_platform,
-  space_url,
-  podcast_links,
   is_movie_of_the_week
 ) VALUES (
   'Everybody Loves Jenifa',
@@ -57,8 +53,6 @@ INSERT INTO content (
   'https://www.youtube.com/embed/x4JIoP5FlhU?si=s-yYKArOOO6QD42e',
   'https://www.primevideo.com/detail/Everybody-Loves-Jenifa/0G4DEZL3GDUGGLRPTKG19ZFEEE',
   'prime_video',
-  'https://x.com/i/spaces/1djGXWjZOORKZ',
-  '{}',
   true
 );
 `;
