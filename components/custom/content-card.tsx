@@ -4,19 +4,11 @@ import Link from "next/link";
 import { CldImage } from "next-cloudinary";
 import { Badge } from "../ui/badge";
 import { Content } from "@/lib/server-queries";
-import { cn } from "@/lib/utils";
+import { cn, scoreBadgeClass } from "@/lib/utils";
 
 interface ContentCardProps {
     item: Content;
     className?: string;
-}
-
-function scoreBadgeClass(userRating: Content["userRating"]) {
-    if (userRating === null) return "bg-gray-400";
-    const score = Number(userRating);
-    if (score > 7) return "bg-green-900";
-    if (score > 4) return "bg-amber-500";
-    return "bg-red-700";
 }
 
 const ContentCard = forwardRef<HTMLAnchorElement, ContentCardProps>(

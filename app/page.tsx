@@ -11,7 +11,7 @@ export default async function Home() {
       <main className="min-h-screen"
       >
         <div className="w-full flex flex-col lg:px-10 lg:py-8 py-10 px-6 gap-15 min-h-screen">
-          <MovieOfTheWeek movie={movieOfTheWeek} spaceUrl={movieOfTheWeekDiscussion?.spaceUrl} />
+          <MovieOfTheWeek movie={movieOfTheWeek} spaceUrl={movieOfTheWeekDiscussion?.spaceUrl} podcastLinks={movieOfTheWeekDiscussion?.podcastLinks} />
           <MoviesAndTVSeries moviesAndTVSeries={moviesAndTVSeries} />
           <Reviews reviews={reviews} />
           <Discussions discussions={discussions} />

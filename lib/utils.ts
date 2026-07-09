@@ -48,6 +48,31 @@ export function getAverageRatingLabel(average: number): string {
   return "Generally disliked";
 }
 
+// Converts a YouTube watch/share URL to its embeddable form. YouTube's
+// /watch pages send X-Frame-Options headers that block iframing entirely —
+// only /embed/<id> URLs can be framed. Returns null if no video id is found.
+export function toYoutubeEmbedUrl(rawUrl: string): string | null {
+  try {
+    const url = new URL(rawUrl);
+    let id: string | null = null;
+    if (url.hostname === "youtu.be") id = url.pathname.slice(1);
+    else if (url.pathname === "/watch") id = url.searchParams.get("v");
+    else if (url.pathname.startsWith("/embed/")) id = url.pathname.replace("/embed/", "");
+    return id ? `https://www.youtube.com/embed/${id}` : null;
+  } catch {
+    return null;
+  }
+}
+
+// NFC score badge color for a content item's userRating (0-10, or null if unrated)
+export function scoreBadgeClass(userRating: number | string | null): string {
+  if (userRating === null) return "bg-gray-400";
+  const score = Number(userRating);
+  if (score > 7) return "bg-green-900";
+  if (score > 4) return "bg-amber-500";
+  return "bg-red-700";
+}
+
 // Image naming utilities
 /**
  * Generates a public image name for Cloudinary based on movie title and release year.

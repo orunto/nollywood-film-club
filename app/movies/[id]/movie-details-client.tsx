@@ -11,12 +11,14 @@ interface MovieDetailsClientProps {
   movie: Content | null;
   userRatings: UserRating[];
   spaceUrl?: string | null;
+  podcastLinks?: string[] | null;
 }
 
 export default function MovieDetailsClient({
   movie,
   userRatings,
   spaceUrl,
+  podcastLinks,
 }: MovieDetailsClientProps) {
   const router = useRouter();
   if (!movie) {
@@ -41,7 +43,7 @@ export default function MovieDetailsClient({
           Go Back
       </Button>
       {/* Movie Header Section (using MovieHero) */}
-      <MovieHero movie={movie} showRating={false} spaceUrl={spaceUrl} />
+      <MovieHero movie={movie} showRating={false} spaceUrl={spaceUrl} podcastLinks={podcastLinks} />
 
       {/* User Ratings/Comments Section */}
       <section className="w-full mt-10">

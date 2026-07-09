@@ -3,11 +3,22 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CldImage } from 'next-cloudinary';
 import { Button } from "@/components/ui/button";
-import { Mic, PlayIcon } from "lucide-react";
+import { ExternalLink, Mic, Mic2, PlayIcon, Podcast, Youtube } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import {
+    AlertDialog,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Content } from "@/lib/server-queries";
+import { cn, scoreBadgeClass, toYoutubeEmbedUrl } from "@/lib/utils";
 import MovieRatingSheet from "@/components/custom/movie-rating-sheet";
 
 interface MovieHeroProps {
@@ -15,15 +26,20 @@ interface MovieHeroProps {
     title?: string; // Optional title, defaults to "Movie of the Week" or movie title based on context
     showRating?: boolean; // Whether to show the rating functionality
     spaceUrl?: string | null; // Twitter/X Space URL from the movie's discussion
+    podcastLinks?: string[] | null; // Podcast platform links from the movie's discussion
 }
 
-export default function MovieHero({ movie, title, showRating = true, spaceUrl }: MovieHeroProps) {
+export default function MovieHero({ movie, title, showRating = true, spaceUrl, podcastLinks }: MovieHeroProps) {
     const router = useRouter();
     const [isPlaying, setIsPlaying] = useState(false);
 
-    // Check if 24 hours have passed since the movie was created
-    const isRatingEnabled = movie && movie.createdAt &&
-        (new Date().getTime() - new Date(movie.createdAt).getTime()) > (24 * 60 * 60 * 1000);
+    const hasPodcastLink = Boolean(podcastLinks && podcastLinks.length > 0);
+    const hasSpaceOrPodcast = Boolean(spaceUrl || hasPodcastLink);
+
+    // Check if 24 hours have passed since the movie was created, or skip the
+    // wait entirely once the podcast episode discussing it is actually out
+    const isRatingEnabled = hasPodcastLink || (movie && movie.createdAt &&
+        (new Date().getTime() - new Date(movie.createdAt).getTime()) > (24 * 60 * 60 * 1000));
 
     const handlePlay = () => {
         setIsPlaying(true);
@@ -51,6 +67,8 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl }:
         );
     }
 
+    const trailerEmbedUrl = movie.trailerUrl ? toYoutubeEmbedUrl(movie.trailerUrl) : null;
+
     return <section className="w-full">
         <h1 className="pb-3 border-b border-black text-2xl font-semibold flex items-center gap-3">
             {title || movie.title}
@@ -58,7 +76,9 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl }:
             {
                 !showRating && (
                     <>
-                        <Badge className="text-xs text-black bg-transparent border border-black">{movie.rating}</Badge>
+                        {movie.rating && (
+                            <Badge className="text-xs text-black bg-transparent border border-black">{movie.rating}</Badge>
+                        )}
                         <Badge className="text-xs text-black bg-transparent border border-black">
                             {movie.contentType === 'movie' ? 'Movie' : 'TV Show'}
                         </Badge>
@@ -69,7 +89,10 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl }:
         </h1>
         <div className=" grid lg:grid-cols-6 lg:gap-10 gap-6 py-6">
             <figure className="lg:col-span-4 flex flex-col gap-4">
-                <div className="relative w-full aspect-video rounded-lg bg-black overflow-hidden cursor-pointer group" onClick={handlePlay}>
+                <div
+                    className={`relative w-full aspect-video rounded-lg bg-black overflow-hidden group ${trailerEmbedUrl ? "cursor-pointer" : ""}`}
+                    onClick={trailerEmbedUrl ? handlePlay : undefined}
+                >
                     {!isPlaying ? (
                         <>
                             <CldImage
@@ -82,10 +105,12 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl }:
                                 loading="lazy"
                             />
                             <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/50 group-hover:text-white lg:text-white/50 text-white transition-colors gap-4">
-                                <span className="lg:text-lg text-base">Watch Trailer</span>
-                                <div className="bg-red-500/50 lg:text-white/50 rounded-full p-4 group-hover:bg-red-500 group-hover:text-white transition-colors">
-                                    <PlayIcon className="w-8 h-8 ml-1" />
-                                </div>
+                                <span className="lg:text-lg text-base">{trailerEmbedUrl ? "Watch Trailer" : "Trailer: N/A"}</span>
+                                {trailerEmbedUrl && (
+                                    <div className="bg-red-500/50 lg:text-white/50 rounded-full p-4 group-hover:bg-red-500 group-hover:text-white transition-colors">
+                                        <PlayIcon className="w-8 h-8 ml-1" />
+                                    </div>
+                                )}
                             </div>
                         </>
                     ) : (
@@ -93,7 +118,7 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl }:
                             <iframe
                                 width="100%"
                                 height="100%"
-                                src={`${movie.trailerUrl}&autoplay=1&rel=0&controls=1&modestbranding=1&showinfo=0&iv_load_policy=3&fs=1`}
+                                src={`${trailerEmbedUrl}?autoplay=1&rel=0&controls=1&modestbranding=1&showinfo=0&iv_load_policy=3&fs=1`}
                                 title="YouTube video player"
                                 frameBorder="0"
                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -108,8 +133,14 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl }:
               <div className="flex gap-4">
                     {
                       (!showRating) && (
-                        <Badge className={`text-3xl p-4 text-white h-20 w-20 ${Number(movie.userRating) > 7 && ('bg-green-900')} ${(Number(movie.userRating) > 4 && Number(movie.userRating) < 7) && ('bg-amber-500')} ${Number(movie.userRating) < 4 && ('bg-red-700')}`}>
-                          {movie.userRating}
+                        <Badge
+                            className={cn(
+                                "font-medium h-20 w-20 p-4",
+                                movie.userRating === null ? "text-sm" : "text-3xl",
+                                scoreBadgeClass(movie.userRating),
+                            )}
+                        >
+                          {movie.userRating ?? "N/A"}
                         </Badge>
                       )
                     }
@@ -119,7 +150,9 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl }:
                       <Link href={`/movies/${movie.id}`}>
                         <h2 className="text-xl hover:text-primary font-medium flex items-center gap-2">
                             {movie.title}
-                            <Badge className="text-xs text-black bg-transparent border border-black">{movie.rating}</Badge>
+                            {movie.rating && (
+                                <Badge className="text-xs text-black bg-transparent border border-black">{movie.rating}</Badge>
+                            )}
                             <Badge className="text-xs text-black bg-transparent border border-black">
                                 {movie.contentType === 'movie' ? 'Movie' : 'TV Show'}
                             </Badge>
@@ -127,10 +160,12 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl }:
                       </Link>
                     )}
                     <span className="text-xs font-light">Run Time: {movie.runtime ? `${Math.floor(movie.runtime / 60)} h ${movie.runtime % 60} min` : 'N/A'}</span>
-                    <span className="text-xs font-light">Theatrical Release Date: {movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : 'N/A'}</span>
-                    {movie.genre && movie.genre.length > 0 && (
-                        <span className="text-xs font-light">Genre: {movie.genre.map(g => g.charAt(0).toUpperCase() + g.slice(1)).join(', ')}</span>
-                    )}
+                    <span className="text-xs font-light">
+                        Theatrical Release Date: {movie.releaseDate ? new Date(movie.releaseDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                    </span>
+                    <span className="text-xs font-light">
+                        Genre: {movie.genre && movie.genre.length > 0 ? movie.genre.map(g => g.charAt(0).toUpperCase() + g.slice(1)).join(', ') : 'N/A'}
+                    </span>
                 </div>
               </div>
 
@@ -167,13 +202,64 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl }:
                             </Button>
                         </Link>
                     )}
-                    {spaceUrl && (
-                        <Link target="_blank" href={spaceUrl}>
-                            <Button variant={'outline'} className="w-full bg-black text-white">
-                                <Mic className="w-4 h-4" />
-                                Join the Space
-                            </Button>
-                        </Link>
+                    {hasSpaceOrPodcast && (
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant={'outline'} className="w-full bg-black text-white">
+                                    <Mic className="w-4 h-4" />
+                                    Listen to Space
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Listen to {movie.title}</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Choose your preferred platform to listen to the recording of this discussion.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <div className="flex flex-col gap-2 py-4">
+                                    {spaceUrl && (
+                                        <a
+                                            href={spaceUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center justify-between p-3 border rounded-sm hover:bg-black/5 transition-colors group"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <Mic2 className="w-5 h-5" />
+                                                <span className="font-medium">Twitter Space Link</span>
+                                            </div>
+                                            <ExternalLink className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        </a>
+                                    )}
+                                    {podcastLinks?.map((link, idx) => {
+                                        const isSpotify = link.includes('spotify');
+                                        const isYoutube = link.includes('youtube');
+
+                                        return (
+                                            <a
+                                                key={idx}
+                                                href={link}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex items-center justify-between p-3 border rounded-sm hover:bg-black/5 transition-colors group"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    {isSpotify ? <Podcast className="w-5 h-5 text-[#1DB954]" /> : isYoutube ? <Youtube className="w-5 h-5 text-[#FF0000]" /> : <Podcast className="w-5 h-5" />}
+                                                    <span className="font-medium">
+                                                        {isSpotify ? 'Spotify Link' : isYoutube ? 'Youtube Music Link' : 'Podcast Link'}
+                                                    </span>
+                                                </div>
+                                                <ExternalLink className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            </a>
+                                        )
+                                    })}
+                                </div>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Close</AlertDialogCancel>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
                     )}
                 </div>
 

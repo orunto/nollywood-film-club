@@ -25,5 +25,5 @@ export default async function MovieDetailsPage({ params }: MovieDetailsPageProps
     notFound();
   }
 
-  return <MovieDetailsClient movie={movie} userRatings={userRatings} spaceUrl={discussion?.spaceUrl} />;
+  return <MovieDetailsClient movie={movie} userRatings={userRatings} spaceUrl={discussion?.spaceUrl} podcastLinks={discussion?.podcastLinks} />;
 }
