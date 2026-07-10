@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { content } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, desc, sql } from 'drizzle-orm';
 
 export async function GET() {
   try {
@@ -9,7 +9,7 @@ export async function GET() {
       .select()
       .from(content)
       .where(eq(content.isMovieOfTheWeek, false))
-      .orderBy(content.createdAt)
+      .orderBy(sql`${content.catalogNumber} DESC NULLS LAST`, desc(content.createdAt))
       .limit(4);
 
     return NextResponse.json({ 
