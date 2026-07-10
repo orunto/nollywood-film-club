@@ -45,10 +45,10 @@
         }, { status: 400 });
       }
       
-      if (!movieData.contentType || !['movie', 'tv_show'].includes(movieData.contentType)) {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'Content type must be either "movie" or "tv_show"' 
+      if (!movieData.contentType || !['movie', 'tv_show', 'short_film'].includes(movieData.contentType)) {
+        return NextResponse.json({
+          success: false,
+          error: 'Content type must be one of "movie", "tv_show", or "short_film"'
         }, { status: 400 });
       }
       
@@ -67,7 +67,8 @@
         streamingPlatform: movieData.streamingPlatform || null,
         otherPlatform: movieData.otherPlatform,
         isMovieOfTheWeek: movieData.isMovieOfTheWeek || false,
-        catalogNumber: movieData.catalogNumber ?? null,
+        // catalogNumber is derived from linked discussion episode numbers —
+        // see lib/catalog-sync.ts. Starts NULL (sorts last) until linked.
       }).returning();
   
       return NextResponse.json({ 

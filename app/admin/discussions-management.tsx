@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Plus, Edit, Trash2, ExternalLink } from 'lucide-react';
 import { Content } from '@/lib/server-queries';
+import { contentTypeLabel } from '@/lib/utils';
 import { toast } from 'sonner';
 import { SortableHead, useTableSort, SortAccessors } from './table-sort';
 
@@ -365,7 +366,7 @@ export default function DiscussionsManagement() {
                     <SelectItem value={NO_CONTENT}>None (standalone topic)</SelectItem>
                     {movies.map((movie) => (
                       <SelectItem key={movie.id} value={movie.id}>
-                        {movie.title} ({movie.contentType === 'movie' ? 'Movie' : 'TV Show'})
+                        {movie.title} ({contentTypeLabel(movie.contentType)})
                       </SelectItem>
                     ))}
                   </SelectContent>

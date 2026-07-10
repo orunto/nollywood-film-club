@@ -36,6 +36,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Nav, Footer } from "@/components/custom";
+import { contentTypeLabel } from "@/lib/utils";
 
 interface User {
   id: string;
@@ -57,7 +58,7 @@ interface UserRating {
   content?: {
     id: string;
     title: string;
-    contentType: "movie" | "tv_show";
+    contentType: "movie" | "tv_show" | "short_film";
   };
 }
 
@@ -68,7 +69,7 @@ interface UserDashboardProps {
 export default function UserDashboard({ user }: UserDashboardProps) {
   const [userRatings, setUserRatings] = useState<UserRating[]>([]);
   const [movies, setMovies] = useState<
-    { id: string; title: string; contentType: "movie" | "tv_show" }[]
+    { id: string; title: string; contentType: "movie" | "tv_show" | "short_film" }[]
   >([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -250,9 +251,7 @@ export default function UserDashboard({ user }: UserDashboardProps) {
                             {movies.map((movie) => (
                               <SelectItem key={movie.id} value={movie.id}>
                                 {movie.title} (
-                                {movie.contentType === "movie"
-                                  ? "Movie"
-                                  : "TV Show"}
+                                {contentTypeLabel(movie.contentType)}
                                 )
                               </SelectItem>
                             ))}
@@ -416,9 +415,7 @@ export default function UserDashboard({ user }: UserDashboardProps) {
                           {movies.map((movie) => (
                             <SelectItem key={movie.id} value={movie.id}>
                               {movie.title} (
-                              {movie.contentType === "movie"
-                                ? "Movie"
-                                : "TV Show"}
+                              {contentTypeLabel(movie.contentType)}
                               )
                             </SelectItem>
                           ))}
@@ -493,9 +490,7 @@ export default function UserDashboard({ user }: UserDashboardProps) {
                                   : "secondary"
                               }
                             >
-                              {movie?.contentType === "movie"
-                                ? "Movie"
-                                : "TV Show"}
+                              {movie ? contentTypeLabel(movie.contentType) : "Unknown"}
                             </Badge>
                           </CardTitle>
                           <CardDescription>
@@ -584,7 +579,7 @@ export default function UserDashboard({ user }: UserDashboardProps) {
                         {movies.map((movie) => (
                           <SelectItem key={movie.id} value={movie.id}>
                             {movie.title} (
-                            {movie.contentType === "movie" ? "Movie" : "TV Show"})
+                            {contentTypeLabel(movie.contentType)})
                           </SelectItem>
                         ))}
                       </SelectContent>

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { CldImage } from "next-cloudinary";
 import { Badge } from "../ui/badge";
 import { Content } from "@/lib/server-queries";
-import { cn, scoreBadgeClass } from "@/lib/utils";
+import { cn, scoreBadgeClass, contentTypeLabel } from "@/lib/utils";
 
 interface ContentCardProps {
     item: Content;
@@ -35,7 +35,7 @@ const ContentCard = forwardRef<HTMLAnchorElement, ContentCardProps>(
 
                         <CardDescription className="flex items-center gap-2">
                             <Badge className="w-fit text-xs text-black bg-transparent border border-black">
-                                {item.contentType === 'movie' ? 'Movie' : 'TV Show'}
+                                {contentTypeLabel(item.contentType)}
                             </Badge>
                             {item.rating && (
                                 <Badge className="w-fit text-xs text-black bg-transparent border border-black">

@@ -38,6 +38,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Plus, Edit, Trash2, Star, Search, Check, ChevronsUpDown, ExternalLink, X } from 'lucide-react';
 import { Content } from '@/lib/server-queries';
+import { contentTypeLabel } from '@/lib/utils';
 import { toast } from 'sonner';
 import { SortableHead, useTableSort, SortAccessors } from './table-sort';
 import { AdminDiscussion } from './discussions-management';
@@ -76,7 +77,7 @@ export default function ContentManagement() {
   const [discussions, setDiscussions] = useState<AdminDiscussion[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'movie' | 'tv_show'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'movie' | 'tv_show' | 'short_film'>('all');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingMovie, setEditingMovie] = useState<Content | null>(null);
@@ -90,7 +91,7 @@ export default function ContentManagement() {
   const [discussionPickerOpen, setDiscussionPickerOpen] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
-    contentType: 'movie' as 'movie' | 'tv_show',
+    contentType: 'movie' as 'movie' | 'tv_show' | 'short_film',
     runtime: '',
     releaseDate: '',
     rating: '',
@@ -102,7 +103,6 @@ export default function ContentManagement() {
     streamingPlatform: '',
     otherPlatform: '',
     isMovieOfTheWeek: false,
-    catalogNumber: '',
   });
 
   const formatDate = (date: string | Date | null): string => {
@@ -251,7 +251,6 @@ export default function ContentManagement() {
         runtime: formData.runtime ? parseInt(formData.runtime) : null,
         releaseDate: formData.releaseDate ? formatDate(formData.releaseDate) : null,
         genre: formData.genre ? formData.genre.split(',').map(g => g.trim()) : [],
-        catalogNumber: formData.catalogNumber !== '' ? parseInt(formData.catalogNumber) : null,
       };
 
       const url = editingMovie ? `/api/admin/movies/${editingMovie.id}` : '/api/admin/movies';
@@ -309,7 +308,6 @@ export default function ContentManagement() {
       streamingPlatform: movie.streamingPlatform || '',
       otherPlatform: movie.otherPlatform || '',
       isMovieOfTheWeek: movie.isMovieOfTheWeek,
-      catalogNumber: movie.catalogNumber?.toString() ?? '',
     });
     setJwQuery('');
     setJwResults([]);
@@ -376,7 +374,6 @@ export default function ContentManagement() {
       streamingPlatform: '',
       otherPlatform: '',
       isMovieOfTheWeek: false,
-      catalogNumber: '',
     });
     setJwQuery('');
     setJwResults([]);
@@ -413,7 +410,7 @@ export default function ContentManagement() {
           onChange={(e) => setSearchQuery(e.target.value)}
           className={`max-w-sm ${inputClass}`}
         />
-        <Select value={typeFilter} onValueChange={(value: 'all' | 'movie' | 'tv_show') => setTypeFilter(value)}>
+        <Select value={typeFilter} onValueChange={(value: 'all' | 'movie' | 'tv_show' | 'short_film') => setTypeFilter(value)}>
           <SelectTrigger className={`w-40 ${inputClass}`}>
             <SelectValue />
           </SelectTrigger>
@@ -421,6 +418,7 @@ export default function ContentManagement() {
             <SelectItem value="all">All Types</SelectItem>
             <SelectItem value="movie">Movies</SelectItem>
             <SelectItem value="tv_show">TV Shows</SelectItem>
+            <SelectItem value="short_film">Short Films</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -476,7 +474,7 @@ export default function ContentManagement() {
                   </TableCell>
                   <TableCell>
                     <Badge className={badgeClass}>
-                      {movie.contentType === 'movie' ? 'Movie' : 'TV Show'}
+                      {contentTypeLabel(movie.contentType)}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-black/60">{movie.rating || '—'}</TableCell>
@@ -601,7 +599,7 @@ export default function ContentManagement() {
                   <Label htmlFor="contentType">Content Type</Label>
                   <Select
                     value={formData.contentType}
-                    onValueChange={(value: 'movie' | 'tv_show') => setFormData({ ...formData, contentType: value })}
+                    onValueChange={(value: 'movie' | 'tv_show' | 'short_film') => setFormData({ ...formData, contentType: value })}
                   >
                     <SelectTrigger className={inputClass}>
                       <SelectValue />
@@ -609,21 +607,19 @@ export default function ContentManagement() {
                     <SelectContent>
                       <SelectItem value="movie">Movie</SelectItem>
                       <SelectItem value="tv_show">TV Show</SelectItem>
+                      <SelectItem value="short_film">Short Film</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
 
               <div>
-                <Label htmlFor="catalogNumber">S/N (Catalog Number)</Label>
-                <Input
-                  id="catalogNumber"
-                  type="number"
-                  className={inputClass}
-                  value={formData.catalogNumber}
-                  onChange={(e) => setFormData({ ...formData, catalogNumber: e.target.value })}
-                  placeholder="Order the content was added"
-                />
+                <Label>S/N (Catalog Number)</Label>
+                <p className="text-sm text-black/60 mt-1">
+                  {editingMovie?.catalogNumber != null
+                    ? `#${editingMovie.catalogNumber} — derived from the linked episode number below`
+                    : 'Assigned automatically once a discussion is linked below'}
+                </p>
               </div>
 
               <div className="grid grid-cols-3 gap-4">

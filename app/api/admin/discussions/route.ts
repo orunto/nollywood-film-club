@@ -3,6 +3,7 @@ import { db } from '@/db/client';
 import { discussions } from '@/db/schema';
 import { desc, sql } from 'drizzle-orm';
 import { authenticateAdmin } from '@/lib/admin-auth';
+import { syncCatalogNumbers } from '@/lib/catalog-sync';
 
 export async function GET() {
   try {
@@ -53,6 +54,8 @@ export async function POST(request: NextRequest) {
       episodeNumber: discussionData.episodeNumber ?? null,
       discussionDate: discussionData.discussionDate ? new Date(discussionData.discussionDate) : null,
     }).returning();
+
+    await syncCatalogNumbers([newDiscussion[0].contentId]);
 
     return NextResponse.json({
       success: true,

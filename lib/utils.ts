@@ -73,6 +73,17 @@ export function scoreBadgeClass(userRating: number | string | null): string {
   return "bg-red-700";
 }
 
+// Content type labels
+const CONTENT_TYPE_LABELS: Record<"movie" | "tv_show" | "short_film", string> = {
+  movie: "Movie",
+  tv_show: "TV Show",
+  short_film: "Short Film",
+};
+
+export function contentTypeLabel(contentType: "movie" | "tv_show" | "short_film"): string {
+  return CONTENT_TYPE_LABELS[contentType];
+}
+
 // Image naming utilities
 /**
  * Generates a public image name for Cloudinary based on movie title and release year.

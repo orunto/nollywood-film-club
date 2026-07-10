@@ -35,7 +35,8 @@ export async function PUT(
         streamingPlatform: movieData.streamingPlatform || null,
         otherPlatform: movieData.otherPlatform,
         isMovieOfTheWeek: movieData.isMovieOfTheWeek,
-        catalogNumber: movieData.catalogNumber ?? null,
+        // catalogNumber is derived from linked discussion episode numbers —
+        // see lib/catalog-sync.ts. Never set directly from client input.
         updatedAt: new Date(),
       })
       .where(eq(content.id, id))

@@ -4,6 +4,7 @@ import { Card, CardTitle, CardHeader, CardContent, CardDescription, CardFooter }
 import { Badge } from "../ui/badge";
 import { Discussion } from "@/lib/server-queries";
 import { useCardScroller } from "@/lib/hooks/use-card-scroller";
+import { contentTypeLabel } from "@/lib/utils";
 import { Calendar, Mic2, Podcast, Youtube, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
 import {
     AlertDialog,
@@ -71,7 +72,7 @@ export default function Discussions({ discussions }: DiscussionsProps) {
                                 <div className="flex flex-col gap-2 mb-2">
                                     <Badge className="w-fit text-xs text-black bg-transparent border border-black">
                                         {discussion.content
-                                            ? (discussion.content.contentType === 'movie' ? 'Movie Discussion' : 'TV Show Discussion')
+                                            ? `${contentTypeLabel(discussion.content.contentType)} Discussion`
                                             : 'Club Discussion'}
                                     </Badge>
                                     {(discussion.discussionDate || discussion.content?.releaseDate) && (

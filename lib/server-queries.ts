@@ -7,7 +7,7 @@ import { stackServerApp } from "@/stack";
 export interface Content {
   id: string;
   title: string;
-  contentType: "movie" | "tv_show";
+  contentType: "movie" | "tv_show" | "short_film";
   runtime: number | null;
   releaseDate: string | null;
   rating: string | null;
@@ -40,7 +40,7 @@ export interface Discussion {
   content: {
     id: string;
     title: string;
-    contentType: "movie" | "tv_show";
+    contentType: "movie" | "tv_show" | "short_film";
     releaseDate: string | null;
     synopsis: string | null;
     runtime: number | null;

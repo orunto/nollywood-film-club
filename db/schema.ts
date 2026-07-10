@@ -7,11 +7,12 @@ import {
   decimal,
   uuid,
   pgEnum,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 
 // Enums
-export const contentTypeEnum = pgEnum("content_type", ["movie", "tv_show"]);
+export const contentTypeEnum = pgEnum("content_type", ["movie", "tv_show", "short_film"]);
 export const ratingEnum = pgEnum("rating", [
   "G",
   "PG",
@@ -60,20 +61,30 @@ export const content = pgTable("content", {
 
 // Discussion spaces table — a discussion may be about a movie/TV show
 // (contentId set) or a standalone topic (contentId null)
-export const discussions = pgTable("discussions", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  title: text("title").notNull(),
-  description: text("description"),
-  contentId: uuid("content_id").references(() => content.id, {
-    onDelete: "set null",
-  }),
-  spaceUrl: text("space_url"), // Twitter/X Space URL
-  podcastLinks: text("podcast_links").array(), // Array of podcast URLs (Spotify, YouTube Music, etc.)
-  episodeNumber: integer("episode_number"), // Podcast episode number (0 = intro); has gaps for private/skipped episodes
-  discussionDate: timestamp("discussion_date"), // When the space was/will be held
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
+export const discussions = pgTable(
+  "discussions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    title: text("title").notNull(),
+    description: text("description"),
+    contentId: uuid("content_id").references(() => content.id, {
+      onDelete: "set null",
+    }),
+    spaceUrl: text("space_url"), // Twitter/X Space URL
+    podcastLinks: text("podcast_links").array(), // Array of podcast URLs (Spotify, YouTube Music, etc.)
+    episodeNumber: integer("episode_number"), // Podcast episode number (0 = intro); has gaps for private/skipped episodes
+    discussionDate: timestamp("discussion_date"), // When the space was/will be held
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    // Prevents the episode-number typos that corrupted content.catalog_number
+    // (which is derived from this column — see lib/catalog-sync.ts)
+    uniqueIndex("discussions_episode_number_unique")
+      .on(table.episodeNumber)
+      .where(sql`${table.episodeNumber} IS NOT NULL`),
+  ],
+);
 
 // User ratings/reviews table
 export const userRatings = pgTable("user_ratings", {

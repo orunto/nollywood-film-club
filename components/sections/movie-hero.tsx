@@ -18,7 +18,7 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Content } from "@/lib/server-queries";
-import { cn, scoreBadgeClass, toYoutubeEmbedUrl } from "@/lib/utils";
+import { cn, scoreBadgeClass, toYoutubeEmbedUrl, contentTypeLabel } from "@/lib/utils";
 import MovieRatingSheet from "@/components/custom/movie-rating-sheet";
 
 interface MovieHeroProps {
@@ -80,7 +80,7 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
                             <Badge className="text-xs text-black bg-transparent border border-black">{movie.rating}</Badge>
                         )}
                         <Badge className="text-xs text-black bg-transparent border border-black">
-                            {movie.contentType === 'movie' ? 'Movie' : 'TV Show'}
+                            {contentTypeLabel(movie.contentType)}
                         </Badge>
                     </>
 
@@ -154,7 +154,7 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
                                 <Badge className="text-xs text-black bg-transparent border border-black">{movie.rating}</Badge>
                             )}
                             <Badge className="text-xs text-black bg-transparent border border-black">
-                                {movie.contentType === 'movie' ? 'Movie' : 'TV Show'}
+                                {contentTypeLabel(movie.contentType)}
                             </Badge>
                         </h2>
                       </Link>

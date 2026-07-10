@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 export interface Content {
   id: string;
   title: string;
-  contentType: 'movie' | 'tv_show';
+  contentType: 'movie' | 'tv_show' | 'short_film';
   runtime: number | null;
   releaseDate: string | null;
   rating: string | null;
