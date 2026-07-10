@@ -1,6 +1,6 @@
 import { db } from "@/db/client";
 import { content, discussions, reviews, userRatings } from "@/db/schema";
-import { eq, avg, desc, sql } from "drizzle-orm";
+import { eq, avg, desc, sql, and } from "drizzle-orm";
 import { stackServerApp } from "@/stack";
 
 // Types
@@ -19,6 +19,7 @@ export interface Content {
   streamingPlatform: string | null;
   otherPlatform: string | null;
   isMovieOfTheWeek: boolean;
+  catalogNumber: number | null;
   createdAt: string;
   updatedAt: string;
   userRating: number | null;
@@ -78,11 +79,18 @@ export interface UserRating {
   userId: string;
   rating: number | null; // 0 (didn't like), 5 (okay), or 10 (liked)
   review: string | null;
+  flagged: boolean;
+  restricted: boolean;
   createdAt: string;
   updatedAt: string;
   // Added username and profileImage fields to store the user info from Stack Auth
   username?: string;
   profileImage?: string;
+}
+
+// Admin-only view of a user rating, with the related content's title joined in
+export interface AdminUserRating extends UserRating {
+  contentTitle: string;
 }
 
 // Server-side data fetching functions
@@ -132,6 +140,7 @@ export async function getMoviesAndTVSeries(): Promise<Content[]> {
         streamingPlatform: content.streamingPlatform,
         otherPlatform: content.otherPlatform,
         isMovieOfTheWeek: content.isMovieOfTheWeek,
+        catalogNumber: content.catalogNumber,
         createdAt: content.createdAt,
         updatedAt: content.updatedAt,
         userRating: avg(userRatings.rating),
@@ -312,6 +321,7 @@ export async function getContentById(id: string): Promise<Content | null> {
         streamingPlatform: content.streamingPlatform,
         otherPlatform: content.otherPlatform,
         isMovieOfTheWeek: content.isMovieOfTheWeek,
+        catalogNumber: content.catalogNumber,
         createdAt: content.createdAt,
         updatedAt: content.updatedAt,
         userRating: avg(userRatings.rating),
@@ -342,66 +352,104 @@ export async function getContentById(id: string): Promise<Content | null> {
   }
 }
 
+// Shared helper: given raw userRatings rows, look up each reviewer's
+// username/profileImage from Stack Auth and map to the public UserRating shape.
+async function enrichRatingsWithUsernames(
+  ratings: (typeof userRatings.$inferSelect)[],
+): Promise<UserRating[]> {
+  // Get unique user IDs
+  const userIds = [...new Set(ratings.map((rating) => rating.userId))];
+
+  // Fetch user information from Stack Auth for all users
+  // We'll use a simplified approach since we don't have direct admin access
+  const userMap = new Map<
+    string,
+    { username: string; profileImage?: string }
+  >();
+
+  // For each user ID, we'll try to get the user info
+  for (const userId of userIds) {
+    try {
+      // Try to get user info - this is a simplified approach
+      // In a real implementation with admin access, you would use the proper admin API
+      const user = await stackServerApp.getUser(userId);
+      if (user) {
+        // Use username from metadata if available, otherwise use user ID
+        const username =
+          user.clientMetadata?.username || `User ${user.id.substring(0, 8)}`;
+        const profileImage = user.profileImageUrl || undefined;
+        userMap.set(userId, { username, profileImage });
+      } else {
+        userMap.set(userId, { username: `User ${userId.substring(0, 8)}` });
+      }
+    } catch (error) {
+      // If we can't get user info, use a default display
+      userMap.set(userId, { username: `User ${userId.substring(0, 8)}` });
+      console.error(error);
+    }
+  }
+
+  // Map ratings with usernames and profile images
+  return ratings.map((item) => ({
+    ...item,
+    id: item.id || "",
+    contentId: item.contentId || "",
+    userId: item.userId || "",
+    rating: item.rating ?? null,
+    flagged: item.flagged ?? false,
+    restricted: item.restricted ?? false,
+    createdAt: item.createdAt?.toISOString() || "",
+    updatedAt: item.updatedAt?.toISOString() || "",
+    username:
+      userMap.get(item.userId)?.username ||
+      `User ${item.userId.substring(0, 8)}`,
+    profileImage: userMap.get(item.userId)?.profileImage,
+  }));
+}
+
 // New function to get user ratings for a specific content with usernames from Stack Auth
 export async function getUserRatingsForContent(
   contentId: string,
 ): Promise<UserRating[]> {
   try {
-    // First get the ratings from the database
+    // Restricted reviews are hidden from public display
     const ratings = await db
       .select()
       .from(userRatings)
-      .where(eq(userRatings.contentId, contentId))
+      .where(
+        and(eq(userRatings.contentId, contentId), eq(userRatings.restricted, false)),
+      )
       .orderBy(userRatings.createdAt);
 
-    // Get unique user IDs
-    const userIds = [...new Set(ratings.map((rating) => rating.userId))];
-
-    // Fetch user information from Stack Auth for all users
-    // We'll use a simplified approach since we don't have direct admin access
-    const userMap = new Map<
-      string,
-      { username: string; profileImage?: string }
-    >();
-
-    // For each user ID, we'll try to get the user info
-    for (const userId of userIds) {
-      try {
-        // Try to get user info - this is a simplified approach
-        // In a real implementation with admin access, you would use the proper admin API
-        const user = await stackServerApp.getUser(userId);
-        if (user) {
-          // Use username from metadata if available, otherwise use user ID
-          const username =
-            user.clientMetadata?.username || `User ${user.id.substring(0, 8)}`;
-          const profileImage = user.profileImageUrl || undefined;
-          userMap.set(userId, { username, profileImage });
-        } else {
-          userMap.set(userId, { username: `User ${userId.substring(0, 8)}` });
-        }
-      } catch (error) {
-        // If we can't get user info, use a default display
-        userMap.set(userId, { username: `User ${userId.substring(0, 8)}` });
-        console.error(error);
-      }
-    }
-
-    // Map ratings with usernames and profile images
-    return ratings.map((item) => ({
-      ...item,
-      id: item.id || "",
-      contentId: item.contentId || "",
-      userId: item.userId || "",
-      rating: item.rating ?? null,
-      createdAt: item.createdAt?.toISOString() || "",
-      updatedAt: item.updatedAt?.toISOString() || "",
-      username:
-        userMap.get(item.userId)?.username ||
-        `User ${item.userId.substring(0, 8)}`,
-      profileImage: userMap.get(item.userId)?.profileImage,
-    }));
+    return await enrichRatingsWithUsernames(ratings);
   } catch (error) {
     console.error("Error fetching user ratings for content:", error);
+    return [];
+  }
+}
+
+// Admin-only: every user rating/review across all content, unfiltered
+// (includes restricted rows so admins can review/un-restrict them), joined
+// with the content title for display in the moderation table.
+export async function getAllUserRatingsForAdmin(): Promise<AdminUserRating[]> {
+  try {
+    const rows = await db
+      .select({
+        rating: userRatings,
+        contentTitle: content.title,
+      })
+      .from(userRatings)
+      .leftJoin(content, eq(userRatings.contentId, content.id))
+      .orderBy(desc(userRatings.createdAt));
+
+    const enriched = await enrichRatingsWithUsernames(rows.map((r) => r.rating));
+
+    return enriched.map((rating, i) => ({
+      ...rating,
+      contentTitle: rows[i].contentTitle || "Unknown",
+    }));
+  } catch (error) {
+    console.error("Error fetching user ratings for admin:", error);
     return [];
   }
 }

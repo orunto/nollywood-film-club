@@ -1,62 +1,73 @@
 'use client';
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Film, FileText, Settings, Users } from 'lucide-react';
-import MoviesManagement from './movies-management';
+import { Film, FileText, Flag, Users, MessagesSquare } from 'lucide-react';
+import ContentManagement from './content-management';
+import DiscussionsManagement from './discussions-management';
 import BlogPostsManagement from './blog-posts-management';
 import ReviewsManagement from './reviews-management';
+import UserReviewsManagement from './user-reviews-management';
+import UsersManagement from './users-management';
+
+const tabTriggerClass = "rounded-none border-0 border-b-2 border-transparent data-[state=active]:border-black data-[state=active]:bg-transparent data-[state=active]:shadow-none text-black/60 data-[state=active]:text-black font-light data-[state=active]:font-medium gap-2 py-3";
 
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState('movies');
+  const [activeTab, setActiveTab] = useState('content');
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="border-b bg-white">
+    <div className="min-h-screen bg-white">
+      <div className="bg-black text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-              <p className="text-gray-600">Manage movies, reviews, and content</p>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Button variant="outline" size="sm">
-                <Settings className="w-4 h-4 mr-2" />
-                Settings
-              </Button>
-            </div>
+          <div className="py-6">
+            <h1 className="text-3xl font-semibold">Admin Dashboard</h1>
+            <p className="text-sm font-light text-white/60">Manage movies, reviews, and content</p>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="movies" className="flex items-center gap-2">
+          <TabsList className="w-full grid grid-cols-6 bg-transparent border-b border-black/10 rounded-none p-0 h-auto">
+            <TabsTrigger value="content" className={tabTriggerClass}>
               <Film className="w-4 h-4" />
-              Movies
+              Content
             </TabsTrigger>
-            <TabsTrigger value="reviews" className="flex items-center gap-2">
+            <TabsTrigger value="discussions" className={tabTriggerClass}>
+              <MessagesSquare className="w-4 h-4" />
+              Discussions
+            </TabsTrigger>
+            <TabsTrigger value="reviews" className={tabTriggerClass}>
               <FileText className="w-4 h-4" />
               Reviews
             </TabsTrigger>
-            <TabsTrigger value="blog" className="flex items-center gap-2">
+            <TabsTrigger value="user-reviews" className={tabTriggerClass}>
+              <Flag className="w-4 h-4" />
+              User Reviews
+            </TabsTrigger>
+            <TabsTrigger value="blog" className={tabTriggerClass}>
               <FileText className="w-4 h-4" />
               Blog Posts
             </TabsTrigger>
-            <TabsTrigger value="users" className="flex items-center gap-2">
+            <TabsTrigger value="users" className={tabTriggerClass}>
               <Users className="w-4 h-4" />
               Users
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="movies" className="space-y-6">
-            <MoviesManagement />
+          <TabsContent value="content" className="space-y-6">
+            <ContentManagement />
+          </TabsContent>
+
+          <TabsContent value="discussions" className="space-y-6">
+            <DiscussionsManagement />
           </TabsContent>
 
           <TabsContent value="reviews" className="space-y-6">
             <ReviewsManagement />
+          </TabsContent>
+
+          <TabsContent value="user-reviews" className="space-y-6">
+            <UserReviewsManagement />
           </TabsContent>
 
           <TabsContent value="blog" className="space-y-6">
@@ -64,15 +75,7 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="users" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>User Management</CardTitle>
-                <CardDescription>Manage user accounts and permissions</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-500">User management features coming soon...</p>
-              </CardContent>
-            </Card>
+            <UsersManagement />
           </TabsContent>
         </Tabs>
       </div>

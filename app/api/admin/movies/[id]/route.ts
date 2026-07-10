@@ -24,16 +24,18 @@ export async function PUT(
         title: movieData.title,
         contentType: movieData.contentType,
         runtime: movieData.runtime,
-        releaseDate: new Date(movieData.releaseDate),
-        rating: movieData.rating,
+        releaseDate: movieData.releaseDate ? new Date(movieData.releaseDate) : null,
+        // Empty strings are not valid enum values — store null instead
+        rating: movieData.rating || null,
         synopsis: movieData.synopsis,
         genre: movieData.genre,
         posterImage: movieData.posterImage,
         trailerUrl: movieData.trailerUrl,
         streamingUrl: movieData.streamingUrl,
-        streamingPlatform: movieData.streamingPlatform,
+        streamingPlatform: movieData.streamingPlatform || null,
         otherPlatform: movieData.otherPlatform,
         isMovieOfTheWeek: movieData.isMovieOfTheWeek,
+        catalogNumber: movieData.catalogNumber ?? null,
         updatedAt: new Date(),
       })
       .where(eq(content.id, id))

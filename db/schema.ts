@@ -84,6 +84,8 @@ export const userRatings = pgTable("user_ratings", {
   userId: text("user_id").notNull(), // Stack user ID
   rating: integer("rating"), // 0 (didn't like), 5 (okay), or 10 (liked)
   review: text("review"),
+  flagged: boolean("flagged").default(false), // marked for admin attention, still publicly visible
+  restricted: boolean("restricted").default(false), // hidden from public display
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
