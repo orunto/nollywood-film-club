@@ -19,10 +19,10 @@ export default function MoviesAndTVSeries({ moviesAndTVSeries }: MoviesAndTVSeri
     } = useCardScroller();
 
     return <section id="movies-and-tv-series" className="w-full">
-        <div className="flex items-end justify-between pb-3 border-b border-black">
+        <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-2 pb-3 border-b border-black">
             <h1 className="text-2xl font-semibold">Movies and TV Series</h1>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center justify-between sm:justify-start gap-4 w-full sm:w-auto self-end sm:self-auto">
                 <Link href="#movies-and-tv-series" className="underline text-sm">View All</Link>
                 {moviesAndTVSeries && moviesAndTVSeries.length > 0 && (
                     <div className="flex items-center gap-2">
