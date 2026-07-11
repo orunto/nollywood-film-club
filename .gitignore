@@ -45,3 +45,6 @@ next-env.d.ts
 #images
 /public/assets/png
 .env*.local
+
+/data
+/scripts
