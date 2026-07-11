@@ -37,10 +37,13 @@ export default function Nav() {
             </div>
             <ul onClick={() => setmenu(false)} className={`${menu ? 'translate-y-0' : '-translate-y-full lg:translate-y-0'} duration-300 relative text-base font-medium flex lg:flex-row flex-col lg:p-0 p-6 gap-8 items-center lg:w-max w-full bg-black`}>
                 <li>
-                    <Link href="/#spaces">Spaces</Link>
+                    <Link href="/#movies-and-tv-series">Movies &amp; TV Series</Link>
                 </li>
                 <li>
                     <Link href="/#reviews">Reviews</Link>
+                </li>
+                <li>
+                    <Link href="/#discussions">Discussions</Link>
                 </li>
                 {isAdmin && (
                     <li>
