@@ -29,6 +29,7 @@ export const ratingEnum = pgEnum("rating", [
 export const streamingPlatformEnum = pgEnum("streaming_platform", [
   "netflix",
   "prime_video",
+  "youtube",
   "disney_plus",
   "hulu",
   "hbo_max",

@@ -7,6 +7,13 @@
 @theme {
     --color-prime-video: oklch(0.5324 0.1933 257.83);
   --color-netflix: oklch(0.5814 0.2349 27.99);
+  --color-youtube: #FF0000;
+  --color-disney-plus: #113CCF;
+  --color-hulu: #1CE783;
+  --color-hbo-max: #5822B4;
+  --color-apple-tv: #000000;
+  --color-paramount-plus: #0064FF;
+  --color-peacock: #000000;
 }
 @theme inline {
   --color-background: var(--background);

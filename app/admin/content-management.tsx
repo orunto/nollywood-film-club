@@ -760,6 +760,7 @@ export default function ContentManagement() {
                     <SelectContent>
                       <SelectItem value="netflix">Netflix</SelectItem>
                       <SelectItem value="prime_video">Prime Video</SelectItem>
+                      <SelectItem value="youtube">YouTube</SelectItem>
                       <SelectItem value="disney_plus">Disney Plus</SelectItem>
                       <SelectItem value="hulu">Hulu</SelectItem>
                       <SelectItem value="hbo_max">HBO Max</SelectItem>

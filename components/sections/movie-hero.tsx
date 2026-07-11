@@ -21,6 +21,23 @@ import { Content } from "@/lib/server-queries";
 import { cn, scoreBadgeClass, toYoutubeEmbedUrl, contentTypeLabel } from "@/lib/utils";
 import MovieRatingSheet from "@/components/custom/movie-rating-sheet";
 
+const STREAMING_PLATFORMS: Record<string, {
+    label: string;
+    className: string;
+    logo: string;
+    showLabel?: boolean; // show the name alongside the logo when the logo mark alone doesn't spell out the brand name
+}> = {
+    netflix: { label: "Netflix", className: "bg-netflix hover:bg-netflix/90 text-white hover:text-white [&_img]:w-14 [&_img]:h-auto", logo: "/logos/streaming/netflix.svg", showLabel: true },
+    prime_video: { label: "Prime Video", className: "bg-prime-video hover:bg-prime-video/90 text-white hover:text-white [&_img]:w-20 [&_img]:h-auto", logo: "/logos/streaming/prime_video.svg" },
+    youtube: { label: "YouTube", className: "bg-youtube hover:bg-youtube/90 text-white hover:text-white [&_img]:w-16 [&_img]:h-auto", logo: "/logos/streaming/youtube.svg", showLabel: true },
+    disney_plus: { label: "Disney+", className: "bg-disney-plus hover:bg-disney-plus/90 text-white hover:text-white", logo: "/logos/streaming/disney_plus.svg" },
+    hulu: { label: "Hulu", className: "bg-hulu hover:bg-hulu/90 text-black hover:text-black", logo: "/logos/streaming/hulu.svg", showLabel: true },
+    hbo_max: { label: "Max", className: "bg-hbo-max hover:bg-hbo-max/90 text-white hover:text-white", logo: "/logos/streaming/hbo_max.svg" },
+    apple_tv: { label: "Apple TV", className: "bg-apple-tv hover:bg-apple-tv/90 text-white hover:text-white", logo: "/logos/streaming/apple_tv.svg" },
+    paramount_plus: { label: "Paramount+", className: "bg-paramount-plus hover:bg-paramount-plus/90 text-white hover:text-white", logo: "/logos/streaming/paramount_plus.svg" },
+    peacock: { label: "Peacock", className: "bg-peacock hover:bg-peacock/90 text-white hover:text-white", logo: "/logos/streaming/peacock.svg", showLabel: true },
+};
+
 interface MovieHeroProps {
     movie: Content | null;
     title?: string; // Optional title, defaults to "Movie of the Week" or movie title based on context
@@ -68,6 +85,7 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
     }
 
     const trailerEmbedUrl = movie.trailerUrl ? toYoutubeEmbedUrl(movie.trailerUrl) : null;
+    const platform = movie.streamingPlatform ? STREAMING_PLATFORMS[movie.streamingPlatform] : null;
 
     return <section className="w-full">
         <h1 className="pb-3 border-b border-black text-2xl font-semibold flex items-center gap-3">
@@ -88,9 +106,9 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
             }
         </h1>
         <div className=" grid lg:grid-cols-6 lg:gap-10 gap-6 py-6">
-            <figure className="lg:col-span-4 flex flex-col gap-4">
+            <figure className="lg:col-span-4 flex flex-col gap-4 aspect-video">
                 <div
-                    className={`relative w-full aspect-video rounded-lg bg-black overflow-hidden group ${trailerEmbedUrl ? "cursor-pointer" : ""}`}
+                    className={`relative w-full h-full rounded-lg bg-black overflow-hidden group ${trailerEmbedUrl ? "cursor-pointer" : ""}`}
                     onClick={trailerEmbedUrl ? handlePlay : undefined}
                 >
                     {!isPlaying ? (
@@ -100,7 +118,7 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
                                 alt={`${movie.title} Movie Poster`}
                                 width={500}
                                 height={500}
-                                className="w-full lg:h-full h-70 object-cover"
+                                className="w-full h-full object-cover"
                                 sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                                 loading="lazy"
                             />
@@ -196,16 +214,24 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
                 <div className="w-full pt-2 grid items-center gap-2">
                     {movie.streamingUrl && (
                         <Link target="_blank" href={movie.streamingUrl}>
-                            <Button variant={'secondary'} className={`w-full ${movie.streamingPlatform === 'prime_video' && 'bg-prime-video'} ${movie.streamingPlatform === 'netflix' && 'bg-netflix'} text-white`}>
-                                <PlayIcon className="w-4 h-4" />
-                                Stream on {movie.streamingPlatform === 'prime_video' ? 'Prime Video' : movie.otherPlatform || 'Platform'}
+                            <Button variant={'secondary'} className={cn("w-full py-4 max-h-13 flex gap-0", platform?.className)}>
+                                Stream on
+                                <span className="inline-flex items-center gap-1.5 font-semibold">
+                                    {platform ? (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img src={platform.logo} alt={`${platform.label} logo`}  />
+                                    ) : (
+                                        <PlayIcon className="w-4 h-4" />
+                                    )}
+                                    {/*{(!platform || platform.showLabel) && (platform?.label || movie.otherPlatform || 'Platform')}*/}
+                                </span>
                             </Button>
                         </Link>
                     )}
                     {hasSpaceOrPodcast && (
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
-                                <Button variant={'outline'} className="w-full bg-black text-white">
+                                <Button variant={'outline'} className="w-full py-4 bg-black text-white">
                                     <Mic className="w-4 h-4" />
                                     Listen to Space
                                 </Button>
