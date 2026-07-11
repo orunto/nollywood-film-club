@@ -17,15 +17,16 @@ const ContentCard = forwardRef<HTMLAnchorElement, ContentCardProps>(
             <Link href={`movies/${item.id}`} ref={ref} className={cn(className)} {...rest}>
                 <Card className="rounded-sm h-full shadow-none p-0 2xl:gap-12 gap-8">
                     <CardHeader className="px-4 bg-primary/50 max-h-30 overflow-y-visible relative z-10 overflow-visible rounded-t-sm">
-                        <CldImage
-                            src={item.posterImage || "nollywood-film-club/elj"}
-                            alt={`${item.title} Poster`}
-                            width={400}
-                            height={400}
-                            className="w-full aspect-video hover:aspect-[8/9] object-cover object-top rounded-sm translate-y-4 relative z-10 transition-[aspect-ratio] duration-300 ease-in-out"
-                            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                            loading="lazy"
-                        />
+                        <div className="w-full pt-[56.25%] hover:pt-[112.5%] relative translate-y-4 z-10 transition-[padding-top] duration-300 ease-in-out">
+                            <CldImage
+                                src={item.posterImage || "nollywood-film-club/elj"}
+                                alt={`${item.title} Poster`}
+                                fill
+                                className="object-cover object-top rounded-sm"
+                                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                                loading="lazy"
+                            />
+                        </div>
                     </CardHeader>
 
                     <CardContent className="p-4 relative flex flex-col gap-2 lg:mt-0 mt-8">
