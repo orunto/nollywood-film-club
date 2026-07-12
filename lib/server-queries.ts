@@ -172,6 +172,56 @@ export async function getMoviesAndTVSeries(): Promise<Content[]> {
   }
 }
 
+// Full catalog for the /movies-and-tv browse page — includes the movie of the
+// week and has no limit; filtering/sorting happens client-side over the result.
+export async function getAllContent(): Promise<Content[]> {
+  try {
+    const allContent = await db
+      .select({
+        id: content.id,
+        title: content.title,
+        contentType: content.contentType,
+        runtime: content.runtime,
+        releaseDate: content.releaseDate,
+        rating: content.rating,
+        synopsis: content.synopsis,
+        genre: content.genre,
+        posterImage: content.posterImage,
+        trailerUrl: content.trailerUrl,
+        streamingUrl: content.streamingUrl,
+        streamingPlatform: content.streamingPlatform,
+        otherPlatform: content.otherPlatform,
+        isMovieOfTheWeek: content.isMovieOfTheWeek,
+        catalogNumber: content.catalogNumber,
+        createdAt: content.createdAt,
+        updatedAt: content.updatedAt,
+        userRating: avg(userRatings.rating),
+      })
+      .from(content)
+      .leftJoin(userRatings, eq(content.id, userRatings.contentId))
+      .groupBy(content.id)
+      .orderBy(
+        sql`${content.catalogNumber} DESC NULLS LAST`,
+        desc(content.createdAt),
+      );
+
+    return allContent.map((item) => ({
+      ...item,
+      id: item.id || "",
+      title: item.title || "",
+      contentType: item.contentType || "movie",
+      releaseDate: item.releaseDate?.toISOString() || null,
+      createdAt: item.createdAt?.toISOString() || "",
+      updatedAt: item.updatedAt?.toISOString() || "",
+      isMovieOfTheWeek: item.isMovieOfTheWeek ?? false,
+      userRating: item.userRating ? parseFloat(item.userRating) : null,
+    }));
+  } catch (error) {
+    console.error("Error fetching all content:", error);
+    return [];
+  }
+}
+
 export async function getReviews(): Promise<Review[]> {
   try {
     const reviewsData = await db

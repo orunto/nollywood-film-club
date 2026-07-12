@@ -23,7 +23,7 @@ export default function MoviesAndTVSeries({ moviesAndTVSeries }: MoviesAndTVSeri
             <h1 className="text-2xl font-semibold">Movies and TV Series</h1>
 
             <div className="flex items-center justify-between sm:justify-start gap-4 w-full sm:w-auto self-end sm:self-auto">
-                <Link href="#movies-and-tv-series" className="underline text-sm">View All</Link>
+                <Link href="/movies-and-tv" className="underline text-sm">View All</Link>
                 {moviesAndTVSeries && moviesAndTVSeries.length > 0 && (
                     <div className="flex items-center gap-2">
                         <button

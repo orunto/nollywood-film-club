@@ -14,7 +14,7 @@ interface ContentCardProps {
 const ContentCard = forwardRef<HTMLAnchorElement, ContentCardProps>(
     function ContentCard({ item, className, ...rest }, ref) {
         return (
-            <Link href={`movies/${item.id}`} ref={ref} className={cn(className)} {...rest}>
+            <Link href={`/movies/${item.id}`} ref={ref} className={cn(className)} {...rest}>
                 <Card className="rounded-sm h-full shadow-none p-0 2xl:gap-12 gap-8">
                     <CardHeader className="px-4 bg-primary/50 max-h-30 overflow-y-visible relative z-10 overflow-visible rounded-t-sm">
                         <div className="w-full pt-[56.25%] hover:pt-[112.5%] relative translate-y-4 z-10 transition-[padding-top] duration-300 ease-in-out">
