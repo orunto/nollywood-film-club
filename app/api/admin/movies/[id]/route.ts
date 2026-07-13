@@ -34,6 +34,7 @@ export async function PUT(
         streamingUrl: movieData.streamingUrl,
         streamingPlatform: movieData.streamingPlatform || null,
         otherPlatform: movieData.otherPlatform,
+        castMembers: Array.isArray(movieData.castMembers) ? movieData.castMembers : null,
         isMovieOfTheWeek: movieData.isMovieOfTheWeek,
         // catalogNumber is derived from linked discussion episode numbers —
         // see lib/catalog-sync.ts. Never set directly from client input.

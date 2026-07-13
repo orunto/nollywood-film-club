@@ -66,6 +66,7 @@
         streamingUrl: movieData.streamingUrl,
         streamingPlatform: movieData.streamingPlatform || null,
         otherPlatform: movieData.otherPlatform,
+        castMembers: Array.isArray(movieData.castMembers) ? movieData.castMembers : null,
         isMovieOfTheWeek: movieData.isMovieOfTheWeek || false,
         // catalogNumber is derived from linked discussion episode numbers —
         // see lib/catalog-sync.ts. Starts NULL (sorts last) until linked.

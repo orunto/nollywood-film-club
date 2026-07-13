@@ -8,6 +8,7 @@ import {
   uuid,
   pgEnum,
   uniqueIndex,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 
@@ -39,6 +40,13 @@ export const streamingPlatformEnum = pgEnum("streaming_platform", [
   "other",
 ]);
 
+// Cast/crew credit stored on a content row — names only, no photos
+export interface CastMember {
+  role: "actor" | "director";
+  name: string;
+  characterName: string | null; // null for directors
+}
+
 // Movies/TV Shows table
 export const content = pgTable("content", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -54,6 +62,7 @@ export const content = pgTable("content", {
   streamingUrl: text("streaming_url"), // Direct streaming URL
   streamingPlatform: streamingPlatformEnum("streaming_platform"), // Platform enum
   otherPlatform: text("other_platform"), // Name if platform is 'other'
+  castMembers: jsonb("cast_members").$type<CastMember[]>(), // From JustWatch credits — see scripts/fetch-cast.ts
   isMovieOfTheWeek: boolean("is_movie_of_the_week").default(false),
   catalogNumber: integer("catalog_number"), // Order content was added, like discussions.episode_number
   createdAt: timestamp("created_at").defaultNow(),

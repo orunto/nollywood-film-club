@@ -8,6 +8,7 @@ const FILTER_KEYS = ["year", "platform", "genre", "score"] as const;
 
 export interface BrowseParams {
   filters: FilterState;
+  query: string; // free-text title search ("q" param)
   sort: SortValue;
   page: number; // parsed, >= 1; clamp against totalPages at render time
 }
@@ -33,6 +34,7 @@ export function useBrowseParams() {
         genres: splitParam(searchParams.get("genre")),
         scores: splitParam(searchParams.get("score")),
       },
+      query: searchParams.get("q") ?? "",
       sort: SORT_OPTIONS.some((o) => o.value === sort) ? (sort as SortValue) : "newest",
       page: Number.isNaN(page) ? 1 : Math.max(page, 1),
     };
@@ -71,9 +73,9 @@ export function useBrowseParams() {
     [searchParams, setParam],
   );
 
-  // Clears filters but keeps tab and sort — tab is navigation, not a filter
+  // Clears filters and search but keeps tab and sort — tab is navigation, not a filter
   const resetFilters = useCallback(() => {
-    setParam(Object.fromEntries(FILTER_KEYS.map((k) => [k, null])));
+    setParam(Object.fromEntries([...FILTER_KEYS, "q"].map((k) => [k, null])));
   }, [setParam]);
 
   // Shareable href for a pagination link (SSR-safe — no window access)

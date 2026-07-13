@@ -84,6 +84,40 @@ export function contentTypeLabel(contentType: "movie" | "tv_show" | "short_film"
   return CONTENT_TYPE_LABELS[contentType];
 }
 
+// URL slug utilities
+// Details pages live under a type-specific base path with an SEO slug of
+// title + release year, e.g. /movie/everybody-loves-jenifa-2024
+const CONTENT_TYPE_BASE_PATH: Record<"movie" | "tv_show" | "short_film", string> = {
+  movie: "/movie",
+  tv_show: "/tv",
+  short_film: "/short",
+};
+
+export function slugifyTitle(title: string): string {
+  return title
+    .toLowerCase()
+    .normalize("NFKD") // Strip accents: "Àjàkájú" → "ajakaju"
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+export function contentSlug(title: string, releaseDate?: Date | string | null): string {
+  const slug = slugifyTitle(title);
+  if (!releaseDate) return slug;
+  const date = typeof releaseDate === "string" ? new Date(releaseDate) : releaseDate;
+  // UTC year so client-rendered links and server-side lookups always agree
+  return isNaN(date.getTime()) ? slug : `${slug}-${date.getUTCFullYear()}`;
+}
+
+export function contentPath(item: {
+  contentType: "movie" | "tv_show" | "short_film";
+  title: string;
+  releaseDate?: Date | string | null;
+}): string {
+  return `${CONTENT_TYPE_BASE_PATH[item.contentType]}/${contentSlug(item.title, item.releaseDate)}`;
+}
+
 // Image naming utilities
 /**
  * Generates a public image name for Cloudinary based on movie title and release year.

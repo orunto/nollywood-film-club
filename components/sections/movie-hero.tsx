@@ -18,7 +18,7 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Content } from "@/lib/server-queries";
-import { cn, scoreBadgeClass, toYoutubeEmbedUrl, contentTypeLabel } from "@/lib/utils";
+import { cn, scoreBadgeClass, toYoutubeEmbedUrl, contentTypeLabel, contentPath } from "@/lib/utils";
 import MovieRatingSheet from "@/components/custom/movie-rating-sheet";
 
 const STREAMING_PLATFORMS: Record<string, {
@@ -65,7 +65,7 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
     const handleRatingSubmit = () => {
         if (movie) {
             setTimeout(() => {
-                router.push(`/movies/${movie.id}`, { scroll: false });
+                router.push(contentPath(movie), { scroll: false });
             }, 500);
 
         }
@@ -165,7 +165,7 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
                 
                 <div className="flex flex-col gap-1">
                     {showRating && (
-                      <Link href={`/movies/${movie.id}`}>
+                      <Link href={contentPath(movie)}>
                         <h2 className="text-xl hover:text-primary font-medium flex items-center gap-2">
                             {movie.title}
                             {movie.rating && (

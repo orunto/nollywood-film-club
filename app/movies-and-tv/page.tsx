@@ -19,9 +19,7 @@ export default async function MoviesAndTVPage() {
             <main className="min-h-screen">
                 <div className="w-full flex flex-col lg:px-10 lg:py-8 py-10 px-6 min-h-screen">
                     <section className="w-full">
-                        <h1 className="pb-3 border-b border-black text-2xl font-semibold">
-                            Movies &amp; TV
-                        </h1>
+                        
                         <Suspense
                             fallback={
                                 <div className="grid lg:grid-cols-3 sm:grid-cols-2 grid-cols-1 gap-6 py-6">

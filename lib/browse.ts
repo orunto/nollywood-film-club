@@ -95,6 +95,13 @@ export function deriveFilterOptions(items: Content[]): DerivedOptions {
   };
 }
 
+// Case-insensitive title match against the free-text search box
+export function searchContent(items: Content[], query: string): Content[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return items;
+  return items.filter((item) => item.title.toLowerCase().includes(q));
+}
+
 // OR within a dimension, AND across dimensions. Items missing a dimension's
 // value are excluded whenever that dimension has an active filter.
 export function applyFilters(items: Content[], state: FilterState): Content[] {

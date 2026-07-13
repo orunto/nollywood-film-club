@@ -2,39 +2,29 @@
 import MovieHero from "@/components/sections/movie-hero";
 import { Content, UserRating } from "@/lib/server-queries";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-// import { Star } from "lucide-react";
 import { ArrowLeft } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-interface MovieDetailsClientProps {
-  movie: Content | null;
+import { contentTypeLabel } from "@/lib/utils";
+
+interface ContentDetailsClientProps {
+  movie: Content;
   userRatings: UserRating[];
   spaceUrl?: string | null;
   podcastLinks?: string[] | null;
 }
 
-export default function MovieDetailsClient({
+export default function ContentDetailsClient({
   movie,
   userRatings,
   spaceUrl,
   podcastLinks,
-}: MovieDetailsClientProps) {
+}: ContentDetailsClientProps) {
   const router = useRouter();
-  if (!movie) {
-    return (
-      <div className="min-h-screen w-full flex flex-col lg:px-10 lg:py-8 py-10 px-6 gap-15">
-        <section className="w-full">
-          <h1 className="pb-3 border-b border-black text-2xl font-semibold">
-            Movie Details
-          </h1>
-          <div className="py-6 text-center">
-            <p className="text-gray-500">Movie not found</p>
-          </div>
-        </section>
-      </div>
-    );
-  }
+
+  const actors = movie.castMembers?.filter((c) => c.role === "actor") ?? [];
+  const directors = movie.castMembers?.filter((c) => c.role === "director") ?? [];
 
   return (
     <div className="w-full flex flex-col lg:px-10 lg:py-8 py-10 px-6 gap-6 min-h-screen">
@@ -42,8 +32,43 @@ export default function MovieDetailsClient({
           <ArrowLeft className="h-4 w-4" />
           Go Back
       </Button>
-      {/* Movie Header Section (using MovieHero) */}
+      {/* Header section (using MovieHero) */}
       <MovieHero movie={movie} showRating={false} spaceUrl={spaceUrl} podcastLinks={podcastLinks} />
+
+      {/* Cast Section — names only, no photos */}
+      {(actors.length > 0 || directors.length > 0) && (
+        <section className="w-full mt-10">
+          <h2 className="pb-3 border-b border-black text-2xl font-semibold">
+            Cast &amp; Crew
+          </h2>
+          <div className="py-6 flex flex-col gap-6">
+            {directors.length > 0 && (
+              <p className="text-sm">
+                <span className="font-medium">
+                  {directors.length > 1 ? "Directors: " : "Director: "}
+                </span>
+                <span className="font-light">
+                  {directors.map((d) => d.name).join(", ")}
+                </span>
+              </p>
+            )}
+            {actors.length > 0 && (
+              <ul className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">
+                {actors.map((member, idx) => (
+                  <li key={`${member.name}-${idx}`} className="flex flex-col">
+                    <span className="text-sm font-medium">{member.name}</span>
+                    {member.characterName && (
+                      <span className="text-xs font-light text-gray-500">
+                        as {member.characterName}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* User Ratings/Comments Section */}
       <section className="w-full mt-10">
@@ -54,7 +79,8 @@ export default function MovieDetailsClient({
           {userRatings.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-gray-500">
-                No reviews yet. Be the first to review this movie!
+                No reviews yet. Be the first to review this{" "}
+                {contentTypeLabel(movie.contentType).toLowerCase()}!
               </p>
             </div>
           ) : (
@@ -89,18 +115,12 @@ export default function MovieDetailsClient({
                         </div>
                       </div>
                       <div className="flex items-center">
-                        {/*{[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`w-4 h-4 ${i < (userRating.rating || 0) ? "text-yellow-400 fill-current" : "text-gray-300"}`}
-                          />
-                        ))}*/}
                         <span className="text-xs text-gray-500">
                           {userRating.rating === 10 &&`I liked it!`}
                           {userRating.rating === 5 && `It was okay`}
                           {userRating.rating === 0 && `I didn't like it`}
                         </span>
-                        
+
                       </div>
                     </div>
                   </CardHeader>

@@ -1,7 +1,10 @@
 import { db } from "@/db/client";
-import { content, discussions, reviews, userRatings } from "@/db/schema";
+import { content, discussions, reviews, userRatings, type CastMember } from "@/db/schema";
 import { eq, avg, desc, sql, and } from "drizzle-orm";
 import { stackServerApp } from "@/stack";
+import { contentSlug } from "@/lib/utils";
+
+export type { CastMember };
 
 // Types
 export interface Content {
@@ -18,6 +21,7 @@ export interface Content {
   streamingUrl: string | null;
   streamingPlatform: string | null;
   otherPlatform: string | null;
+  castMembers: CastMember[] | null;
   isMovieOfTheWeek: boolean;
   catalogNumber: number | null;
   createdAt: string;
@@ -139,6 +143,7 @@ export async function getMoviesAndTVSeries(): Promise<Content[]> {
         streamingUrl: content.streamingUrl,
         streamingPlatform: content.streamingPlatform,
         otherPlatform: content.otherPlatform,
+        castMembers: content.castMembers,
         isMovieOfTheWeek: content.isMovieOfTheWeek,
         catalogNumber: content.catalogNumber,
         createdAt: content.createdAt,
@@ -191,6 +196,7 @@ export async function getAllContent(): Promise<Content[]> {
         streamingUrl: content.streamingUrl,
         streamingPlatform: content.streamingPlatform,
         otherPlatform: content.otherPlatform,
+        castMembers: content.castMembers,
         isMovieOfTheWeek: content.isMovieOfTheWeek,
         catalogNumber: content.catalogNumber,
         createdAt: content.createdAt,
@@ -370,6 +376,7 @@ export async function getContentById(id: string): Promise<Content | null> {
         streamingUrl: content.streamingUrl,
         streamingPlatform: content.streamingPlatform,
         otherPlatform: content.otherPlatform,
+        castMembers: content.castMembers,
         isMovieOfTheWeek: content.isMovieOfTheWeek,
         catalogNumber: content.catalogNumber,
         createdAt: content.createdAt,
@@ -398,6 +405,29 @@ export async function getContentById(id: string): Promise<Content | null> {
     };
   } catch (error) {
     console.error("Error fetching content by ID:", error);
+    return null;
+  }
+}
+
+// Resolves an SEO slug ("everybody-loves-jenifa-2024") to a content row.
+// Slugs aren't stored — they're derived from title + release year — so we
+// match against the computed slug of every row (the catalog is small).
+export async function getContentBySlug(slug: string): Promise<Content | null> {
+  try {
+    const rows = await db
+      .select({
+        id: content.id,
+        title: content.title,
+        releaseDate: content.releaseDate,
+      })
+      .from(content);
+
+    const match = rows.find(
+      (row) => contentSlug(row.title, row.releaseDate) === slug,
+    );
+    return match ? getContentById(match.id) : null;
+  } catch (error) {
+    console.error("Error fetching content by slug:", error);
     return null;
   }
 }

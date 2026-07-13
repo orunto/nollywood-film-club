@@ -23,6 +23,7 @@ query GetSearchTitles($country: Country!, $language: Language!, $first: Int!, $f
           posterUrl
           ageCertification
           clips { externalId provider }
+          credits { role name characterName }
         }
         offers(country: $country, platform: WEB) {
           monetizationType
@@ -100,6 +101,7 @@ interface JustWatchNode {
     posterUrl: string | null;
     ageCertification: string | null;
     clips: { externalId: string; provider: string }[] | null;
+    credits: { role: string; name: string; characterName: string | null }[] | null;
   };
   offers: JustWatchOffer[] | null;
 }
@@ -125,6 +127,14 @@ function mapNode(node: JustWatchNode) {
     : null;
 
   const trailer = content.clips?.find((c) => c.provider === 'YOUTUBE' && c.externalId);
+  const castMembers =
+    content.credits
+      ?.filter((c) => c.role === 'ACTOR' || c.role === 'DIRECTOR')
+      .map((c) => ({
+        role: c.role === 'DIRECTOR' ? ('director' as const) : ('actor' as const),
+        name: c.name,
+        characterName: c.characterName || null,
+      })) ?? [];
   const offer = pickBestOffer(node.offers);
   const technicalName = offer?.package?.technicalName ?? '';
   const platform = offer ? PLATFORM_BY_TECHNICAL_NAME[technicalName] ?? 'other' : null;
@@ -146,6 +156,7 @@ function mapNode(node: JustWatchNode) {
         .join(', ') ?? '',
     posterUrl,
     trailerUrl: trailer ? `https://www.youtube.com/embed/${trailer.externalId}` : null,
+    castMembers: castMembers.length ? castMembers : null,
     streamingPlatform: platform,
     otherPlatform: platform === 'other' ? offer?.package?.clearName ?? null : null,
     streamingUrl: offer?.standardWebURL ?? null,

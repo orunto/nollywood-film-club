@@ -37,7 +37,7 @@ import {
 } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Plus, Edit, Trash2, Star, Search, Check, ChevronsUpDown, ExternalLink, X } from 'lucide-react';
-import { Content } from '@/lib/server-queries';
+import { CastMember, Content } from '@/lib/server-queries';
 import { contentTypeLabel } from '@/lib/utils';
 import { toast } from 'sonner';
 import { SortableHead, useTableSort, SortAccessors } from './table-sort';
@@ -56,6 +56,7 @@ interface JustWatchResult {
   genre: string;
   posterUrl: string | null;
   trailerUrl: string | null;
+  castMembers: CastMember[] | null;
   streamingPlatform: string | null;
   otherPlatform: string | null;
   streamingUrl: string | null;
@@ -89,6 +90,8 @@ export default function ContentManagement() {
   const [isUploadingPoster, setIsUploadingPoster] = useState(false);
   const [linkedDiscussionId, setLinkedDiscussionId] = useState('');
   const [discussionPickerOpen, setDiscussionPickerOpen] = useState(false);
+  // Set from a JustWatch import or the row being edited — no manual editor
+  const [castMembers, setCastMembers] = useState<CastMember[] | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     contentType: 'movie' as 'movie' | 'tv_show' | 'short_film',
@@ -177,6 +180,7 @@ export default function ContentManagement() {
       streamingPlatform: result.streamingPlatform ?? '',
       otherPlatform: result.otherPlatform ?? '',
     }));
+    setCastMembers(result.castMembers);
     setImportedPosterUrl(result.posterUrl);
     setJwResults([]);
     toast.success(`Imported "${result.title}" from JustWatch`);
@@ -251,6 +255,7 @@ export default function ContentManagement() {
         runtime: formData.runtime ? parseInt(formData.runtime) : null,
         releaseDate: formData.releaseDate ? formatDate(formData.releaseDate) : null,
         genre: formData.genre ? formData.genre.split(',').map(g => g.trim()) : [],
+        castMembers,
       };
 
       const url = editingMovie ? `/api/admin/movies/${editingMovie.id}` : '/api/admin/movies';
@@ -309,6 +314,7 @@ export default function ContentManagement() {
       otherPlatform: movie.otherPlatform || '',
       isMovieOfTheWeek: movie.isMovieOfTheWeek,
     });
+    setCastMembers(movie.castMembers);
     setJwQuery('');
     setJwResults([]);
     setImportedPosterUrl(null);
@@ -375,6 +381,7 @@ export default function ContentManagement() {
       otherPlatform: '',
       isMovieOfTheWeek: false,
     });
+    setCastMembers(null);
     setJwQuery('');
     setJwResults([]);
     setImportedPosterUrl(null);
@@ -582,6 +589,14 @@ export default function ContentManagement() {
                 <p className="text-xs font-light text-black/60">
                   Selecting a result fills the form below. Review before saving.
                 </p>
+                {castMembers && castMembers.length > 0 && (
+                  <p className="text-xs font-light text-black/60">
+                    Cast on record: {castMembers.filter((c) => c.role === 'actor').map((c) => c.name).join(', ') || '—'}
+                    {castMembers.some((c) => c.role === 'director') && (
+                      <> · Directed by {castMembers.filter((c) => c.role === 'director').map((c) => c.name).join(', ')}</>
+                    )}
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
