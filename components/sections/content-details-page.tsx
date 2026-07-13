@@ -1,9 +1,12 @@
 import { requireContentAt } from "@/lib/content-route";
 import {
   getDiscussionForContent,
+  getRelatedContent,
+  getReviewsForContent,
   getUserRatingsForContent,
 } from "@/lib/server-queries";
 import ContentDetailsClient from "@/components/sections/content-details-client";
+import { Footer, Nav } from "@/components/custom";
 
 interface ContentDetailsPageProps {
   rawParam: string;
@@ -17,17 +20,27 @@ export default async function ContentDetailsPage({
 }: ContentDetailsPageProps) {
   const item = await requireContentAt(rawParam, basePath);
 
-  const [userRatings, discussion] = await Promise.all([
+  const [userRatings, discussion, criticReviews, related] = await Promise.all([
     getUserRatingsForContent(item.id),
     getDiscussionForContent(item.id),
+    getReviewsForContent(item.id),
+    getRelatedContent(item),
   ]);
 
   return (
-    <ContentDetailsClient
-      movie={item}
-      userRatings={userRatings}
-      spaceUrl={discussion?.spaceUrl}
-      podcastLinks={discussion?.podcastLinks}
-    />
+    <>
+      <Nav />
+      <main className="min-h-screen">
+        <ContentDetailsClient
+          movie={item}
+          userRatings={userRatings}
+          criticReviews={criticReviews}
+          related={related}
+          spaceUrl={discussion?.spaceUrl}
+          podcastLinks={discussion?.podcastLinks}
+        />
+      </main>
+      <Footer />
+    </>
   );
 }

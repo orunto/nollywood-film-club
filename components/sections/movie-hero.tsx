@@ -21,7 +21,7 @@ import { Content } from "@/lib/server-queries";
 import { cn, scoreBadgeClass, toYoutubeEmbedUrl, contentTypeLabel, contentPath } from "@/lib/utils";
 import MovieRatingSheet from "@/components/custom/movie-rating-sheet";
 
-const STREAMING_PLATFORMS: Record<string, {
+export const STREAMING_PLATFORMS: Record<string, {
     label: string;
     className: string;
     logo: string;

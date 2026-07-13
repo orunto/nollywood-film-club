@@ -257,6 +257,60 @@ export async function getReviews(): Promise<Review[]> {
   }
 }
 
+// Critic reviews published for one content item, newest first
+export async function getReviewsForContent(
+  contentId: string,
+): Promise<Review[]> {
+  try {
+    const rows = await db
+      .select()
+      .from(reviews)
+      .where(eq(reviews.contentId, contentId))
+      .orderBy(
+        sql`${reviews.publishedAt} DESC NULLS LAST`,
+        desc(reviews.createdAt),
+      );
+
+    return rows.map((item) => ({
+      ...item,
+      id: item.id || "",
+      contentId: item.contentId || "",
+      title: item.title || "",
+      description: item.description || "",
+      reviewer: item.reviewer || "",
+      score:
+        typeof item.score === "string"
+          ? parseFloat(item.score) || null
+          : item.score,
+      publishedAt: item.publishedAt?.toISOString() || null,
+      createdAt: item.createdAt?.toISOString() || "",
+      updatedAt: item.updatedAt?.toISOString() || "",
+    }));
+  } catch (error) {
+    console.error("Error fetching reviews for content:", error);
+    return [];
+  }
+}
+
+// Titles to suggest under "More Like This" on a details page — ranked by how
+// many genres they share with the current item, falling back to same type.
+// The catalog is small, so ranking in JS over the full list is fine.
+export async function getRelatedContent(item: Content, limit = 4): Promise<Content[]> {
+  const all = await getAllContent();
+  const genres = new Set((item.genre ?? []).map((g) => g.toLowerCase()));
+
+  return all
+    .filter((other) => other.id !== item.id)
+    .map((other) => ({
+      other,
+      shared: (other.genre ?? []).filter((g) => genres.has(g.toLowerCase())).length,
+    }))
+    .filter(({ other, shared }) => shared > 0 || other.contentType === item.contentType)
+    .sort((a, b) => b.shared - a.shared)
+    .slice(0, limit)
+    .map(({ other }) => other);
+}
+
 function mapDiscussion(
   item: typeof discussions.$inferSelect,
   related: typeof content.$inferSelect | null,
