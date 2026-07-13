@@ -109,4 +109,20 @@
   scrollbar-width: none
 }
 
+/* Hero poster-wall marquee: each column scrolls its (duplicated) posters so a
+   -50% translate loops seamlessly. Direction alternates per column. */
+@keyframes nfc-marquee-up {
+  from { transform: translateY(0); }
+  to { transform: translateY(-50%); }
+}
+@keyframes nfc-marquee-down {
+  from { transform: translateY(-50%); }
+  to { transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  [class*="nfc-marquee"] {
+    animation: none !important;
+  }
+}
+
 /* Custom scrollbar styling */

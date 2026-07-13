@@ -64,6 +64,29 @@ export function toYoutubeEmbedUrl(rawUrl: string): string | null {
   }
 }
 
+// Converts an open.spotify.com share URL (episode/show/track/playlist/album)
+// to its embeddable /embed/ form so it can be dropped into an iframe player.
+// Accepts links that are already in /embed/ form. Returns null when the URL
+// isn't a recognisable Spotify link. Used to build the homepage hero player.
+export function toSpotifyEmbedUrl(rawUrl: string): string | null {
+  try {
+    const url = new URL(rawUrl);
+    if (!url.hostname.endsWith("spotify.com")) return null;
+
+    const segments = url.pathname.split("/").filter(Boolean);
+    // Drop a leading "embed" segment so an already-embeddable URL still works
+    if (segments[0] === "embed") segments.shift();
+
+    const [type, id] = segments;
+    const embeddableTypes = ["episode", "show", "track", "playlist", "album"];
+    if (!type || !id || !embeddableTypes.includes(type)) return null;
+
+    return `https://open.spotify.com/embed/${type}/${id}?utm_source=generator`;
+  } catch {
+    return null;
+  }
+}
+
 // NFC score badge color for a content item's userRating (0-10, or null if unrated)
 export function scoreBadgeClass(userRating: number | string | null): string {
   if (userRating === null) return "bg-gray-400";
