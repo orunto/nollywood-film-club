@@ -28,7 +28,7 @@ export default function Nav() {
         <nav className={"flex lg:flex-row flex-col justify-between items-center w-full bg-black lg:px-10 lg:py-3 text-white lg:overflow-hidden overflow-y-visible z-50 relative lg:max-h-[unset] max-h-16"}>
             <div className="relative z-10 bg-black flex items-center justify-between w-full lg:p-0 px-6 py-3 lg:w-max">
                 <Link href="/">
-                    <Image src="/assets/webp/logo-no-bg.webp" alt="Logo" width={40} height={40} />
+                    <Image src="/assets/svg/logo.svg" alt="Nollywood Film Club logo" width={40} height={40} />
                 </Link>
 
                 <Button onClick={() => setmenu(!menu)} className="lg:hidden" size={'icon'} variant={'ghost'}>
