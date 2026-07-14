@@ -46,12 +46,11 @@ export default function SpotifyEmbed({ src, title }: SpotifyEmbedProps) {
                     src={src}
                     width="100%"
                     height={PLAYER_HEIGHT}
-                    frameBorder="0"
                     loading="lazy"
                     allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
                     allowFullScreen
                     onLoad={() => setLoaded(true)}
-                    className={`absolute inset-0 w-full h-full rounded-sm transition-opacity duration-500 ${
+                    className={`absolute inset-0 w-full h-full border-none rounded-sm transition-opacity duration-500 ${
                         loaded ? "opacity-100" : "opacity-0"
                     }`}
                 />

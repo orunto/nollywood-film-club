@@ -46,6 +46,7 @@ export default function UserMenu({ user, isAdmin = false }: UserMenuProps) {
       await user.signOut();
     } catch (err: unknown) {
       console.error(err);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -56,6 +57,7 @@ export default function UserMenu({ user, isAdmin = false }: UserMenuProps) {
         <button
           type="button"
           aria-label="Open account menu"
+          onClick={(e) => e.stopPropagation()}
           className="cursor-pointer rounded-full outline-none transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
         >
           <Avatar className="size-9 border border-white/20">

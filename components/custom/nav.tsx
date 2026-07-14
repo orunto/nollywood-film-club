@@ -51,9 +51,7 @@ export default function Nav() {
                 </li>
                 <li>
                     {user ? (
-                        <span onClick={(e) => e.stopPropagation()}>
-                            <UserMenu user={user} isAdmin={isAdmin} />
-                        </span>
+                        <UserMenu user={user} isAdmin={isAdmin} />
                     ) : (
                         <Link href="/auth">
                             <Button variant={'default'} className="text-base">
