@@ -1,10 +1,10 @@
 import { ImageResponse } from "next/og";
 import { resolveContent } from "@/lib/content-route";
-import { contentTypeLabel } from "@/lib/utils";
 
 // Shared generator behind the opengraph-image.tsx files of /movie/[slug],
-// /tv/[slug] and /short/[slug] — a monochrome NFC-branded card with the
-// poster alongside the title, per the site's flat black/white design system.
+// /tv/[slug] and /short/[slug] — the poster full-bleed with the NFC badge
+// in the bottom-right corner. The badge is drawn in JSX (colours sampled
+// from public/assets/webp/logo-no-bg.webp) because satori can't decode webp.
 
 export const OG_SIZE = { width: 1200, height: 630 };
 
@@ -56,6 +56,33 @@ function loadFonts(): Promise<OgFont[]> {
   return fontsPromise;
 }
 
+// The circular NFC badge, recreated from the logo (pink #d1416d, grey ring)
+function NfcBadge({ size }: { size: number }) {
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: "50%",
+        backgroundColor: "#d1416d",
+        border: `${Math.round(size * 0.04)}px solid #c6c6c6`,
+        color: "#ffffff",
+        fontSize: size * 0.17,
+        fontWeight: 600,
+        lineHeight: 1.25,
+        textAlign: "center",
+      }}
+    >
+      <div style={{ display: "flex" }}>Nollywood</div>
+      <div style={{ display: "flex" }}>Film Club</div>
+    </div>
+  );
+}
+
 export async function contentOgImage(rawSlug: string) {
   const [item, fonts] = await Promise.all([
     resolveContent(rawSlug),
@@ -63,16 +90,13 @@ export async function contentOgImage(rawSlug: string) {
   ]);
 
   const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-  // f_jpg because satori doesn't decode webp/avif
+  // f_jpg because satori doesn't decode webp/avif; g_auto so the landscape
+  // crop of the portrait poster keeps the subject in frame
   const posterUrl =
     item?.posterImage && cloudName
-      ? `https://res.cloudinary.com/${cloudName}/image/upload/f_jpg,c_fill,w_400,h_600/${item.posterImage}`
+      ? `https://res.cloudinary.com/${cloudName}/image/upload/f_jpg,c_fill,g_auto,w_${OG_SIZE.width},h_${OG_SIZE.height}/${item.posterImage}`
       : null;
 
-  const year = item?.releaseDate
-    ? new Date(item.releaseDate).getUTCFullYear()
-    : null;
-  const title = item?.title ?? "Nollywood Film Club";
   const fontFamily = fonts.length ? "Lexend Deca" : undefined;
 
   return new ImageResponse(
@@ -82,133 +106,41 @@ export async function contentOgImage(rawSlug: string) {
           width: "100%",
           height: "100%",
           display: "flex",
-          backgroundColor: "#ffffff",
-          color: "#000000",
+          backgroundColor: "#000000",
           fontFamily,
-          padding: 48,
         }}
       >
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "space-between",
-            paddingRight: 48,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              fontSize: 28,
-              fontWeight: 600,
-              letterSpacing: 6,
-              borderBottom: "3px solid #000",
-              paddingBottom: 20,
-            }}
-          >
-            NOLLYWOOD FILM CLUB
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
-            <div
-              style={{
-                display: "flex",
-                fontSize: title.length > 40 ? 52 : 68,
-                fontWeight: 700,
-                lineHeight: 1.1,
-                lineClamp: 3,
-              }}
-            >
-              {title}
-            </div>
-            {item && (
-              <div style={{ display: "flex", gap: 14 }}>
-                {year && (
-                  <div
-                    style={{
-                      display: "flex",
-                      border: "2px solid #000",
-                      borderRadius: 4,
-                      padding: "8px 18px",
-                      fontSize: 26,
-                      fontWeight: 400,
-                    }}
-                  >
-                    {year}
-                  </div>
-                )}
-                <div
-                  style={{
-                    display: "flex",
-                    border: "2px solid #000",
-                    borderRadius: 4,
-                    padding: "8px 18px",
-                    fontSize: 26,
-                    fontWeight: 400,
-                  }}
-                >
-                  {contentTypeLabel(item.contentType)}
-                </div>
-                {item.rating && (
-                  <div
-                    style={{
-                      display: "flex",
-                      backgroundColor: "#000",
-                      color: "#fff",
-                      borderRadius: 4,
-                      padding: "8px 18px",
-                      fontSize: 26,
-                      fontWeight: 400,
-                    }}
-                  >
-                    {item.rating}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div style={{ display: "flex", fontSize: 24, fontWeight: 300 }}>
-            {item?.genre?.length
-              ? item.genre
-                  .slice(0, 3)
-                  .map((g) => g.charAt(0).toUpperCase() + g.slice(1))
-                  .join(" · ")
-              : "Nigerian cinema, watched and discussed together"}
-          </div>
-        </div>
-
-        {posterUrl ? (
+        {posterUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={posterUrl}
             alt=""
-            width={356}
-            height={534}
+            width={OG_SIZE.width}
+            height={OG_SIZE.height}
             style={{
-              width: 356,
-              height: 534,
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
               objectFit: "cover",
-              border: "3px solid #000",
-              borderRadius: 8,
             }}
           />
+        )}
+        {posterUrl ? (
+          <div style={{ position: "absolute", right: 40, bottom: 40, display: "flex" }}>
+            <NfcBadge size={160} />
+          </div>
         ) : (
           <div
             style={{
-              width: 356,
-              height: 534,
+              position: "absolute",
+              inset: 0,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              border: "3px solid #000",
-              borderRadius: 8,
-              fontSize: 96,
-              fontWeight: 700,
             }}
           >
-            NFC
+            <NfcBadge size={320} />
           </div>
         )}
       </div>
