@@ -6,6 +6,7 @@ import {
     UsersIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { Sparkle } from "@/components/graphics";
+import SpotifyEmbed from "./spotify-embed";
 import { Discussion } from "@/lib/server-queries";
 import { toSpotifyEmbedUrl } from "@/lib/utils";
 
@@ -133,16 +134,9 @@ export default function Hero({ latestEpisode, posters = [] }: HeroProps) {
                     </h2>
 
                     {spotifyEmbedUrl ? (
-                        <iframe
-                            title={`Spotify player: ${latestEpisode?.title ?? "Latest episode"}`}
+                        <SpotifyEmbed
                             src={spotifyEmbedUrl}
-                            width="100%"
-                            height="352"
-                            frameBorder="0"
-                            loading="lazy"
-                            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                            allowFullScreen
-                            className="w-full rounded-sm"
+                            title={`Spotify player: ${latestEpisode?.title ?? "Latest episode"}`}
                         />
                     ) : (
                         <div className="py-10 text-center">
