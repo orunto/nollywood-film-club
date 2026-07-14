@@ -74,9 +74,10 @@ export default function Reviews({ reviews }: ReviewsProps) {
                     ))}
                 </div>
                 <div className="text-center mt-8">
-                    <h2 className="text-xl font-semibold mb-2">Coming Soon...</h2>
+                    <h2 className="text-xl font-semibold mb-2">Coming soon...</h2>
                     <p className="text-gray-600 text-sm">
-                        Reviews will appear here once we start publishing them.
+                        Written reviews are on the way. The yapping is already recorded.
+                        Writing it down is the hard part.
                     </p>
                 </div>
             </div>

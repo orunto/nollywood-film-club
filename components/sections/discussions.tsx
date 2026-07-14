@@ -93,7 +93,7 @@ export default function Discussions({ discussions }: DiscussionsProps) {
 
                             <CardContent className="p-0 mb-6">
                                 <CardDescription className="text-sm font-light text-black/70 line-clamp-3">
-                                    {discussion.description || discussion.content?.synopsis || "Join our deep dive into this Nollywood masterpiece."}
+                                    {discussion.description || discussion.content?.synopsis || "“Masterpiece” is a strong word. Come and hear what we actually thought."}
                                 </CardDescription>
                             </CardContent>
                         </div>
@@ -111,7 +111,7 @@ export default function Discussions({ discussions }: DiscussionsProps) {
                                         <AlertDialogHeader>
                                             <AlertDialogTitle>Listen to {discussion.title}</AlertDialogTitle>
                                             <AlertDialogDescription>
-                                                Choose your preferred platform to listen to the recording of this discussion.
+                                                Pick your platform. The opinions are the same on all of them.
                                             </AlertDialogDescription>
                                         </AlertDialogHeader>
                                         <div className="flex flex-col gap-2 py-4">
@@ -158,7 +158,7 @@ export default function Discussions({ discussions }: DiscussionsProps) {
                                     </AlertDialogContent>
                                 </AlertDialog>
                             ) : (
-                                <span className="text-sm text-black/40 italic">Recording coming soon...</span>
+                                <span className="text-sm text-black/40 italic">Recording coming soon. Cletus is on it.</span>
                             )}
                         </CardFooter>
                     </Card>
@@ -176,9 +176,9 @@ export default function Discussions({ discussions }: DiscussionsProps) {
             </div>
         ) : (
             <div className="lg:py-10 py-6 text-center">
-                <h2 className="text-xl font-semibold mb-2">Coming Soon...</h2>
+                <h2 className="text-xl font-semibold mb-2">Coming soon...</h2>
                 <p className="text-gray-600 text-sm">
-                    More discussions will appear here soon.
+                    The Sundays keep coming, and so do we. Discussions land here shortly.
                 </p>
             </div>
         )}

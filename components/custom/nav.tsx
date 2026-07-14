@@ -45,6 +45,9 @@ export default function Nav() {
                 <li>
                     <Link href="/#discussions">Discussions</Link>
                 </li>
+                <li>
+                    <Link href="/about">About</Link>
+                </li>
                 {isAdmin && (
                     <li>
                         <Link href="/admin">Admin</Link>

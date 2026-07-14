@@ -87,14 +87,16 @@ export default function Hero({ latestEpisode, posters = [] }: HeroProps) {
                 {/* Intro */}
                 <div className="flex flex-col gap-6 text-white">
                     <span className="w-fit text-xs text-white bg-transparent border border-white rounded-sm px-2.5 py-1">
-                        Sundays · 6PM WAT
+                        Live on X Spaces · Sundays · 6PM WAT
                     </span>
                     <h1 className="text-4xl lg:text-6xl font-bold leading-[1.05]">
-                        Welcome to Nollywood Film Club
+                        Hello and welcome to Nollywood Film Club
                     </h1>
                     <p className="text-base lg:text-lg font-light text-white/70 max-w-lg">
-                        Where we pick a movie to discuss on Sundays at 6pm WAT. Now you can
-                        keep up with our discussions through the years and share your thoughts.
+                        Every Sunday we pick one Nollywood film and discuss it properly:
+                        what we liked in the good, what we didn&apos;t in the bad, and the
+                        pushback where we disagree. Everybody&apos;s opinion is welcome here.
+                        Some of them are even right.
                     </p>
                     <div className="flex flex-wrap gap-3 pt-1">
                         <Link
@@ -137,9 +139,10 @@ export default function Hero({ latestEpisode, posters = [] }: HeroProps) {
                         />
                     ) : (
                         <div className="py-10 text-center">
-                            <h3 className="text-xl font-semibold mb-2 text-black">Coming Soon...</h3>
+                            <h3 className="text-xl font-semibold mb-2 text-black">Coming soon...</h3>
                             <p className="text-gray-600 text-sm">
-                                Our latest discussion will stream right here as soon as it drops.
+                                The next episode lands here once Cletus finds
+                                whatever catchy intro music you&apos;re about to hear.
                             </p>
                         </div>
                     )}

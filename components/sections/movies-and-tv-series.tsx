@@ -96,9 +96,9 @@ export default function MoviesAndTVSeries({ moviesAndTVSeries }: MoviesAndTVSeri
                     ))}
                 </div>
                 <div className="text-center mt-8">
-                    <h2 className="text-xl font-semibold mb-2">Coming Soon...</h2>
+                    <h2 className="text-xl font-semibold mb-2">Coming soon...</h2>
                     <p className="text-gray-600 text-sm mb-4">
-                        Movies and TV Series will appear here once we update them. In the meantime you can check out the recordings:
+                        The catalogue is on its way. Until then, the recordings will keep you company:
                     </p>
                      <div className="flex justify-center">
                          <Link

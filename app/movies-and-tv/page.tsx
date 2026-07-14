@@ -7,7 +7,7 @@ import BrowseContent from "./browse-content";
 export const metadata: Metadata = {
     title: "Movies & TV | Nollywood Film Club",
     description:
-        "Browse every movie, TV series, and short film the Nollywood Film Club has covered — filter by year, streaming service, genre, and NFC score.",
+        "Every movie, TV series, and short film Nollywood Film Club has discussed. Filter by year, streaming service, genre, and the score it earned. The catalogue remembers everything, even the ones we'd rather forget.",
 };
 
 export default async function MoviesAndTVPage() {

@@ -78,7 +78,7 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
                     {title || "Movie of the Week"}
                 </h1>
                 <div className="py-6 text-center">
-                    <p className="text-gray-500">No movie available</p>
+                    <p className="text-gray-500">No film this week. Even haters deserve rest.</p>
                 </div>
             </section>
         );
@@ -240,7 +240,7 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
                                 <AlertDialogHeader>
                                     <AlertDialogTitle>Listen to {movie.title}</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                        Choose your preferred platform to listen to the recording of this discussion.
+                                        Pick your platform. The opinions are the same on all of them.
                                     </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <div className="flex flex-col gap-2 py-4">

@@ -4,7 +4,8 @@ export default function Footer() {
         <div className="w-full flex lg:flex-row flex-col gap-6 justify-between">
             <div className="flex flex-col gap-2">
                 <span className="text-lg font-semibold">The Nollywood Film Club <sub>hosted by <Link href='https://linktr.ee/irokocritic' className="underline">Iroko Critic</Link></sub></span>
-                <span className="text-xs font-light">Copyright © 2025. All rights reserved.</span>
+                <span className="text-xs font-light">One film a week. The good, the bad, the pushback.</span>
+                <span className="text-xs font-light">Copyright © 2026. All rights reserved.</span>
                 <span className="text-xs font-light">Open source project maintained by <Link href='https://orunto.vercel.app' className="underline text-green-600">orunto.dev</Link></span>
             </div>
 
@@ -12,8 +13,8 @@ export default function Footer() {
                 <Link href='/movies-and-tv'>Movies &amp; TV</Link>
                 <Link href='/#discussions'>Discussions</Link>
                 <Link href='/#reviews'>Reviews</Link>
+                <Link href='/about'>About</Link>
                 <Link href='/auth'>Join the Club</Link>
-                {/* <Link href='/about'>About</Link> */}
             </div>
         </div>
     </footer>
