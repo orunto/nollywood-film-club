@@ -4,11 +4,12 @@ import Link from "next/link";
 import { Button } from "../ui/button";
 import { ListIcon } from "@phosphor-icons/react";
 import { useState, useEffect } from "react";
-import { User, useStackApp } from "@stackframe/stack";
+import { CurrentUser, useStackApp } from "@stackframe/stack";
+import UserMenu from "./user-menu";
 
 export default function Nav() {
     const [menu, setmenu] = useState(false);
-    const [user, setUser] = useState<User | null>(null);
+    const [user, setUser] = useState<CurrentUser | null>(null);
     const [isAdmin, setIsAdmin] = useState(false);
     const app = useStackApp();
 
@@ -48,18 +49,11 @@ export default function Nav() {
                 <li>
                     <Link href="/about">About</Link>
                 </li>
-                {isAdmin && (
-                    <li>
-                        <Link href="/admin">Admin</Link>
-                    </li>
-                )}
                 <li>
                     {user ? (
-                        <Link href="/user-dashboard">
-                            <Button variant={'default'} className="text-base">
-                                Profile
-                            </Button>
-                        </Link>
+                        <span onClick={(e) => e.stopPropagation()}>
+                            <UserMenu user={user} isAdmin={isAdmin} />
+                        </span>
                     ) : (
                         <Link href="/auth">
                             <Button variant={'default'} className="text-base">
