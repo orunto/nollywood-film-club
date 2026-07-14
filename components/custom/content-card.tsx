@@ -17,15 +17,20 @@ const ContentCard = forwardRef<HTMLAnchorElement, ContentCardProps>(
             <Link href={contentPath(item)} ref={ref} className={cn(className)} {...rest}>
                 <Card className="rounded-sm h-full shadow-none p-0 2xl:gap-12 gap-8">
                     <CardHeader className="px-4 bg-primary/50 max-h-30 overflow-y-visible relative z-10 overflow-visible rounded-t-sm">
-                        <div className="w-full pt-[56.25%] hover:pt-[112.5%] relative translate-y-4 z-10 transition-[padding-top] duration-300 ease-in-out">
-                            <CldImage
-                                src={item.posterImage || "nollywood-film-club/elj"}
-                                alt={`${item.title} Poster`}
-                                fill
-                                className="object-cover object-top rounded-sm"
-                                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                                loading="lazy"
-                            />
+                        {/* Static 16:9 box; the absolutely-positioned inner container is
+                            what grows on hover (to 200% = the old 112.5% of width), so the
+                            animation can never contribute to layout and push the card body */}
+                        <div className="w-full pt-[56.25%] relative translate-y-4 z-10">
+                            <div className="absolute inset-x-0 top-0 h-full hover:h-[200%] transition-[height] duration-300 ease-in-out">
+                                <CldImage
+                                    src={item.posterImage || "nollywood-film-club/elj"}
+                                    alt={`${item.title} Poster`}
+                                    fill
+                                    className="object-cover object-top rounded-sm"
+                                    sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                                    loading="lazy"
+                                />
+                            </div>
                         </div>
                     </CardHeader>
 
