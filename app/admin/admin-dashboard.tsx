@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Film, FileText, Flag, Users, MessagesSquare } from 'lucide-react';
+import { FilmSlateIcon, FileTextIcon, FlagIcon, UsersIcon, ChatsCircleIcon } from "@phosphor-icons/react";
 import ContentManagement from './content-management';
 import DiscussionsManagement from './discussions-management';
 import BlogPostsManagement from './blog-posts-management';
@@ -29,27 +29,27 @@ export default function AdminDashboard() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="w-full grid grid-cols-6 bg-transparent border-b border-black/10 rounded-none p-0 h-auto">
             <TabsTrigger value="content" className={tabTriggerClass}>
-              <Film className="w-4 h-4" />
+              <FilmSlateIcon className="w-4 h-4" />
               Content
             </TabsTrigger>
             <TabsTrigger value="discussions" className={tabTriggerClass}>
-              <MessagesSquare className="w-4 h-4" />
+              <ChatsCircleIcon className="w-4 h-4" />
               Discussions
             </TabsTrigger>
             <TabsTrigger value="reviews" className={tabTriggerClass}>
-              <FileText className="w-4 h-4" />
+              <FileTextIcon className="w-4 h-4" />
               Reviews
             </TabsTrigger>
             <TabsTrigger value="user-reviews" className={tabTriggerClass}>
-              <Flag className="w-4 h-4" />
+              <FlagIcon className="w-4 h-4" />
               User Reviews
             </TabsTrigger>
             <TabsTrigger value="blog" className={tabTriggerClass}>
-              <FileText className="w-4 h-4" />
+              <FileTextIcon className="w-4 h-4" />
               Blog Posts
             </TabsTrigger>
             <TabsTrigger value="users" className={tabTriggerClass}>
-              <Users className="w-4 h-4" />
+              <UsersIcon className="w-4 h-4" />
               Users
             </TabsTrigger>
           </TabsList>

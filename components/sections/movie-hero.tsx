@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CldImage } from 'next-cloudinary';
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Mic, Mic2, PlayIcon, Podcast, Youtube } from "lucide-react";
+import { ArrowSquareOutIcon, MicrophoneIcon, MicrophoneStageIcon, PlayIcon, BroadcastIcon, YoutubeLogoIcon } from "@phosphor-icons/react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -232,7 +232,7 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
                                 <Button variant={'outline'} className="w-full py-4 bg-black text-white">
-                                    <Mic className="w-4 h-4" />
+                                    <MicrophoneIcon className="w-4 h-4" />
                                     Listen to Space
                                 </Button>
                             </AlertDialogTrigger>
@@ -252,10 +252,10 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
                                             className="flex items-center justify-between p-3 border rounded-sm hover:bg-black/5 transition-colors group"
                                         >
                                             <div className="flex items-center gap-3">
-                                                <Mic2 className="w-5 h-5" />
+                                                <MicrophoneStageIcon className="w-5 h-5" />
                                                 <span className="font-medium">Twitter Space Link</span>
                                             </div>
-                                            <ExternalLink className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            <ArrowSquareOutIcon className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                                         </a>
                                     )}
                                     {podcastLinks?.map((link, idx) => {
@@ -271,12 +271,12 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
                                                 className="flex items-center justify-between p-3 border rounded-sm hover:bg-black/5 transition-colors group"
                                             >
                                                 <div className="flex items-center gap-3">
-                                                    {isSpotify ? <Podcast className="w-5 h-5 text-[#1DB954]" /> : isYoutube ? <Youtube className="w-5 h-5 text-[#FF0000]" /> : <Podcast className="w-5 h-5" />}
+                                                    {isSpotify ? <BroadcastIcon className="w-5 h-5 text-[#1DB954]" /> : isYoutube ? <YoutubeLogoIcon className="w-5 h-5 text-[#FF0000]" /> : <BroadcastIcon className="w-5 h-5" />}
                                                     <span className="font-medium">
                                                         {isSpotify ? 'Spotify Link' : isYoutube ? 'Youtube Music Link' : 'Podcast Link'}
                                                     </span>
                                                 </div>
-                                                <ExternalLink className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                <ArrowSquareOutIcon className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                                             </a>
                                         )
                                     })}

@@ -26,7 +26,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Edit, Trash2, ExternalLink } from 'lucide-react';
+import { PlusIcon, PencilSimpleIcon, TrashIcon, ArrowSquareOutIcon } from "@phosphor-icons/react";
+import { EmptyListIllustration } from '@/components/graphics';
 import { Content } from '@/lib/server-queries';
 import { contentTypeLabel } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -229,7 +230,7 @@ export default function DiscussionsManagement() {
           <p className="text-sm font-light text-black/60">Manage discussion spaces and podcast episodes</p>
         </div>
         <Button onClick={handleAdd} className="bg-black text-white hover:bg-black/80 rounded-sm shadow-none">
-          <Plus className="w-4 h-4 mr-2" />
+          <PlusIcon className="w-4 h-4 mr-2" />
           Add Discussion
         </Button>
       </div>
@@ -254,6 +255,7 @@ export default function DiscussionsManagement() {
         </div>
       ) : filteredDiscussions.length === 0 ? (
         <div className="text-center py-16 border border-black/10 rounded-sm">
+          <EmptyListIllustration className="w-24 md:w-28 mx-auto mb-4 text-black/70" />
           <h2 className="text-xl font-semibold mb-2">
             {searchQuery ? 'No matches found' : 'Coming Soon...'}
           </h2>
@@ -312,15 +314,15 @@ export default function DiscussionsManagement() {
                         {discussion.spaceUrl && (
                           <Button variant="ghost" size="icon" className="text-black/60 hover:text-black hover:bg-black/10" asChild>
                             <a href={discussion.spaceUrl} target="_blank" rel="noopener noreferrer" title="Open space">
-                              <ExternalLink className="w-4 h-4" />
+                              <ArrowSquareOutIcon className="w-4 h-4" />
                             </a>
                           </Button>
                         )}
                         <Button variant="ghost" size="icon" className="text-black/60 hover:text-black hover:bg-black/10" onClick={() => handleEdit(discussion)}>
-                          <Edit className="w-4 h-4" />
+                          <PencilSimpleIcon className="w-4 h-4" />
                         </Button>
                         <Button variant="ghost" size="icon" className="text-black/60 hover:text-black hover:bg-black/10" onClick={() => setIsDeleting(discussion.id)}>
-                          <Trash2 className="w-4 h-4" />
+                          <TrashIcon className="w-4 h-4" />
                         </Button>
                       </div>
                     </TableCell>

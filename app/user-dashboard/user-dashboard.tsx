@@ -10,14 +10,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Star,
-  Edit,
-  Trash2,
-  Plus,
-  ThumbsUp,
-  ThumbsDown,
-  Minus,
-} from "lucide-react";
+  StarIcon,
+  PencilSimpleIcon,
+  TrashIcon,
+  PlusIcon,
+  ThumbsUpIcon,
+  ThumbsDownIcon,
+  MinusIcon,
+} from "@phosphor-icons/react";
+import { EmptyReviewsIllustration } from "@/components/graphics";
 import {
   Dialog,
   DialogContent,
@@ -223,7 +224,7 @@ export default function UserDashboard({ user }: UserDashboardProps) {
                 >
                   <DialogTrigger asChild>
                     <Button onClick={resetForm}>
-                      <Plus className="w-4 h-4 mr-2" />
+                      <PlusIcon className="w-4 h-4 mr-2" />
                       Add Review
                     </Button>
                   </DialogTrigger>
@@ -276,19 +277,19 @@ export default function UserDashboard({ user }: UserDashboardProps) {
                           <SelectContent>
                             <SelectItem value="10">
                               <div className="flex items-center gap-2">
-                                <ThumbsUp className="w-4 h-4" />I liked it (10
+                                <ThumbsUpIcon className="w-4 h-4" />I liked it (10
                                 points)
                               </div>
                             </SelectItem>
                             <SelectItem value="5">
                               <div className="flex items-center gap-2">
-                                <Minus className="w-4 h-4" />
+                                <MinusIcon className="w-4 h-4" />
                                 It was okay (5 points)
                               </div>
                             </SelectItem>
                             <SelectItem value="0">
                               <div className="flex items-center gap-2">
-                                <ThumbsDown className="w-4 h-4" />I didn&apos;t like
+                                <ThumbsDownIcon className="w-4 h-4" />I didn&apos;t like
                                 it (0 points)
                               </div>
                             </SelectItem>
@@ -387,7 +388,7 @@ export default function UserDashboard({ user }: UserDashboardProps) {
               <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                 <DialogTrigger asChild>
                   <Button onClick={resetForm}>
-                    <Plus className="w-4 h-4 mr-2" />
+                    <PlusIcon className="w-4 h-4 mr-2" />
                     Add Review
                   </Button>
                 </DialogTrigger>
@@ -506,14 +507,14 @@ export default function UserDashboard({ user }: UserDashboardProps) {
                             size="sm"
                             onClick={() => handleEdit(rating)}
                           >
-                            <Edit className="w-4 h-4" />
+                            <PencilSimpleIcon className="w-4 h-4" />
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handleDelete(rating.id)}
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <TrashIcon className="w-4 h-4" />
                           </Button>
                         </div>
                       </div>
@@ -524,11 +525,12 @@ export default function UserDashboard({ user }: UserDashboardProps) {
                       )}
                       <div className="flex items-center mt-2">
                         {Array.from({ length: 5 }).map((_, i) => (
-                          <Star
+                          <StarIcon
                             key={i}
+                            weight={i < (rating.rating || 0) ? "fill" : "regular"}
                             className={`w-4 h-4 ${
                               i < (rating.rating || 0)
-                                ? "text-yellow-400 fill-current"
+                                ? "text-yellow-400"
                                 : "text-gray-300"
                             }`}
                           />
@@ -543,11 +545,12 @@ export default function UserDashboard({ user }: UserDashboardProps) {
             {userRatings.length === 0 && (
               <Card>
                 <CardContent className="p-6 text-center">
+                  <EmptyReviewsIllustration className="w-24 md:w-28 mx-auto mb-4 text-black/70" />
                   <p className="text-gray-500 mb-4">
                     You haven&apos;t reviewed any movies or TV shows yet.
                   </p>
                   <Button onClick={() => setIsAddDialogOpen(true)}>
-                    <Plus className="w-4 h-4 mr-2" />
+                    <PlusIcon className="w-4 h-4 mr-2" />
                     Add Your First Review
                   </Button>
                 </CardContent>
@@ -600,19 +603,19 @@ export default function UserDashboard({ user }: UserDashboardProps) {
                       <SelectContent>
                         <SelectItem value="10">
                           <div className="flex items-center gap-2">
-                            <ThumbsUp className="w-4 h-4" />
+                            <ThumbsUpIcon className="w-4 h-4" />
                             I liked it (10 points)
                           </div>
                         </SelectItem>
                         <SelectItem value="5">
                           <div className="flex items-center gap-2">
-                            <Minus className="w-4 h-4" />
+                            <MinusIcon className="w-4 h-4" />
                             It was okay (5 points)
                           </div>
                         </SelectItem>
                         <SelectItem value="0">
                           <div className="flex items-center gap-2">
-                            <ThumbsDown className="w-4 h-4" />
+                            <ThumbsDownIcon className="w-4 h-4" />
                             I didn&apos;t like it (0 points)
                           </div>
                         </SelectItem>

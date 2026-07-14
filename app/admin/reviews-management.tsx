@@ -24,7 +24,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Edit, Trash2, ExternalLink, X } from 'lucide-react';
+import { PlusIcon, PencilSimpleIcon, TrashIcon, ArrowSquareOutIcon, XIcon } from "@phosphor-icons/react";
+import { EmptyListIllustration } from '@/components/graphics';
 import { Review, Content } from '@/lib/server-queries';
 import { contentTypeLabel } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -192,7 +193,7 @@ export default function ReviewsManagement() {
           <p className="text-sm font-light text-black/60">Manage external reviews for movies and TV shows</p>
         </div>
         <Button onClick={handleAdd} className="bg-black text-white hover:bg-black/80 rounded-sm shadow-none">
-          <Plus className="w-4 h-4 mr-2" />
+          <PlusIcon className="w-4 h-4 mr-2" />
           Add Review
         </Button>
       </div>
@@ -217,6 +218,7 @@ export default function ReviewsManagement() {
         </div>
       ) : filteredReviews.length === 0 ? (
         <div className="text-center py-16 border border-black/10 rounded-sm">
+          <EmptyListIllustration className="w-24 md:w-28 mx-auto mb-4 text-black/70" />
           <h2 className="text-xl font-semibold mb-2">
             {searchQuery ? 'No matches found' : 'Coming Soon...'}
           </h2>
@@ -245,15 +247,15 @@ export default function ReviewsManagement() {
                   {review.externalUrl && (
                     <Button variant="ghost" size="icon" className="text-black/60 hover:text-black hover:bg-black/10" asChild>
                       <a href={review.externalUrl} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="w-4 h-4" />
+                        <ArrowSquareOutIcon className="w-4 h-4" />
                       </a>
                     </Button>
                   )}
                   <Button variant="ghost" size="icon" className="text-black/60 hover:text-black hover:bg-black/10" onClick={() => handleEdit(review)}>
-                    <Edit className="w-4 h-4" />
+                    <PencilSimpleIcon className="w-4 h-4" />
                   </Button>
                   <Button variant="ghost" size="icon" className="text-black/60 hover:text-black hover:bg-black/10" onClick={() => setIsDeleting(review.id)}>
-                    <Trash2 className="w-4 h-4" />
+                    <TrashIcon className="w-4 h-4" />
                   </Button>
                 </div>
               </div>
@@ -373,7 +375,7 @@ export default function ReviewsManagement() {
                         onClick={() => setFormData((prev) => ({ ...prev, reviewImage: '' }))}
                         title="Remove image"
                       >
-                        <X className="w-4 h-4" />
+                        <XIcon className="w-4 h-4" />
                       </Button>
                     </>
                   ) : (

@@ -1,6 +1,6 @@
 'use client';
 import { useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react';
+import { ArrowDownIcon, ArrowUpIcon, CaretUpDownIcon } from "@phosphor-icons/react";
 import { TableHead } from '@/components/ui/table';
 
 type SortValue = string | number | boolean | Date | null | undefined;
@@ -73,12 +73,12 @@ export function SortableHead({ label, sortKey, activeKey, direction, onSort, cla
         {label}
         {isActive ? (
           direction === 'asc' ? (
-            <ArrowUp className="w-3.5 h-3.5 shrink-0" />
+            <ArrowUpIcon className="w-3.5 h-3.5 shrink-0" />
           ) : (
-            <ArrowDown className="w-3.5 h-3.5 shrink-0" />
+            <ArrowDownIcon className="w-3.5 h-3.5 shrink-0" />
           )
         ) : (
-          <ChevronsUpDown className="w-3.5 h-3.5 shrink-0 opacity-30" />
+          <CaretUpDownIcon className="w-3.5 h-3.5 shrink-0 opacity-30" />
         )}
       </button>
     </TableHead>

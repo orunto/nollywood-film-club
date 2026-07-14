@@ -1,7 +1,7 @@
 'use client';
 import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Upload } from 'lucide-react';
+import { UploadSimpleIcon } from "@phosphor-icons/react";
 import { toast } from 'sonner';
 
 interface UploadImageButtonProps {
@@ -61,7 +61,7 @@ export default function UploadImageButton({ title, releaseDate, onUploaded }: Up
         onClick={() => inputRef.current?.click()}
         className="border-black text-black bg-transparent hover:bg-black hover:text-white rounded-sm shadow-none shrink-0"
       >
-        <Upload className="w-4 h-4 mr-2" />
+        <UploadSimpleIcon className="w-4 h-4 mr-2" />
         {isUploading ? 'Uploading…' : 'Upload'}
       </Button>
     </>

@@ -6,7 +6,7 @@ export default function Footer() {
                 <span className="text-lg font-semibold">The Nollywood Film Club <sub>hosted by <Link href='https://linktr.ee/irokocritic' className="underline">Iroko Critic</Link></sub></span>
                 <span className="text-xs font-light">One film a week. The good, the bad, the pushback.</span>
                 <span className="text-xs font-light">Copyright © 2026. All rights reserved.</span>
-                <span className="text-xs font-light">Open source project maintained by <Link href='https://orunto.vercel.app' className="underline text-green-600">orunto.dev</Link></span>
+                <span className="text-xs font-light">Open source project maintained by <Link href='https://orunto.dev' className="underline text-green-600">orunto.dev</Link></span>
             </div>
 
             <div className="flex flex-col gap-3 text-sm lg:text-right text-left lg:items-end items-start lg:w-max w-full">

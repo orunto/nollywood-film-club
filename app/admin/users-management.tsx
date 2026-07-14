@@ -16,7 +16,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ShieldCheck, ShieldOff } from 'lucide-react';
+import { ShieldCheckIcon, ShieldSlashIcon } from "@phosphor-icons/react";
+import { EmptyListIllustration } from '@/components/graphics';
 import { toast } from 'sonner';
 import { SortableHead, useTableSort, SortAccessors } from './table-sort';
 
@@ -127,6 +128,7 @@ export default function UsersManagement() {
         </div>
       ) : filteredUsers.length === 0 ? (
         <div className="text-center py-16 border border-black/10 rounded-sm">
+          <EmptyListIllustration className="w-24 md:w-28 mx-auto mb-4 text-black/70" />
           <h2 className="text-xl font-semibold mb-2">
             {searchQuery ? 'No matches found' : 'No users yet'}
           </h2>
@@ -174,7 +176,7 @@ export default function UsersManagement() {
                           onClick={() => setPendingChange({ user, makeAdmin: user.role !== 'admin' })}
                           title={user.role === 'admin' ? 'Remove admin access' : 'Grant admin access'}
                         >
-                          {user.role === 'admin' ? <ShieldOff className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
+                          {user.role === 'admin' ? <ShieldSlashIcon className="w-4 h-4" /> : <ShieldCheckIcon className="w-4 h-4" />}
                         </Button>
                       </div>
                     </TableCell>

@@ -15,7 +15,7 @@ const ContentCard = forwardRef<HTMLAnchorElement, ContentCardProps>(
     function ContentCard({ item, className, ...rest }, ref) {
         return (
             <Link href={contentPath(item)} ref={ref} className={cn(className)} {...rest}>
-                <Card className="rounded-sm h-full shadow-none p-0 2xl:gap-12 gap-8">
+                <Card className="@container rounded-sm h-full shadow-none p-0 2xl:gap-12 gap-8">
                     <CardHeader className="px-4 bg-primary/50 max-h-30 overflow-y-visible relative z-10 overflow-visible rounded-t-sm">
                         {/* Static 16:9 box; the absolutely-positioned inner container is
                             what grows on hover (to 200% = the old 112.5% of width), so the
@@ -35,7 +35,7 @@ const ContentCard = forwardRef<HTMLAnchorElement, ContentCardProps>(
                     </CardHeader>
 
                     <CardContent className="p-4 relative flex flex-col gap-2 lg:mt-0 mt-8">
-                        <CardTitle className="lg:text-xl font-semibold flex items-center gap-2">
+                        <CardTitle className="text-base @xs:text-lg @md:text-xl font-semibold flex items-center gap-2">
                             {item.title}
                         </CardTitle>
 
@@ -58,11 +58,11 @@ const ContentCard = forwardRef<HTMLAnchorElement, ContentCardProps>(
                     </CardContent>
 
                     <CardFooter className="p-4 flex justify-between border-t items-start">
-                        <span className="text-black/40 text-sm">NFC SCORE</span>
+                        <span className="text-black/40 text-xs @sm:text-sm">NFC SCORE</span>
                         <Badge
                             className={cn(
-                                "font-medium h-15 w-15 p-4",
-                                item.userRating === null ? "text-sm" : "text-xl",
+                                "font-medium h-12 w-12 @sm:h-15 @sm:w-15 p-4",
+                                item.userRating === null ? "text-sm" : "text-lg @sm:text-xl",
                                 scoreBadgeClass(item.userRating),
                             )}
                         >

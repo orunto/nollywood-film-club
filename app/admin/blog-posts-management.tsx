@@ -25,7 +25,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { PlusIcon, PencilSimpleIcon, TrashIcon } from "@phosphor-icons/react";
+import { EmptyListIllustration } from '@/components/graphics';
 import { toast } from 'sonner';
 
 const inputClass = "border-black/20 rounded-sm focus-visible:ring-black/20 focus-visible:border-black shadow-none";
@@ -224,7 +225,7 @@ export default function BlogPostsManagement() {
           <p className="text-sm font-light text-black/60">Manage blog posts and articles</p>
         </div>
         <Button onClick={handleAdd} className="bg-black text-white hover:bg-black/80 rounded-sm shadow-none">
-          <Plus className="w-4 h-4 mr-2" />
+          <PlusIcon className="w-4 h-4 mr-2" />
           Add Blog Post
         </Button>
       </div>
@@ -249,6 +250,7 @@ export default function BlogPostsManagement() {
         </div>
       ) : filteredPosts.length === 0 ? (
         <div className="text-center py-16 border border-black/10 rounded-sm">
+          <EmptyListIllustration className="w-24 md:w-28 mx-auto mb-4 text-black/70" />
           <h2 className="text-xl font-semibold mb-2">
             {searchQuery ? 'No matches found' : 'Coming Soon...'}
           </h2>
@@ -286,10 +288,10 @@ export default function BlogPostsManagement() {
                   {post.published ? 'Unpublish' : 'Publish'}
                 </Button>
                 <Button variant="ghost" size="icon" className="text-black/60 hover:text-black hover:bg-black/10" onClick={() => handleEdit(post)}>
-                  <Edit className="w-4 h-4" />
+                  <PencilSimpleIcon className="w-4 h-4" />
                 </Button>
                 <Button variant="ghost" size="icon" className="text-black/60 hover:text-black hover:bg-black/10" onClick={() => setIsDeleting(post.id)}>
-                  <Trash2 className="w-4 h-4" />
+                  <TrashIcon className="w-4 h-4" />
                 </Button>
               </div>
             </div>

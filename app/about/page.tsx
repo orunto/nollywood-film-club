@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AudioLines, Crown, Mic2, Podcast, Users } from "lucide-react";
+import {
+    BroadcastIcon,
+    CrownIcon,
+    MicrophoneStageIcon,
+    UsersIcon,
+    WaveformIcon,
+} from "@phosphor-icons/react/dist/ssr";
 import { Footer, Nav } from "@/components/custom";
 
 export const metadata: Metadata = {
@@ -201,7 +207,7 @@ export default function AboutPage() {
                             <div className="rounded-sm bg-black text-white p-6 flex flex-col gap-4">
                                 <div className="flex items-center justify-between">
                                     <div className="w-14 h-14 rounded-sm bg-white text-black flex items-center justify-center">
-                                        <Mic2 className="w-6 h-6" />
+                                        <MicrophoneStageIcon className="w-6 h-6" />
                                     </div>
                                     <span className="text-xs border border-white rounded-sm px-2.5 py-1">
                                         Host
@@ -219,7 +225,7 @@ export default function AboutPage() {
                             <div className="rounded-sm bg-black text-white p-6 flex flex-col gap-4">
                                 <div className="flex items-center justify-between">
                                     <div className="w-14 h-14 rounded-sm bg-white text-black flex items-center justify-center">
-                                        <Crown className="w-6 h-6" />
+                                        <CrownIcon className="w-6 h-6" />
                                     </div>
                                     <span className="text-xs border border-white rounded-sm px-2.5 py-1">
                                         Co-host
@@ -237,7 +243,7 @@ export default function AboutPage() {
                             <div className="rounded-sm border border-black/10 p-6 flex flex-col gap-4">
                                 <div className="flex items-center justify-between">
                                     <div className="w-14 h-14 rounded-sm bg-black text-white flex items-center justify-center">
-                                        <Users className="w-6 h-6" />
+                                        <UsersIcon className="w-6 h-6" />
                                     </div>
                                     <span className="text-xs border border-black rounded-sm px-2.5 py-1">
                                         The community
@@ -256,7 +262,7 @@ export default function AboutPage() {
                             <div className="rounded-sm border border-black/10 p-6 flex flex-col gap-4">
                                 <div className="flex items-center justify-between">
                                     <div className="w-14 h-14 rounded-sm bg-black text-white flex items-center justify-center">
-                                        <AudioLines className="w-6 h-6" />
+                                        <WaveformIcon className="w-6 h-6" />
                                     </div>
                                     <span className="text-xs border border-black rounded-sm px-2.5 py-1">
                                         The adult
@@ -290,7 +296,7 @@ export default function AboutPage() {
                                 href="/auth"
                                 className="inline-flex items-center gap-2 bg-black text-white rounded-sm text-sm font-medium px-5 py-3 hover:bg-black/80 transition-colors"
                             >
-                                <Users className="w-4 h-4" />
+                                <UsersIcon className="w-4 h-4" />
                                 Join the Club
                             </Link>
                             <a
@@ -299,7 +305,7 @@ export default function AboutPage() {
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-2 border border-black rounded-sm text-sm font-medium px-5 py-3 text-black hover:bg-black hover:text-white transition-colors"
                             >
-                                <Mic2 className="w-4 h-4" />
+                                <MicrophoneStageIcon className="w-4 h-4" />
                                 Follow @irokocritic
                             </a>
                             <a
@@ -308,7 +314,7 @@ export default function AboutPage() {
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-2 border border-black rounded-sm text-sm font-medium px-5 py-3 text-black hover:bg-black hover:text-white transition-colors"
                             >
-                                <Podcast className="w-4 h-4" />
+                                <BroadcastIcon className="w-4 h-4" />
                                 Listen to the Podcast
                             </a>
                         </div>

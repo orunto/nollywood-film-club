@@ -1,6 +1,6 @@
 'use client';
 import { useState } from "react";
-import { Star, ThumbsUp, ThumbsDown, Minus } from "lucide-react";
+import { StarIcon, ThumbsUpIcon, ThumbsDownIcon, MinusIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
@@ -85,7 +85,7 @@ export default function MovieRatingSheet({
             variant={'outline'} 
             className="w-full py-4 border-primary text-primary"
           >
-            Rate this Movie <Star />
+            Rate this Movie <StarIcon />
           </Button>
         </div>
       </SheetTrigger>
@@ -106,21 +106,21 @@ export default function MovieRatingSheet({
               <SelectContent>
                 <SelectItem value="10">
                   <div className="flex items-center gap-2">
-                    <ThumbsUp className="w-4 h-4" />
+                    <ThumbsUpIcon className="w-4 h-4" />
                     I liked it 
                     {/*(10 points)*/}
                   </div>
                 </SelectItem>
                 <SelectItem value="5">
                   <div className="flex items-center gap-2">
-                    <Minus className="w-4 h-4" />
+                    <MinusIcon className="w-4 h-4" />
                     It was okay 
                     {/*(5 points)*/}
                   </div>
                 </SelectItem>
                 <SelectItem value="0">
                   <div className="flex items-center gap-2">
-                    <ThumbsDown className="w-4 h-4" />
+                    <ThumbsDownIcon className="w-4 h-4" />
                     I didn&apos;t like it 
                     {/*(0 points)*/}
                   </div>
@@ -130,11 +130,12 @@ export default function MovieRatingSheet({
             {/*<div>
               <div className="flex space-x-1">
                 {[1, 2, 3, 4, 5].map((star) => (
-                  <Star
+                  <StarIcon
                     key={star}
+                    weight={star <= (hoverRating || rating) ? 'fill' : 'regular'}
                     className={`w-8 h-8 cursor-pointer ${
                       star <= (hoverRating || rating)
-                        ? 'text-yellow-400 fill-current'
+                        ? 'text-yellow-400'
                         : 'text-gray-300'
                     }`}
                     onClick={() => setRating(star)}

@@ -1,5 +1,11 @@
 import Link from "next/link";
-import { ArrowRight, Film, Podcast, Users } from "lucide-react";
+import {
+    ArrowRightIcon,
+    BroadcastIcon,
+    FilmSlateIcon,
+    UsersIcon,
+} from "@phosphor-icons/react/dist/ssr";
+import { Sparkle } from "@/components/graphics";
 import { Discussion } from "@/lib/server-queries";
 import { toSpotifyEmbedUrl } from "@/lib/utils";
 
@@ -90,7 +96,8 @@ export default function Hero({ latestEpisode, posters = [] }: HeroProps) {
                         Live on X Spaces · Sundays · 6PM WAT
                     </span>
                     <h1 className="text-4xl lg:text-6xl font-bold leading-[1.05]">
-                        Hello and welcome to Nollywood Film Club
+                        Hello and welcome to Nollywood Film Club{" "}
+                        <Sparkle className="inline-block w-[0.5em] h-[0.5em] align-super text-primary" />
                     </h1>
                     <p className="text-base lg:text-lg font-light text-white/70 max-w-lg">
                         Every Sunday we pick one Nollywood film and discuss it properly:
@@ -103,14 +110,14 @@ export default function Hero({ latestEpisode, posters = [] }: HeroProps) {
                             href="/auth"
                             className="inline-flex items-center gap-2 bg-white text-black rounded-sm text-sm font-medium px-5 py-3 hover:bg-white/85 transition-colors"
                         >
-                            <Users className="w-4 h-4" />
+                            <UsersIcon className="w-4 h-4" />
                             Join the Club
                         </Link>
                         <Link
                             href="/movies-and-tv"
                             className="inline-flex items-center gap-2 border border-white rounded-sm text-sm font-medium px-5 py-3 text-white hover:bg-white hover:text-black transition-colors"
                         >
-                            <Film className="w-4 h-4" />
+                            <FilmSlateIcon className="w-4 h-4" />
                             Browse Movies &amp; TV
                         </Link>
                     </div>
@@ -121,7 +128,7 @@ export default function Hero({ latestEpisode, posters = [] }: HeroProps) {
                     title row underlined in black. */}
                 <div className="lg:justify-self-end w-full max-w-md bg-white rounded-sm border border-black/10 p-6 flex flex-col gap-4">
                     <h2 className="pb-3 border-b border-black text-lg font-semibold flex items-center gap-2 text-black">
-                        <Podcast className="w-4 h-4 text-[#1DB954]" />
+                        <BroadcastIcon className="w-4 h-4 text-[#1DB954]" />
                         Latest Episode
                     </h2>
 
@@ -154,7 +161,7 @@ export default function Hero({ latestEpisode, posters = [] }: HeroProps) {
                             className="flex items-center gap-2 px-3 py-2 bg-black text-white rounded-sm text-xs hover:bg-black/80 transition-colors"
                         >
                             See more
-                            <ArrowRight className="w-3.5 h-3.5" />
+                            <ArrowRightIcon className="w-3.5 h-3.5" />
                         </Link>
                     </div>
                 </div>

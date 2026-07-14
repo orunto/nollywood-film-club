@@ -6,7 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Flag, Eye, EyeOff } from 'lucide-react';
+import { FlagIcon, EyeIcon, EyeSlashIcon } from "@phosphor-icons/react";
+import { EmptyListIllustration } from '@/components/graphics';
 import { AdminUserRating } from '@/lib/server-queries';
 import { toast } from 'sonner';
 import { SortableHead, useTableSort, SortAccessors } from './table-sort';
@@ -149,6 +150,7 @@ export default function UserReviewsManagement() {
         </div>
       ) : filteredRatings.length === 0 ? (
         <div className="text-center py-16 border border-black/10 rounded-sm">
+          <EmptyListIllustration className="w-24 md:w-28 mx-auto mb-4 text-black/70" />
           <h2 className="text-xl font-semibold mb-2">
             {isFiltered ? 'No matches found' : 'No reviews yet'}
           </h2>
@@ -200,7 +202,7 @@ export default function UserReviewsManagement() {
                         onClick={() => toggleFlag(rating.id, rating.flagged)}
                         title={rating.flagged ? 'Remove flag' : 'Flag for attention'}
                       >
-                        <Flag className={`w-4 h-4 ${rating.flagged ? 'fill-black' : ''}`} />
+                        <FlagIcon weight={rating.flagged ? 'fill' : 'regular'} className="w-4 h-4" />
                       </Button>
                       <Button
                         variant="ghost"
@@ -209,7 +211,7 @@ export default function UserReviewsManagement() {
                         onClick={() => toggleRestrict(rating.id, rating.restricted)}
                         title={rating.restricted ? 'Restore to public view' : 'Restrict from public view'}
                       >
-                        {rating.restricted ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {rating.restricted ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
                       </Button>
                     </div>
                   </TableCell>

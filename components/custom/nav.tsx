@@ -2,7 +2,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "../ui/button";
-import { MenuIcon } from "lucide-react";
+import { ListIcon } from "@phosphor-icons/react";
 import { useState, useEffect } from "react";
 import { User, useStackApp } from "@stackframe/stack";
 
@@ -32,7 +32,7 @@ export default function Nav() {
                 </Link>
 
                 <Button onClick={() => setmenu(!menu)} className="lg:hidden" size={'icon'} variant={'ghost'}>
-                    <MenuIcon />
+                    <ListIcon />
                 </Button>
             </div>
             <ul onClick={() => setmenu(false)} className={`${menu ? 'translate-y-0' : '-translate-y-full lg:translate-y-0'} duration-300 relative text-base font-medium flex lg:flex-row flex-col lg:p-0 p-6 gap-8 items-center lg:w-max w-full bg-black`}>

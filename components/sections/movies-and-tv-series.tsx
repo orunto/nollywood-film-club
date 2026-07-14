@@ -1,7 +1,8 @@
 'use client'
 import Link from "next/link";
 import { Content } from "@/lib/server-queries";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { CaretLeftIcon, CaretRightIcon } from "@phosphor-icons/react";
+import { Asterisk, Starburst } from "@/components/graphics";
 import { useCardScroller } from "@/lib/hooks/use-card-scroller";
 import ContentCard from "../custom/content-card";
 
@@ -32,7 +33,7 @@ export default function MoviesAndTVSeries({ moviesAndTVSeries }: MoviesAndTVSeri
                             disabled={!canScrollLeft}
                             className="w-9 h-9 flex items-center justify-center rounded-full border border-black hover:bg-black hover:text-white transition-colors cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
                         >
-                            <ChevronLeft className="w-4 h-4" />
+                            <CaretLeftIcon className="w-4 h-4" />
                         </button>
                         <button
                             aria-label="Scroll movies and TV series forward"
@@ -40,7 +41,7 @@ export default function MoviesAndTVSeries({ moviesAndTVSeries }: MoviesAndTVSeri
                             disabled={!canScrollRight}
                             className="w-9 h-9 flex items-center justify-center rounded-full border border-black hover:bg-black hover:text-white transition-colors cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
                         >
-                            <ChevronRight className="w-4 h-4" />
+                            <CaretRightIcon className="w-4 h-4" />
                         </button>
                     </div>
                 )}
@@ -96,7 +97,10 @@ export default function MoviesAndTVSeries({ moviesAndTVSeries }: MoviesAndTVSeri
                     ))}
                 </div>
                 <div className="text-center mt-8">
-                    <h2 className="text-xl font-semibold mb-2">Coming soon...</h2>
+                    <h2 className="text-xl font-semibold mb-2 flex items-center justify-center gap-2">
+                        <Asterisk size={14} className="text-primary" />
+                        Coming soon...
+                    </h2>
                     <p className="text-gray-600 text-sm mb-4">
                         The catalogue is on its way. Until then, the recordings will keep you company:
                     </p>
@@ -105,9 +109,9 @@ export default function MoviesAndTVSeries({ moviesAndTVSeries }: MoviesAndTVSeri
                              href="https://linktr.ee/irokocritic"
                              target="_blank"
                              rel="noopener noreferrer"
-                             className="inline-flex items-center gap-2 px-6 py-3 bg-green-500 text-white border border-green-500 rounded-lg hover:bg-white hover:!text-green-500 hover:[&>svg]:[&>path]:fill-green-500 hover:!no-underline transition-all duration-200 font-medium"
+                             className="inline-flex items-center gap-2 px-6 py-3 bg-green-500 text-white border border-green-500 rounded-lg hover:bg-white hover:!text-green-500 hover:!no-underline transition-all duration-200 font-medium"
                          >
-                             <svg width="16" height="16" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15.7599 6.82888L20.4322 2.02579L23.1441 4.80309L18.2431 9.47548H25.1372V13.331H18.2104L23.1441 18.1232L20.4322 20.8461L13.7341 14.1152L7.03604 20.8461L4.32414 18.1341L9.25784 13.3419H2.33105V9.47548H9.22516L4.32414 4.80309L7.03604 2.02579L11.7084 6.82888V0H15.7599V6.82888ZM11.7084 18.8529H15.7599V28.0017H11.7084V18.8529Z" fill="#fff"></path></svg>
+                             <Starburst size={16} />
                              Listen on All Platforms
                          </Link>
                      </div>

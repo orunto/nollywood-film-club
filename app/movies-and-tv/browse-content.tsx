@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import { MagnifyingGlassIcon, SlidersHorizontalIcon, XIcon } from "@phosphor-icons/react";
+import { EmptyCatalogueIllustration } from "@/components/graphics";
 import ContentCard from "@/components/custom/content-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -117,7 +118,7 @@ export default function BrowseContent({
         <h1 className="pb-3 text-2xl font-semibold">Movies &amp; TV</h1>
 
         <div className="relative w-full max-w-md">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
+          <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
           <Input
             type="search"
             value={searchInput}
@@ -133,7 +134,7 @@ export default function BrowseContent({
               aria-label="Clear search"
               className="absolute right-3 top-1/2 -translate-y-1/2 text-black/40 hover:text-black cursor-pointer"
             >
-              <X className="h-4 w-4" />
+              <XIcon className="h-4 w-4" />
             </button>
           )}
         </div>
@@ -187,7 +188,7 @@ export default function BrowseContent({
                   variant="outline"
                   className="lg:hidden rounded-sm border-black/40 gap-2"
                 >
-                  <SlidersHorizontal className="w-4 h-4" />
+                  <SlidersHorizontalIcon className="w-4 h-4" />
                   Filters
                   {activeFilterCount > 0 && ` (${activeFilterCount})`}
                 </Button>
@@ -225,6 +226,7 @@ export default function BrowseContent({
               </div>
             ) : (
               <div className="flex flex-col items-center gap-4 py-20 text-center">
+                <EmptyCatalogueIllustration className="w-24 md:w-28 text-black/70" />
                 <p className="text-black/60">
                   {allContent.length === 0
                     ? "No titles yet — check back soon."

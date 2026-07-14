@@ -36,7 +36,8 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Plus, Edit, Trash2, Star, Search, Check, ChevronsUpDown, ExternalLink, X } from 'lucide-react';
+import { PlusIcon, PencilSimpleIcon, TrashIcon, StarIcon, MagnifyingGlassIcon, CheckIcon, CaretUpDownIcon, ArrowSquareOutIcon, XIcon } from "@phosphor-icons/react";
+import { EmptyListIllustration } from '@/components/graphics';
 import { CastMember, Content } from '@/lib/server-queries';
 import { contentTypeLabel } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -405,7 +406,7 @@ export default function ContentManagement() {
           <p className="text-sm font-light text-black/60">Manage movies and TV shows</p>
         </div>
         <Button onClick={handleAdd} className="bg-black text-white hover:bg-black/80 rounded-sm shadow-none">
-          <Plus className="w-4 h-4 mr-2" />
+          <PlusIcon className="w-4 h-4 mr-2" />
           Add Content
         </Button>
       </div>
@@ -443,6 +444,7 @@ export default function ContentManagement() {
         </div>
       ) : filteredMovies.length === 0 ? (
         <div className="text-center py-16 border border-black/10 rounded-sm">
+          <EmptyListIllustration className="w-24 md:w-28 mx-auto mb-4 text-black/70" />
           <h2 className="text-xl font-semibold mb-2">
             {isFiltered ? 'No matches found' : 'Coming Soon...'}
           </h2>
@@ -473,7 +475,7 @@ export default function ContentManagement() {
                       {movie.title}
                       {movie.isMovieOfTheWeek && (
                         <Badge className="text-xs bg-black text-white rounded-sm shrink-0">
-                          <Star className="w-3 h-3 mr-1 fill-white" />
+                          <StarIcon weight="fill" className="w-3 h-3 mr-1" />
                           MOTW
                         </Badge>
                       )}
@@ -500,13 +502,13 @@ export default function ContentManagement() {
                         onClick={() => toggleMovieOfTheWeek(movie.id, movie.isMovieOfTheWeek)}
                         title={movie.isMovieOfTheWeek ? 'Remove from Movie of the Week' : 'Set as Movie of the Week'}
                       >
-                        <Star className={`w-4 h-4 ${movie.isMovieOfTheWeek ? 'fill-black' : ''}`} />
+                        <StarIcon weight={movie.isMovieOfTheWeek ? 'fill' : 'regular'} className="w-4 h-4" />
                       </Button>
                       <Button variant="ghost" size="icon" className="text-black/60 hover:text-black hover:bg-black/10" onClick={() => handleEdit(movie)}>
-                        <Edit className="w-4 h-4" />
+                        <PencilSimpleIcon className="w-4 h-4" />
                       </Button>
                       <Button variant="ghost" size="icon" className="text-black/60 hover:text-black hover:bg-black/10" onClick={() => setIsDeleting(movie.id)}>
-                        <Trash2 className="w-4 h-4" />
+                        <TrashIcon className="w-4 h-4" />
                       </Button>
                     </div>
                   </TableCell>
@@ -549,7 +551,7 @@ export default function ContentManagement() {
                     disabled={isSearchingJw || !jwQuery.trim()}
                     className="bg-black text-white hover:bg-black/80 rounded-sm shadow-none shrink-0"
                   >
-                    <Search className="w-4 h-4 mr-2" />
+                    <MagnifyingGlassIcon className="w-4 h-4 mr-2" />
                     {isSearchingJw ? 'Searching…' : 'Search'}
                   </Button>
                 </div>
@@ -725,7 +727,7 @@ export default function ContentManagement() {
                         onClick={() => setFormData((prev) => ({ ...prev, posterImage: '' }))}
                         title="Remove poster"
                       >
-                        <X className="w-4 h-4" />
+                        <XIcon className="w-4 h-4" />
                       </Button>
                     </>
                   ) : (
@@ -744,7 +746,7 @@ export default function ContentManagement() {
                       className="underline hover:text-black inline-flex items-center gap-1"
                     >
                       JustWatch poster
-                      <ExternalLink className="w-3 h-3" />
+                      <ArrowSquareOutIcon className="w-3 h-3" />
                     </a>
                     {' '}— auto-upload failed; download it and use the Upload button.
                   </p>
@@ -829,7 +831,7 @@ export default function ContentManagement() {
                           return `${linked.episodeNumber !== null ? `#${linked.episodeNumber} · ` : ''}${linked.title}`;
                         })()}
                       </span>
-                      <ChevronsUpDown className="w-4 h-4 opacity-50 shrink-0" />
+                      <CaretUpDownIcon className="w-4 h-4 opacity-50 shrink-0" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 rounded-sm" align="start">
@@ -845,7 +847,7 @@ export default function ContentManagement() {
                               setDiscussionPickerOpen(false);
                             }}
                           >
-                            <Check className={`w-4 h-4 ${linkedDiscussionId === '' ? 'opacity-100' : 'opacity-0'}`} />
+                            <CheckIcon className={`w-4 h-4 ${linkedDiscussionId === '' ? 'opacity-100' : 'opacity-0'}`} />
                             None
                           </CommandItem>
                           {discussions.map((discussion) => (
@@ -857,7 +859,7 @@ export default function ContentManagement() {
                                 setDiscussionPickerOpen(false);
                               }}
                             >
-                              <Check className={`w-4 h-4 ${linkedDiscussionId === discussion.id ? 'opacity-100' : 'opacity-0'}`} />
+                              <CheckIcon className={`w-4 h-4 ${linkedDiscussionId === discussion.id ? 'opacity-100' : 'opacity-0'}`} />
                               <span className="truncate">
                                 {discussion.episodeNumber !== null && `#${discussion.episodeNumber} · `}
                                 {discussion.title}

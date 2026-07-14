@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/form";
 // import { StackAuth } from '@stackframe/stack';
 import { StackClientApp } from "@stackframe/stack";
-import { ArrowLeft, Eye, EyeOff, Loader2 } from "lucide-react";
+import { ArrowLeftIcon, EyeIcon, EyeSlashIcon, CircleNotchIcon } from "@phosphor-icons/react";
 import Link from "next/link";
 
 const signUpSchema = z
@@ -121,7 +121,7 @@ export default function AuthPage() {
         onClick={() => router.back()}
         className="absolute top-6 left-6 bg-white text-black"
       >
-        <ArrowLeft className="h-4 w-4" />
+        <ArrowLeftIcon className="h-4 w-4" />
         Go Back
       </Button>
       <div className="max-w-md w-full space-y-8">
@@ -196,9 +196,9 @@ export default function AuthPage() {
                                 onClick={() => setShowPassword(!showPassword)}
                               >
                                 {showPassword ? (
-                                  <EyeOff className="h-4 w-4" />
+                                  <EyeSlashIcon className="h-4 w-4" />
                                 ) : (
-                                  <Eye className="h-4 w-4" />
+                                  <EyeIcon className="h-4 w-4" />
                                 )}
                               </Button>
                             </div>
@@ -232,9 +232,9 @@ export default function AuthPage() {
                                 }
                               >
                                 {showConfirmPassword ? (
-                                  <EyeOff className="h-4 w-4" />
+                                  <EyeSlashIcon className="h-4 w-4" />
                                 ) : (
-                                  <Eye className="h-4 w-4" />
+                                  <EyeIcon className="h-4 w-4" />
                                 )}
                               </Button>
                             </div>
@@ -250,7 +250,7 @@ export default function AuthPage() {
                       disabled={isLoading}
                     >
                       {isLoading && (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <CircleNotchIcon className="mr-2 h-4 w-4 animate-spin" />
                       )}
                       Create Account
                     </Button>
@@ -390,9 +390,9 @@ export default function AuthPage() {
                                 onClick={() => setShowPassword(!showPassword)}
                               >
                                 {showPassword ? (
-                                  <EyeOff className="h-4 w-4" />
+                                  <EyeSlashIcon className="h-4 w-4" />
                                 ) : (
-                                  <Eye className="h-4 w-4" />
+                                  <EyeIcon className="h-4 w-4" />
                                 )}
                               </Button>
                             </div>
@@ -417,7 +417,7 @@ export default function AuthPage() {
                       disabled={isLoading}
                     >
                       {isLoading && (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <CircleNotchIcon className="mr-2 h-4 w-4 animate-spin" />
                       )}
                       Sign In
                     </Button>

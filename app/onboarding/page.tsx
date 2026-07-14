@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { CheckCircle, XCircle, Loader2, User } from 'lucide-react';
+import { CheckCircleIcon, XCircleIcon, CircleNotchIcon, UserIcon } from "@phosphor-icons/react";
 import { useStackApp } from '@stackframe/stack';
 import { useDebounce } from '@/hooks/use-debounce';
 
@@ -137,7 +137,7 @@ export default function OnboardingPage() {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <div className="mx-auto h-12 w-12 bg-primary rounded-full flex items-center justify-center mb-4">
-            <User className="h-6 w-6 text-white" />
+            <UserIcon className="h-6 w-6 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900">Choose Your Username</h1>
           <p className="mt-2 text-sm text-gray-600">
@@ -180,11 +180,11 @@ export default function OnboardingPage() {
                   />
                   <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                     {isChecking ? (
-                      <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                      <CircleNotchIcon className="h-4 w-4 animate-spin text-gray-400" />
                     ) : usernameStatus?.available === true ? (
-                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <CheckCircleIcon className="h-4 w-4 text-green-500" />
                     ) : usernameStatus?.available === false ? (
-                      <XCircle className="h-4 w-4 text-red-500" />
+                      <XCircleIcon className="h-4 w-4 text-red-500" />
                     ) : null}
                   </div>
                 </div>
@@ -221,7 +221,7 @@ export default function OnboardingPage() {
                 className="w-full"
                 disabled={!usernameStatus?.available || isSubmitting || isChecking}
               >
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isSubmitting && <CircleNotchIcon className="mr-2 h-4 w-4 animate-spin" />}
                 Complete Setup
               </Button>
             </form>

@@ -5,7 +5,7 @@ import { Badge } from "../ui/badge";
 import { Discussion } from "@/lib/server-queries";
 import { useCardScroller } from "@/lib/hooks/use-card-scroller";
 import { contentTypeLabel } from "@/lib/utils";
-import { Calendar, Mic2, Podcast, Youtube, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarBlankIcon, MicrophoneStageIcon, BroadcastIcon, YoutubeLogoIcon, ArrowSquareOutIcon, CaretLeftIcon, CaretRightIcon } from "@phosphor-icons/react";
 import {
     AlertDialog,
     AlertDialogCancel,
@@ -41,7 +41,7 @@ export default function Discussions({ discussions }: DiscussionsProps) {
                         disabled={!canScrollLeft}
                         className="w-9 h-9 flex items-center justify-center rounded-full border border-black hover:bg-black hover:text-white transition-colors cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
                     >
-                        <ChevronLeft className="w-4 h-4" />
+                        <CaretLeftIcon className="w-4 h-4" />
                     </button>
                     <button
                         aria-label="Scroll discussions forward"
@@ -49,7 +49,7 @@ export default function Discussions({ discussions }: DiscussionsProps) {
                         disabled={!canScrollRight}
                         className="w-9 h-9 flex items-center justify-center rounded-full border border-black hover:bg-black hover:text-white transition-colors cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
                     >
-                        <ChevronRight className="w-4 h-4" />
+                        <CaretRightIcon className="w-4 h-4" />
                     </button>
                 </div>
             )}
@@ -77,7 +77,7 @@ export default function Discussions({ discussions }: DiscussionsProps) {
                                     </Badge>
                                     {(discussion.discussionDate || discussion.content?.releaseDate) && (
                                         <div className="flex items-center gap-1 text-xs text-black/60">
-                                            <Calendar className="w-3 h-3" />
+                                            <CalendarBlankIcon className="w-3 h-3" />
                                             {new Date(discussion.discussionDate || discussion.content!.releaseDate!).toLocaleDateString('en-US', {
                                                 month: 'short',
                                                 day: 'numeric',
@@ -103,7 +103,7 @@ export default function Discussions({ discussions }: DiscussionsProps) {
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
                                         <button className="flex items-center gap-2 px-3 py-2 bg-black text-white rounded-sm text-xs hover:bg-black/80 transition-colors cursor-pointer">
-                                            <Mic2 className="w-4 h-4" />
+                                            <MicrophoneStageIcon className="w-4 h-4" />
                                             Listen to Space
                                         </button>
                                     </AlertDialogTrigger>
@@ -123,10 +123,10 @@ export default function Discussions({ discussions }: DiscussionsProps) {
                                                     className="flex items-center justify-between p-3 border rounded-sm hover:bg-black/5 transition-colors group"
                                                 >
                                                     <div className="flex items-center gap-3">
-                                                        <Mic2 className="w-5 h-5" />
+                                                        <MicrophoneStageIcon className="w-5 h-5" />
                                                         <span className="font-medium">Twitter Space Link</span>
                                                     </div>
-                                                    <ExternalLink className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                    <ArrowSquareOutIcon className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                                                 </a>
                                             )}
                                             {discussion.podcastLinks?.map((link, idx) => {
@@ -142,12 +142,12 @@ export default function Discussions({ discussions }: DiscussionsProps) {
                                                         className="flex items-center justify-between p-3 border rounded-sm hover:bg-black/5 transition-colors group"
                                                     >
                                                         <div className="flex items-center gap-3">
-                                                            {isSpotify ? <Podcast className="w-5 h-5 text-[#1DB954]" /> : isYoutube ? <Youtube className="w-5 h-5 text-[#FF0000]" /> : <Podcast className="w-5 h-5" />}
+                                                            {isSpotify ? <BroadcastIcon className="w-5 h-5 text-[#1DB954]" /> : isYoutube ? <YoutubeLogoIcon className="w-5 h-5 text-[#FF0000]" /> : <BroadcastIcon className="w-5 h-5" />}
                                                             <span className="font-medium">
                                                                 {isSpotify ? 'Spotify Link' : isYoutube ? 'Youtube Music Link' : 'Podcast Link'}
                                                             </span>
                                                         </div>
-                                                        <ExternalLink className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                        <ArrowSquareOutIcon className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                                                     </a>
                                                 )
                                             })}

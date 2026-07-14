@@ -4,14 +4,15 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CldImage } from "next-cloudinary";
 import {
-  ArrowLeft,
-  ExternalLink,
-  Mic,
-  Mic2,
+  ArrowLeftIcon,
+  ArrowSquareOutIcon,
+  BroadcastIcon,
+  MicrophoneIcon,
+  MicrophoneStageIcon,
   PlayIcon,
-  Podcast,
-  Youtube,
-} from "lucide-react";
+  YoutubeLogoIcon,
+} from "@phosphor-icons/react";
+import { EmptyReviewsIllustration } from "@/components/graphics";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -171,7 +172,7 @@ export default function ContentDetailsClient({
             onClick={() => router.back()}
             className="flex items-center gap-2 text-sm font-medium hover:opacity-70 transition-opacity cursor-pointer"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeftIcon className="h-4 w-4" />
             Go Back
           </button>
           <div className="flex items-center gap-2 text-sm">
@@ -320,7 +321,7 @@ export default function ContentDetailsClient({
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button variant="outline" className="w-full py-4 bg-black text-white">
-                      <Mic className="w-4 h-4" />
+                      <MicrophoneIcon className="w-4 h-4" />
                       Listen to Space
                     </Button>
                   </AlertDialogTrigger>
@@ -341,10 +342,10 @@ export default function ContentDetailsClient({
                           className="flex items-center justify-between p-3 border rounded-sm hover:bg-black/5 transition-colors group"
                         >
                           <div className="flex items-center gap-3">
-                            <Mic2 className="w-5 h-5" />
+                            <MicrophoneStageIcon className="w-5 h-5" />
                             <span className="font-medium">Twitter Space Link</span>
                           </div>
-                          <ExternalLink className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <ArrowSquareOutIcon className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                         </a>
                       )}
                       {podcastLinks?.map((link, idx) => {
@@ -361,11 +362,11 @@ export default function ContentDetailsClient({
                           >
                             <div className="flex items-center gap-3">
                               {isSpotify ? (
-                                <Podcast className="w-5 h-5 text-[#1DB954]" />
+                                <BroadcastIcon className="w-5 h-5 text-[#1DB954]" />
                               ) : isYoutube ? (
-                                <Youtube className="w-5 h-5 text-[#FF0000]" />
+                                <YoutubeLogoIcon className="w-5 h-5 text-[#FF0000]" />
                               ) : (
-                                <Podcast className="w-5 h-5" />
+                                <BroadcastIcon className="w-5 h-5" />
                               )}
                               <span className="font-medium">
                                 {isSpotify
@@ -375,7 +376,7 @@ export default function ContentDetailsClient({
                                     : "Podcast Link"}
                               </span>
                             </div>
-                            <ExternalLink className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <ArrowSquareOutIcon className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                           </a>
                         );
                       })}
@@ -500,14 +501,20 @@ export default function ContentDetailsClient({
 
           <div className="py-6">
             {ratingsWithReview.length === 0 ? (
-              <p className="text-black/60 text-sm py-8 text-center">
-                No written reviews yet. Be the first to review this{" "}
-                {contentTypeLabel(movie.contentType).toLowerCase()}!
-              </p>
+              <div className="py-8 text-center">
+                <EmptyReviewsIllustration className="w-24 md:w-28 mx-auto mb-4 text-black/70" />
+                <p className="text-black/60 text-sm">
+                  No written reviews yet. Be the first to review this{" "}
+                  {contentTypeLabel(movie.contentType).toLowerCase()}!
+                </p>
+              </div>
             ) : visibleUserReviews.length === 0 ? (
-              <p className="text-black/60 text-sm py-8 text-center">
-                No reviews in this category.
-              </p>
+              <div className="py-8 text-center">
+                <EmptyReviewsIllustration className="w-24 md:w-28 mx-auto mb-4 text-black/70" />
+                <p className="text-black/60 text-sm">
+                  No reviews in this category.
+                </p>
+              </div>
             ) : (
               <div className="grid gap-4 lg:grid-cols-2">
                 {visibleUserReviews.map((userRating) => (
