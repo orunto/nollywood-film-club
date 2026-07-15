@@ -7,8 +7,10 @@ import {
   decimal,
   uuid,
   pgEnum,
+  index,
   uniqueIndex,
   jsonb,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 
@@ -132,6 +134,76 @@ export const reviews = pgTable("reviews", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Pushback (replies) on a user review, threaded X-style.
+//
+// Every row carries `reviewId` — the root review — even when it is a reply to a
+// reply. That denormalisation is deliberate: a whole thread is one flat query
+// (WHERE review_id = ?) assembled into a tree in memory, and the trending feed
+// counts interactions with a plain GROUP BY. Neither needs a recursive CTE.
+export const pushbacks = pgTable(
+  "pushbacks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    reviewId: uuid("review_id")
+      .notNull()
+      .references(() => userRatings.id, { onDelete: "cascade" }),
+    // null = a direct reply to the review itself
+    parentId: uuid("parent_id").references((): AnyPgColumn => pushbacks.id, {
+      onDelete: "cascade",
+    }),
+    userId: text("user_id").notNull(), // Stack user ID — no FK, there is no local users table
+    body: text("body").notNull(),
+    depth: integer("depth").notNull().default(0), // 0 = direct reply; capped at MAX_PUSHBACK_DEPTH
+    flagged: boolean("flagged").default(false), // marked for admin attention, still publicly visible
+    restricted: boolean("restricted").default(false), // hidden from public display
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("pushbacks_review_id_idx").on(table.reviewId),
+    index("pushbacks_parent_id_idx").on(table.parentId),
+  ],
+);
+
+// User-submitted reports of a review or a pushback. Polymorphic: `targetId`
+// carries no FK, so the admin queue must tolerate a target that has since been
+// deleted. Reporting a target also flips its `flagged` column, which is what
+// puts it in front of the moderation UI admins already use.
+export const reportTargetEnum = pgEnum("report_target", ["review", "pushback"]);
+export const reportReasonEnum = pgEnum("report_reason", [
+  "spoiler",
+  "harassment",
+  "spam",
+  "off_topic",
+  "other",
+]);
+export const reportStatusEnum = pgEnum("report_status", ["open", "actioned", "dismissed"]);
+
+export const reports = pgTable(
+  "reports",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    targetType: reportTargetEnum("target_type").notNull(),
+    targetId: uuid("target_id").notNull(),
+    reporterId: text("reporter_id").notNull(), // Stack user ID
+    reason: reportReasonEnum("reason").notNull(),
+    note: text("note"), // optional free text from the reporter
+    status: reportStatusEnum("status").notNull().default("open"),
+    resolvedBy: text("resolved_by"), // Stack user ID of the admin who closed it
+    resolvedAt: timestamp("resolved_at"),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    // One report per user per target — makes POST /api/user/reports idempotent
+    uniqueIndex("reports_reporter_target_unique").on(
+      table.reporterId,
+      table.targetType,
+      table.targetId,
+    ),
+    index("reports_status_idx").on(table.status),
+  ],
+);
+
 // Blog posts table
 export const blogPosts = pgTable("blog_posts", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -159,11 +231,25 @@ export const discussionRelations = relations(discussions, ({ one }) => ({
   }),
 }));
 
-export const userRatingRelations = relations(userRatings, ({ one }) => ({
+export const userRatingRelations = relations(userRatings, ({ one, many }) => ({
   content: one(content, {
     fields: [userRatings.contentId],
     references: [content.id],
   }),
+  pushbacks: many(pushbacks),
+}));
+
+export const pushbackRelations = relations(pushbacks, ({ one, many }) => ({
+  review: one(userRatings, {
+    fields: [pushbacks.reviewId],
+    references: [userRatings.id],
+  }),
+  parent: one(pushbacks, {
+    fields: [pushbacks.parentId],
+    references: [pushbacks.id],
+    relationName: "pushback_parent",
+  }),
+  replies: many(pushbacks, { relationName: "pushback_parent" }),
 }));
 
 export const reviewRelations = relations(reviews, ({ one }) => ({

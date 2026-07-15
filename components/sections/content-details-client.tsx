@@ -26,6 +26,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import ContentCard from "@/components/custom/content-card";
+import ScoreBox from "@/components/custom/score-box";
 import MovieRatingSheet from "@/components/custom/movie-rating-sheet";
 import { STREAMING_PLATFORMS } from "@/components/sections/movie-hero";
 import { Content, Review, UserRating } from "@/lib/server-queries";
@@ -87,27 +88,6 @@ function DistributionBar({ ratings }: { ratings: UserRating[] }) {
       {negative > 0 && (
         <div className="bg-red-700 rounded-full" style={{ flexGrow: negative }} />
       )}
-    </div>
-  );
-}
-
-function ScoreBox({
-  score,
-  className,
-}: {
-  score: number | null;
-  className?: string;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex items-center justify-center rounded-sm font-semibold text-white",
-        score === null ? "text-xs" : "text-2xl",
-        scoreBadgeClass(score),
-        className,
-      )}
-    >
-      {score ?? "N/A"}
     </div>
   );
 }

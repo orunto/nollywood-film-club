@@ -98,6 +98,14 @@ export default function AuthPage() {
     }
   };
 
+  // A tab opened straight onto this page — a shared link, or "open in new tab"
+  // from anywhere — has a single history entry, so router.back() would sit there
+  // doing nothing. Send those visitors home instead.
+  const handleBack = () => {
+    if (window.history.length > 1) router.back();
+    else router.push("/");
+  };
+
   const onSignIn = async () => {
     setIsLoading(true);
     setError(null);
@@ -118,7 +126,7 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen flex lg:py-7 py-20 justify-center bg-gray-50 px-4 sm:px-6 lg:px-8">
       <Button
-        onClick={() => router.back()}
+        onClick={handleBack}
         className="absolute top-6 left-6 bg-white text-black"
       >
         <ArrowLeftIcon className="h-4 w-4" />

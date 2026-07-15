@@ -1,6 +1,15 @@
+import { cache } from "react";
 import { db } from "@/db/client";
-import { content, discussions, reviews, userRatings, type CastMember } from "@/db/schema";
-import { eq, avg, desc, sql, and } from "drizzle-orm";
+import {
+  content,
+  discussions,
+  pushbacks,
+  reports,
+  reviews,
+  userRatings,
+  type CastMember,
+} from "@/db/schema";
+import { eq, avg, asc, desc, sql, and, inArray, isNotNull, ne } from "drizzle-orm";
 import { stackServerApp } from "@/stack";
 import { contentSlug } from "@/lib/utils";
 
@@ -382,13 +391,15 @@ export async function getDiscussionForContent(
   }
 }
 
-// Combined function to fetch all homepage data
+// Combined function to fetch all homepage data.
+// `reviews` here is the trending *member* feed — critic reviews still live on
+// the film detail pages via getReviewsForContent.
 export async function getHomepageData() {
   try {
     const [movieOfTheWeek, moviesAndTVSeries, reviews, discussions] = await Promise.all([
       getMovieOfTheWeek(),
       getMoviesAndTVSeries(),
-      getReviews(),
+      getTrendingReviews({ limit: 4 }),
       getDiscussions(),
     ]);
 
@@ -409,7 +420,7 @@ export async function getHomepageData() {
       movieOfTheWeek: null,
       movieOfTheWeekDiscussion: null,
       moviesAndTVSeries: [],
-      reviews: [],
+      reviews: [] as FeedReview[],
       discussions: [],
     };
   }
@@ -490,42 +501,50 @@ export async function getContentBySlug(slug: string): Promise<Content | null> {
   }
 }
 
+export interface UserDisplay {
+  username: string;
+  profileImage?: string;
+}
+
+// Display info for one reviewer, from Stack Auth (there is no local users
+// table). Wrapped in React cache() so a request that renders the same author
+// more than once — a feed and the threads under it — only looks them up once.
+const getUserDisplay = cache(async (userId: string): Promise<UserDisplay> => {
+  try {
+    const user = await stackServerApp.getUser(userId);
+    if (user) {
+      return {
+        username: user.clientMetadata?.username || `User ${user.id.substring(0, 8)}`,
+        profileImage: user.profileImageUrl || undefined,
+      };
+    }
+  } catch (error) {
+    console.error("Error fetching Stack user", userId, error);
+  }
+  // Deleted user, or Stack Auth is unreachable — never fail the whole page
+  return { username: `User ${userId.substring(0, 8)}` };
+});
+
+// Resolve a batch of user IDs at once. Deduped and issued in parallel: this
+// previously awaited one Stack Auth round-trip per user *in sequence*, which is
+// tolerable for a single film's reviews but not for a cross-catalogue feed
+// where nearly every row is a different author.
+export async function getUserDisplayMap(
+  userIds: string[],
+): Promise<Map<string, UserDisplay>> {
+  const unique = [...new Set(userIds)];
+  const entries = await Promise.all(
+    unique.map(async (id) => [id, await getUserDisplay(id)] as const),
+  );
+  return new Map(entries);
+}
+
 // Shared helper: given raw userRatings rows, look up each reviewer's
 // username/profileImage from Stack Auth and map to the public UserRating shape.
 async function enrichRatingsWithUsernames(
   ratings: (typeof userRatings.$inferSelect)[],
 ): Promise<UserRating[]> {
-  // Get unique user IDs
-  const userIds = [...new Set(ratings.map((rating) => rating.userId))];
-
-  // Fetch user information from Stack Auth for all users
-  // We'll use a simplified approach since we don't have direct admin access
-  const userMap = new Map<
-    string,
-    { username: string; profileImage?: string }
-  >();
-
-  // For each user ID, we'll try to get the user info
-  for (const userId of userIds) {
-    try {
-      // Try to get user info - this is a simplified approach
-      // In a real implementation with admin access, you would use the proper admin API
-      const user = await stackServerApp.getUser(userId);
-      if (user) {
-        // Use username from metadata if available, otherwise use user ID
-        const username =
-          user.clientMetadata?.username || `User ${user.id.substring(0, 8)}`;
-        const profileImage = user.profileImageUrl || undefined;
-        userMap.set(userId, { username, profileImage });
-      } else {
-        userMap.set(userId, { username: `User ${userId.substring(0, 8)}` });
-      }
-    } catch (error) {
-      // If we can't get user info, use a default display
-      userMap.set(userId, { username: `User ${userId.substring(0, 8)}` });
-      console.error(error);
-    }
-  }
+  const userMap = await getUserDisplayMap(ratings.map((rating) => rating.userId));
 
   // Map ratings with usernames and profile images
   return ratings.map((item) => ({
@@ -562,6 +581,329 @@ export async function getUserRatingsForContent(
     return await enrichRatingsWithUsernames(ratings);
   } catch (error) {
     console.error("Error fetching user ratings for content:", error);
+    return [];
+  }
+}
+
+// A review as it appears in the trending feed. Carries its film alongside it —
+// the feed spans the whole catalogue, so unlike the detail page there is no
+// surrounding context to say what is being reviewed.
+export interface FeedReview extends UserRating {
+  pushbackCount: number;
+  film: {
+    title: string;
+    contentType: "movie" | "tv_show" | "short_film";
+    releaseDate: string | null;
+    posterImage: string | null;
+  } | null;
+}
+
+// Trending = interaction, decayed by age.
+//
+//   (pushback_count + 1) / (hours_since_posted + 2)^1.5
+//
+// The +1 matters: on a bare count every review with no pushback scores zero, so
+// nothing new could ever surface and the feed would start empty forever. With
+// it, a fresh review ranks on recency alone and pushback multiplies from there.
+// The +2 keeps a minutes-old review from dividing by ~0 and pinning the top.
+const HOT_SCORE = sql<number>`
+  (COUNT(${pushbacks.id}) + 1)::float
+  / POWER(EXTRACT(EPOCH FROM (NOW() - ${userRatings.createdAt})) / 3600 + 2, 1.5)
+`;
+
+// Only rows that are actually reviews (a bare rating with no text is not a
+// feed item) and not hidden by a moderator.
+const FEED_VISIBLE = and(
+  eq(userRatings.restricted, false),
+  isNotNull(userRatings.review),
+  ne(userRatings.review, ""),
+);
+
+// Trending user reviews across the whole catalogue, newest-and-busiest first.
+export async function getTrendingReviews({
+  limit = 12,
+  offset = 0,
+}: { limit?: number; offset?: number } = {}): Promise<FeedReview[]> {
+  try {
+    const rows = await db
+      .select({
+        rating: userRatings,
+        title: content.title,
+        contentType: content.contentType,
+        releaseDate: content.releaseDate,
+        posterImage: content.posterImage,
+        // Restricted pushback must not inflate the ranking, so it is filtered
+        // in the join condition rather than the WHERE clause — a WHERE would
+        // drop reviews that have no pushback at all.
+        pushbackCount: sql<number>`COUNT(${pushbacks.id})::int`,
+      })
+      .from(userRatings)
+      .leftJoin(content, eq(userRatings.contentId, content.id))
+      .leftJoin(
+        pushbacks,
+        and(eq(pushbacks.reviewId, userRatings.id), eq(pushbacks.restricted, false)),
+      )
+      .where(FEED_VISIBLE)
+      .groupBy(userRatings.id, content.id)
+      .orderBy(desc(HOT_SCORE))
+      .limit(limit)
+      .offset(offset);
+
+    const enriched = await enrichRatingsWithUsernames(rows.map((r) => r.rating));
+
+    return enriched.map((rating, i) => ({
+      ...rating,
+      pushbackCount: Number(rows[i].pushbackCount ?? 0),
+      film: rows[i].title
+        ? {
+            title: rows[i].title as string,
+            contentType: rows[i].contentType as "movie" | "tv_show" | "short_film",
+            releaseDate: rows[i].releaseDate?.toISOString() ?? null,
+            posterImage: rows[i].posterImage,
+          }
+        : null,
+    }));
+  } catch (error) {
+    console.error("Error fetching trending reviews:", error);
+    return [];
+  }
+}
+
+// Total feed size, for pagination.
+export async function countTrendingReviews(): Promise<number> {
+  try {
+    const [row] = await db
+      .select({ total: sql<number>`COUNT(*)::int` })
+      .from(userRatings)
+      .where(FEED_VISIBLE);
+    return Number(row?.total ?? 0);
+  } catch (error) {
+    console.error("Error counting trending reviews:", error);
+    return 0;
+  }
+}
+
+// One review by id, for its permalink page. Returns null when missing or
+// restricted, so the page can 404 rather than render a hidden review.
+export async function getFeedReviewById(id: string): Promise<FeedReview | null> {
+  try {
+    const rows = await db
+      .select({
+        rating: userRatings,
+        title: content.title,
+        contentType: content.contentType,
+        releaseDate: content.releaseDate,
+        posterImage: content.posterImage,
+        pushbackCount: sql<number>`COUNT(${pushbacks.id})::int`,
+      })
+      .from(userRatings)
+      .leftJoin(content, eq(userRatings.contentId, content.id))
+      .leftJoin(
+        pushbacks,
+        and(eq(pushbacks.reviewId, userRatings.id), eq(pushbacks.restricted, false)),
+      )
+      .where(and(eq(userRatings.id, id), eq(userRatings.restricted, false)))
+      .groupBy(userRatings.id, content.id)
+      .limit(1);
+
+    const row = rows[0];
+    if (!row) return null;
+
+    const [enriched] = await enrichRatingsWithUsernames([row.rating]);
+    return {
+      ...enriched,
+      pushbackCount: Number(row.pushbackCount ?? 0),
+      film: row.title
+        ? {
+            title: row.title,
+            contentType: row.contentType as "movie" | "tv_show" | "short_film",
+            releaseDate: row.releaseDate?.toISOString() ?? null,
+            posterImage: row.posterImage,
+          }
+        : null,
+    };
+  } catch (error) {
+    console.error("Error fetching review by id:", error);
+    return null;
+  }
+}
+
+export interface PushbackNode {
+  id: string;
+  reviewId: string;
+  parentId: string | null;
+  userId: string;
+  body: string;
+  depth: number;
+  createdAt: string;
+  username: string;
+  profileImage?: string;
+  replies: PushbackNode[];
+}
+
+// A whole thread in one flat query, assembled into a tree in memory. This is
+// what the denormalised `reviewId` on every pushback buys us — nesting with no
+// recursive CTE, at one round-trip regardless of depth.
+export async function getReviewThread(reviewId: string): Promise<PushbackNode[]> {
+  try {
+    const rows = await db
+      .select()
+      .from(pushbacks)
+      .where(and(eq(pushbacks.reviewId, reviewId), eq(pushbacks.restricted, false)))
+      .orderBy(pushbacks.createdAt);
+
+    const userMap = await getUserDisplayMap(rows.map((r) => r.userId));
+
+    const nodes = new Map<string, PushbackNode>(
+      rows.map((r) => [
+        r.id,
+        {
+          id: r.id,
+          reviewId: r.reviewId,
+          parentId: r.parentId,
+          userId: r.userId,
+          body: r.body,
+          depth: r.depth,
+          createdAt: r.createdAt?.toISOString() ?? "",
+          username: userMap.get(r.userId)?.username ?? `User ${r.userId.substring(0, 8)}`,
+          profileImage: userMap.get(r.userId)?.profileImage,
+          replies: [],
+        },
+      ]),
+    );
+
+    const roots: PushbackNode[] = [];
+    for (const row of rows) {
+      const node = nodes.get(row.id)!;
+      if (!row.parentId) {
+        roots.push(node);
+        continue;
+      }
+      const parent = nodes.get(row.parentId);
+      // Parent missing means it was restricted and filtered out above. Drop the
+      // orphan rather than re-parenting it to the root: hiding a pushback hides
+      // the conversation hanging off it, which is the point of restricting it.
+      if (parent) parent.replies.push(node);
+    }
+    return roots;
+  } catch (error) {
+    console.error("Error fetching review thread:", error);
+    return [];
+  }
+}
+
+// A report as the admin queue shows it: the report plus enough of what was
+// reported to judge it without opening another tab.
+export interface AdminReport {
+  id: string;
+  targetType: "review" | "pushback";
+  targetId: string;
+  reason: string;
+  note: string | null;
+  status: "open" | "actioned" | "dismissed";
+  createdAt: string;
+  reporterId: string;
+  reporterName: string;
+  // Null when the target has since been deleted — reports.targetId is
+  // polymorphic and carries no FK, so orphans are expected, not a bug.
+  targetBody: string | null;
+  targetAuthor: string | null;
+  targetFlagged: boolean;
+  targetRestricted: boolean;
+  contentTitle: string | null;
+  reviewId: string | null; // permalink anchor for either target type
+}
+
+// Admin-only: the report queue, open reports first, newest first within that.
+export async function getReportsForAdmin(): Promise<AdminReport[]> {
+  try {
+    const rows = await db
+      .select()
+      .from(reports)
+      .orderBy(
+        // 'open' sorts before actioned/dismissed so triage lands on top
+        asc(sql`CASE WHEN ${reports.status} = 'open' THEN 0 ELSE 1 END`),
+        desc(reports.createdAt),
+      );
+
+    if (rows.length === 0) return [];
+
+    const reviewIds = rows.filter((r) => r.targetType === "review").map((r) => r.targetId);
+    const pushbackIds = rows.filter((r) => r.targetType === "pushback").map((r) => r.targetId);
+
+    // Two batched lookups rather than one per report
+    const reviewRows = reviewIds.length
+      ? await db
+          .select({
+            id: userRatings.id,
+            body: userRatings.review,
+            userId: userRatings.userId,
+            flagged: userRatings.flagged,
+            restricted: userRatings.restricted,
+            contentTitle: content.title,
+          })
+          .from(userRatings)
+          .leftJoin(content, eq(userRatings.contentId, content.id))
+          .where(inArray(userRatings.id, reviewIds))
+      : [];
+
+    const pushbackRows = pushbackIds.length
+      ? await db
+          .select({
+            id: pushbacks.id,
+            body: pushbacks.body,
+            userId: pushbacks.userId,
+            flagged: pushbacks.flagged,
+            restricted: pushbacks.restricted,
+            reviewId: pushbacks.reviewId,
+            contentTitle: content.title,
+          })
+          .from(pushbacks)
+          .leftJoin(userRatings, eq(pushbacks.reviewId, userRatings.id))
+          .leftJoin(content, eq(userRatings.contentId, content.id))
+          .where(inArray(pushbacks.id, pushbackIds))
+      : [];
+
+    const reviewMap = new Map(reviewRows.map((r) => [r.id, r]));
+    const pushbackMap = new Map(pushbackRows.map((r) => [r.id, r]));
+
+    const userMap = await getUserDisplayMap([
+      ...rows.map((r) => r.reporterId),
+      ...reviewRows.map((r) => r.userId),
+      ...pushbackRows.map((r) => r.userId),
+    ]);
+
+    return rows.map((report) => {
+      const target =
+        report.targetType === "review"
+          ? reviewMap.get(report.targetId)
+          : pushbackMap.get(report.targetId);
+
+      return {
+        id: report.id,
+        targetType: report.targetType,
+        targetId: report.targetId,
+        reason: report.reason,
+        note: report.note,
+        status: report.status,
+        createdAt: report.createdAt?.toISOString() ?? "",
+        reporterId: report.reporterId,
+        reporterName:
+          userMap.get(report.reporterId)?.username ??
+          `User ${report.reporterId.substring(0, 8)}`,
+        targetBody: target?.body ?? null,
+        targetAuthor: target ? (userMap.get(target.userId)?.username ?? null) : null,
+        targetFlagged: target?.flagged ?? false,
+        targetRestricted: target?.restricted ?? false,
+        contentTitle: target?.contentTitle ?? null,
+        reviewId:
+          report.targetType === "review"
+            ? report.targetId
+            : (pushbackMap.get(report.targetId)?.reviewId ?? null),
+      };
+    });
+  } catch (error) {
+    console.error("Error fetching reports for admin:", error);
     return [];
   }
 }
