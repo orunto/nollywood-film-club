@@ -36,7 +36,7 @@ const ContentCard = forwardRef<HTMLAnchorElement, ContentCardProps>(
                     </CardHeader>
 
                     <CardContent className="p-4 relative flex flex-col gap-2 lg:mt-0 mt-8">
-                        <CardTitle className="text-base @xs:text-lg @md:text-xl font-semibold flex items-center gap-2">
+                        <CardTitle className="text-base @xs:text-lg @md:text-xl font-semibold flex items-center gap-2 mt-5 lg:mt-0">
                             {item.title}
                         </CardTitle>
 
