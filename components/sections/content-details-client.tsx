@@ -200,6 +200,7 @@ export default function ContentDetailsClient({
                 <>
                   <CldImage
                     src={movie.posterImage || "nollywood-film-club/elj"}
+                    version={movie.posterVersion ?? undefined}
                     alt={`${movie.title} Poster`}
                     width={800}
                     height={450}

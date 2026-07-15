@@ -24,6 +24,7 @@ const ContentCard = forwardRef<HTMLAnchorElement, ContentCardProps>(
                             <div className="absolute inset-x-0 top-0 h-full hover:h-[200%] transition-[height] duration-300 ease-in-out">
                                 <CldImage
                                     src={item.posterImage || "nollywood-film-club/elj"}
+                                    version={item.posterVersion ?? undefined}
                                     alt={`${item.title} Poster`}
                                     fill
                                     className="object-cover object-top rounded-sm"

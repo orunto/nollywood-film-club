@@ -4,6 +4,8 @@ import { authenticateAdmin } from '@/lib/admin-auth';
 import { generateImagePublicName } from '@/lib/utils';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+// Every poster lives under this Cloudinary folder, matching the seeded posters
+const CLOUDINARY_FOLDER = 'nfc';
 
 function configureCloudinary(): boolean {
   const { NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET } =
@@ -84,6 +86,7 @@ export async function POST(request: NextRequest) {
 
     const result = await cloudinary.uploader.upload(source, {
       public_id: publicId,
+      folder: CLOUDINARY_FOLDER,
       overwrite: true,
       invalidate: true,
       resource_type: 'image',
@@ -91,7 +94,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: { publicId: result.public_id },
+      data: { publicId: result.public_id, version: result.version },
       message: 'Image uploaded successfully'
     });
   } catch (error) {
