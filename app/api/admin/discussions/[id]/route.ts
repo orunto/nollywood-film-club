@@ -56,7 +56,7 @@ export async function PUT(
     console.error('Error updating discussion:', error);
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Something went wrong. Please try again.'
     }, { status: 500 });
   }
 }
@@ -107,7 +107,7 @@ export async function PATCH(
     console.error('Error linking discussion:', error);
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Something went wrong. Please try again.'
     }, { status: 500 });
   }
 }
@@ -145,7 +145,7 @@ export async function DELETE(
     console.error('Error deleting discussion:', error);
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Something went wrong. Please try again.'
     }, { status: 500 });
   }
 }

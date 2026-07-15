@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { reviews } from '@/db/schema';
+import { authenticateAdmin } from '@/lib/admin-auth';
 
 export async function GET() {
   try {
+    const authResult = await authenticateAdmin();
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const reviewsData = await db
       .select()
       .from(reviews)
@@ -17,13 +23,18 @@ export async function GET() {
     console.error('Error fetching reviews:', error);
     return NextResponse.json({ 
       success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+      error: 'Something went wrong. Please try again.' 
     }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await authenticateAdmin();
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const reviewData = await request.json();
     
     const newReview = await db.insert(reviews).values({
@@ -46,7 +57,7 @@ export async function POST(request: NextRequest) {
     console.error('Error creating review:', error);
     return NextResponse.json({ 
       success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+      error: 'Something went wrong. Please try again.' 
     }, { status: 500 });
   }
 }

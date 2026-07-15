@@ -2,12 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { blogPosts } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { authenticateAdmin } from '@/lib/admin-auth';
 
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authResult = await authenticateAdmin();
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const postData = await request.json();
     const { id } = await params
     const updatedPost = await db
@@ -40,7 +46,7 @@ export async function PUT(
     console.error('Error updating blog post:', error);
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Something went wrong. Please try again.'
     }, { status: 500 });
   }
 }
@@ -50,8 +56,13 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authResult = await authenticateAdmin();
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const { id } = await params;
-    
+
     const deletedPost = await db
       .delete(blogPosts)
       .where(eq(blogPosts.id, id))
@@ -72,7 +83,7 @@ export async function DELETE(
     console.error('Error deleting blog post:', error);
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Something went wrong. Please try again.'
     }, { status: 500 });
   }
 }

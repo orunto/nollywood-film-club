@@ -57,7 +57,7 @@ export async function PATCH(
     console.error('Error updating report:', error);
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: 'Something went wrong. Please try again.',
     }, { status: 500 });
   }
 }

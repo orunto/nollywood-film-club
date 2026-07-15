@@ -2,12 +2,18 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { reviews } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { authenticateAdmin } from '@/lib/admin-auth';
 
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authResult = await authenticateAdmin();
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const { id } = await params
     const reviewData = await request.json();
     
@@ -43,13 +49,18 @@ export async function PUT(
     console.error('Error updating review:', error);
     return NextResponse.json({ 
       success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+      error: 'Something went wrong. Please try again.' 
     }, { status: 500 });
   }
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const authResult = await authenticateAdmin();
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const { id} = await params
     const deletedReview = await db
       .delete(reviews)
@@ -71,7 +82,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     console.error('Error deleting review:', error);
     return NextResponse.json({ 
       success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+      error: 'Something went wrong. Please try again.' 
     }, { status: 500 });
   }
 }

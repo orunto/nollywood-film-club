@@ -42,7 +42,7 @@ export async function DELETE(
     console.error('Error deleting pushback:', error);
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: 'Something went wrong. Please try again.',
     }, { status: 500 });
   }
 }

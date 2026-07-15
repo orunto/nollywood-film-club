@@ -2,12 +2,18 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { blogPosts } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { authenticateAdmin } from '@/lib/admin-auth';
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authResult = await authenticateAdmin();
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const { published, publishedAt } = await request.json();
     const {id} = await params
     const updatedPost = await db
@@ -36,7 +42,7 @@ export async function PATCH(
     console.error('Error updating blog post publish status:', error);
     return NextResponse.json({ 
       success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+      error: 'Something went wrong. Please try again.' 
     }, { status: 500 });
   }
 }

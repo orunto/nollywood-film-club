@@ -5,6 +5,7 @@ import { Button } from "../ui/button";
 import { ListIcon } from "@phosphor-icons/react";
 import { useState, useEffect } from "react";
 import { CurrentUser, useStackApp } from "@stackframe/stack";
+import { isAdminUser } from "@/lib/roles";
 import UserMenu from "./user-menu";
 
 export default function Nav() {
@@ -17,10 +18,9 @@ export default function Nav() {
         const checkUser = async () => {
             const currentUser = await app.getUser();
             setUser(currentUser);
-            if (currentUser) {
-                const userRole = (currentUser as { clientMetadata?: { role?: string } }).clientMetadata?.role;
-                setIsAdmin(userRole === 'admin');
-            }
+            // UI hint only — shows/hides the Admin link. Real enforcement is
+            // server-side in authenticateAdmin(); the client cannot forge this.
+            setIsAdmin(isAdminUser(currentUser));
         };
         checkUser();
     }, [app]);

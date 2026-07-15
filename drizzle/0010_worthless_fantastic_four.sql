@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "user_ratings_content_user_unique" ON "user_ratings" USING btree ("content_id","user_id");

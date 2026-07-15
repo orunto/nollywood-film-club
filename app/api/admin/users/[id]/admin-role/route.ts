@@ -30,11 +30,13 @@ export async function PATCH(
       }, { status: 404 });
     }
 
+    // Role lives in clientReadOnlyMetadata — writable only here on the server,
+    // never by the user themselves. See lib/roles.ts.
     const { role: _role, ...restMetadata } =
-      (targetUser.clientMetadata as Record<string, string | boolean | null>) ?? {};
+      (targetUser.clientReadOnlyMetadata as Record<string, string | boolean | null>) ?? {};
     const newMetadata = isAdmin ? { ...restMetadata, role: 'admin' } : restMetadata;
 
-    await targetUser.update({ clientMetadata: newMetadata });
+    await targetUser.setClientReadOnlyMetadata(newMetadata);
 
     return NextResponse.json({
       success: true,
@@ -44,7 +46,7 @@ export async function PATCH(
     console.error('Error updating user role:', error);
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: 'Something went wrong. Please try again.',
     }, { status: 500 });
   }
 }

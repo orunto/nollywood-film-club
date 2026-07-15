@@ -1,17 +1,16 @@
 import { redirect } from 'next/navigation';
 import { stackServerApp } from '@/stack';
+import { isAdminUser } from '@/lib/roles';
 
 export default async function AuthCallbackPage() {
   const user = await stackServerApp.getUser();
-  
+
   if (!user) {
     redirect('/auth');
   }
 
-  // Check user role and redirect accordingly
-  const userRole = user.clientMetadata?.role;
-  
-  if (userRole === 'admin') {
+  // Role comes from clientReadOnlyMetadata (server-write-only, unforgeable)
+  if (isAdminUser(user)) {
     redirect('/admin');
   }
 

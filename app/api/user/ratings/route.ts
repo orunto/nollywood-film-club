@@ -39,7 +39,7 @@ export async function GET() {
     console.error('Error fetching user ratings:', error);
     return NextResponse.json({ 
       success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+      error: 'Something went wrong. Please try again.' 
     }, { status: 500 });
   }
 }
@@ -68,50 +68,46 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const ratingCheck = await db.select().from(userRatings).where(and(
-      eq(userRatings.contentId, ratingData.contentId),
-      eq(userRatings.userId, authResult.user.id)
-    ));
-
-    if (ratingCheck.length > 0) {
-      const updateData: { rating?: number; review?: string | null } = {};
-      
-      if (ratingData.rating !== undefined && ratingData.rating !== null) {
-        updateData.rating = ratingData.rating;
-      }
-      
-      if (ratingData.review && ratingData.review.length > 0) {
-        updateData.review = ratingData.review;
-      }
-      const editRating = await db.update(userRatings).set(updateData).where(and(
+    // Atomic upsert against the user_ratings_content_user_unique index. This
+    // replaces a read-then-write that could race two concurrent submits into
+    // duplicate rows — now impossible at the DB level.
+    const existing = await db
+      .select({ id: userRatings.id })
+      .from(userRatings)
+      .where(and(
         eq(userRatings.contentId, ratingData.contentId),
         eq(userRatings.userId, authResult.user.id)
-      )).returning();
+      ));
+    const isUpdate = existing.length > 0;
 
-      return NextResponse.json({ 
-        success: true, 
-        data: editRating[0],
-        message: 'Rating updated!' 
-      });
-    }
+    const upserted = await db
+      .insert(userRatings)
+      .values({
+        contentId: ratingData.contentId,
+        userId: authResult.user.id,
+        rating: ratingData.rating,
+        review: ratingData.review ?? null,
+      })
+      .onConflictDoUpdate({
+        target: [userRatings.contentId, userRatings.userId],
+        set: {
+          rating: ratingData.rating,
+          review: ratingData.review ?? null,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
 
-    const newRating = await db.insert(userRatings).values({
-      contentId: ratingData.contentId,
-      userId: authResult.user.id,
-      rating: ratingData.rating,
-      review: ratingData.review,
-    }).returning();
-
-    return NextResponse.json({ 
-      success: true, 
-      data: newRating[0],
-      message: 'Rating submitted!' 
+    return NextResponse.json({
+      success: true,
+      data: upserted[0],
+      message: isUpdate ? 'Rating updated!' : 'Rating submitted!'
     });
   } catch (error) {
     console.error('Error creating rating:', error);
     return NextResponse.json({ 
       success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+      error: 'Something went wrong. Please try again.' 
     }, { status: 500 });
   }
 }
