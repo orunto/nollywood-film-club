@@ -143,6 +143,14 @@ export default function ContentDetailsClient({
   const hasPodcastLink = Boolean(podcastLinks && podcastLinks.length > 0);
   const hasSpaceOrPodcast = Boolean(spaceUrl || hasPodcastLink);
 
+  // A tab opened straight onto this page — a shared link, or "open in new tab"
+  // from anywhere — has a single history entry, so router.back() would sit there
+  // doing nothing. Send those visitors home instead.
+  const handleBack = () => {
+    if (window.history.length > 1) router.back();
+    else router.push("/");
+  };
+
   // Rating opens 24h after the title lands in the catalog, or as soon as the
   // podcast episode discussing it is out
   const isRatingEnabled =
@@ -169,7 +177,7 @@ export default function ContentDetailsClient({
       <div className="w-full bg-black text-white border-t border-white/15">
         <div className="flex items-center justify-between gap-4 lg:px-10 px-6 py-3">
           <button
-            onClick={() => router.back()}
+            onClick={handleBack}
             className="flex items-center gap-2 text-sm font-medium hover:opacity-70 transition-opacity cursor-pointer"
           >
             <ArrowLeftIcon className="h-4 w-4" />
