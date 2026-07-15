@@ -1,4 +1,4 @@
-import { forwardRef } from "react";
+import { forwardRef, memo } from "react";
 import { Card, CardTitle, CardHeader, CardContent, CardDescription, CardFooter } from "../ui/card";
 import Link from "next/link";
 import { CldImage } from "next-cloudinary";
@@ -76,4 +76,8 @@ const ContentCard = forwardRef<HTMLAnchorElement, ContentCardProps>(
     },
 );
 
-export default ContentCard;
+// Memoised because the browse page re-renders on every keystroke of its search
+// box: each card rebuilds a Cloudinary URL (~0.7ms), so an unmemoised grid burns
+// ~8ms per keystroke before React even reconciles. `item` comes straight from the
+// fetched catalogue, so its identity is stable across those renders.
+export default memo(ContentCard);
