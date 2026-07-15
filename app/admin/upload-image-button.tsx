@@ -8,7 +8,7 @@ interface UploadImageButtonProps {
   // Used to name the Cloudinary public ID (snake_case title + year)
   title?: string;
   releaseDate?: string;
-  onUploaded: (publicId: string) => void;
+  onUploaded: (publicId: string, version: number) => void;
 }
 
 export default function UploadImageButton({ title, releaseDate, onUploaded }: UploadImageButtonProps) {
@@ -28,7 +28,7 @@ export default function UploadImageButton({ title, releaseDate, onUploaded }: Up
       });
       const result = await response.json();
       if (result.success) {
-        onUploaded(result.data.publicId);
+        onUploaded(result.data.publicId, result.data.version);
         toast.success('Image uploaded to Cloudinary');
       } else {
         toast.error(result.error || 'Failed to upload image');

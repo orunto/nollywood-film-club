@@ -11,6 +11,7 @@ export interface Content {
   synopsis: string | null;
   genre: string[] | null;
   posterImage: string | null;
+  posterVersion: number | null;
   trailerUrl: string | null;
   streamingUrl: string | null;
   streamingPlatform: string | null;

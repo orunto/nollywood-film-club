@@ -26,6 +26,7 @@ export interface Content {
   synopsis: string | null;
   genre: string[] | null;
   posterImage: string | null;
+  posterVersion: number | null;
   trailerUrl: string | null;
   streamingUrl: string | null;
   streamingPlatform: string | null;
@@ -148,6 +149,7 @@ export async function getMoviesAndTVSeries(): Promise<Content[]> {
         synopsis: content.synopsis,
         genre: content.genre,
         posterImage: content.posterImage,
+        posterVersion: content.posterVersion,
         trailerUrl: content.trailerUrl,
         streamingUrl: content.streamingUrl,
         streamingPlatform: content.streamingPlatform,
@@ -201,6 +203,7 @@ export async function getAllContent(): Promise<Content[]> {
         synopsis: content.synopsis,
         genre: content.genre,
         posterImage: content.posterImage,
+        posterVersion: content.posterVersion,
         trailerUrl: content.trailerUrl,
         streamingUrl: content.streamingUrl,
         streamingPlatform: content.streamingPlatform,
@@ -437,6 +440,7 @@ export async function getContentById(id: string): Promise<Content | null> {
         synopsis: content.synopsis,
         genre: content.genre,
         posterImage: content.posterImage,
+        posterVersion: content.posterVersion,
         trailerUrl: content.trailerUrl,
         streamingUrl: content.streamingUrl,
         streamingPlatform: content.streamingPlatform,
