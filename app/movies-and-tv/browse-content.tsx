@@ -32,6 +32,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Content } from "@/lib/server-queries";
+import { cn } from "@/lib/utils";
 import {
   PAGE_SIZE,
   SORT_OPTIONS,
@@ -76,11 +77,34 @@ export default function BrowseContent({
 
   const [searchInput, setSearchInput] = useState(state.query);
   const debouncedSearch = useDebounce(searchInput, 300);
+
+  // Below lg the search collapses to an icon — see the header block below.
+  // Opens already holding a query when one arrived via the URL, so the box
+  // isn't hidden while its results are on screen.
+  const [isSearchOpen, setIsSearchOpen] = useState(Boolean(state.query));
+  const searchRef = useRef<HTMLInputElement>(null);
+  const searchMounted = useRef(false);
+
+  // Focus the box when the user opens it, but not on mount — a page loaded
+  // with ?q= would otherwise steal focus and scroll the header into view.
+  useEffect(() => {
+    if (!searchMounted.current) {
+      searchMounted.current = true;
+      return;
+    }
+    if (isSearchOpen) searchRef.current?.focus();
+  }, [isSearchOpen]);
+
+  const closeSearch = () => {
+    setSearchInput("");
+    setIsSearchOpen(false);
+  };
+
   const options = useMemo(() => deriveFilterOptions(allContent), [allContent]);
 
   const filtered = useMemo(
     () => sortContent(applyFilters(allContent, state.filters), state.sort),
-    [allContent, state.filters, state.sort, debouncedSearch],
+    [allContent, state.filters, state.sort],
   );
 
   const filteredBySearch = useMemo(
@@ -103,40 +127,76 @@ export default function BrowseContent({
     gridRef.current?.scrollIntoView({ block: "start" });
   };
 
-  const sidebar = (
-    <FilterSidebar
-      options={options}
-      filters={state.filters}
-      onToggle={toggleFilter}
-      onReset={resetFilters}
-    />
+  // Memoised element, not just a variable: keeps its identity stable across the
+  // re-render every keystroke triggers, so React skips the whole sidebar subtree.
+  const sidebar = useMemo(
+    () => (
+      <FilterSidebar
+        options={options}
+        filters={state.filters}
+        onToggle={toggleFilter}
+        onReset={resetFilters}
+      />
+    ),
+    [options, state.filters, toggleFilter, resetFilters],
   );
 
   return (
     <div className="w-full">
-      <div className=" flex border-b border-black gap-4 justify-between w-full">
+      <div className="relative flex border-b border-black gap-4 justify-between w-full">
         <h1 className="pb-3 text-2xl font-semibold">Movies &amp; TV</h1>
 
-        <div className="relative w-full max-w-md">
-          <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
-          <Input
-            type="search"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Search titles…"
-            aria-label="Search titles"
-            className="rounded-sm border-black/40 pl-9 pr-9 shadow-none focus-visible:border-black focus-visible:ring-black/20"
-          />
-          {searchInput && (
-            <button
-              type="button"
-              onClick={() => setSearchInput("")}
-              aria-label="Clear search"
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-black/40 hover:text-black cursor-pointer"
-            >
-              <XIcon className="h-4 w-4" />
-            </button>
+        {/* Below lg a full search box would eat the row and squeeze the h1, so
+            it collapses to this icon and expands into a box overlaying the row.
+            The box is absolute, so the h1 keeps its space in either state. */}
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label="Search titles"
+          aria-expanded={isSearchOpen}
+          onClick={() => setIsSearchOpen(true)}
+          className={cn(
+            "lg:hidden shrink-0 text-black/60 hover:bg-black/5 hover:text-black",
+            isSearchOpen && "invisible",
           )}
+        >
+          <MagnifyingGlassIcon className="h-5 w-5" />
+        </Button>
+
+        <div
+          className={cn(
+            "lg:block lg:w-full lg:max-w-md",
+            isSearchOpen
+              ? "absolute inset-0 z-20 flex items-center bg-white lg:static lg:bg-transparent"
+              : "hidden",
+          )}
+        >
+          <div className="relative w-full">
+            <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
+            <Input
+              ref={searchRef}
+              type="search"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Escape" && closeSearch()}
+              placeholder="Search titles…"
+              aria-label="Search titles"
+              // The trailing utilities drop WebKit's built-in clear button, which
+              // would otherwise sit next to our own X
+              className="rounded-sm border-black/40 pl-9 pr-9 shadow-none focus-visible:border-black focus-visible:ring-black/20 [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none"
+            />
+            {(searchInput || isSearchOpen) && (
+              <button
+                type="button"
+                onClick={closeSearch}
+                aria-label={searchInput ? "Clear search" : "Close search"}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-black/40 hover:text-black cursor-pointer"
+              >
+                <XIcon className="h-4 w-4" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
       <div className="flex flex-col gap-4 py-6">

@@ -1,4 +1,4 @@
-import { forwardRef } from "react";
+import { forwardRef, memo } from "react";
 import { Card, CardTitle, CardHeader, CardContent, CardDescription, CardFooter } from "../ui/card";
 import Link from "next/link";
 import { CldImage } from "next-cloudinary";
@@ -24,6 +24,7 @@ const ContentCard = forwardRef<HTMLAnchorElement, ContentCardProps>(
                             <div className="absolute inset-x-0 top-0 h-full hover:h-[200%] transition-[height] duration-300 ease-in-out">
                                 <CldImage
                                     src={item.posterImage || "nollywood-film-club/elj"}
+                                    version={item.posterVersion ?? undefined}
                                     alt={`${item.title} Poster`}
                                     fill
                                     className="object-cover object-top rounded-sm"
@@ -35,7 +36,7 @@ const ContentCard = forwardRef<HTMLAnchorElement, ContentCardProps>(
                     </CardHeader>
 
                     <CardContent className="p-4 relative flex flex-col gap-2 lg:mt-0 mt-8">
-                        <CardTitle className="text-base @xs:text-lg @md:text-xl font-semibold flex items-center gap-2">
+                        <CardTitle className="text-base @xs:text-lg @md:text-xl font-semibold flex items-center gap-2 mt-5 lg:mt-0">
                             {item.title}
                         </CardTitle>
 
@@ -75,4 +76,8 @@ const ContentCard = forwardRef<HTMLAnchorElement, ContentCardProps>(
     },
 );
 
-export default ContentCard;
+// Memoised because the browse page re-renders on every keystroke of its search
+// box: each card rebuilds a Cloudinary URL (~0.7ms), so an unmemoised grid burns
+// ~8ms per keystroke before React even reconciles. `item` comes straight from the
+// fetched catalogue, so its identity is stable across those renders.
+export default memo(ContentCard);

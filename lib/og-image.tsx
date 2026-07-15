@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 import { resolveContent } from "@/lib/content-route";
 import { NFC_LOGO_SVG } from "@/lib/nfc-logo";
+import { posterPath } from "@/lib/utils";
 
 // Shared generator behind the opengraph-image.tsx files of /movie/[slug],
 // /tv/[slug] and /short/[slug] — the poster full-bleed with the NFC badge
@@ -27,7 +28,7 @@ export async function contentOgImage(rawSlug: string) {
   // crop of the portrait poster keeps the subject in frame
   const posterUrl =
     item?.posterImage && cloudName
-      ? `https://res.cloudinary.com/${cloudName}/image/upload/f_jpg,c_fill,g_auto,w_${OG_SIZE.width},h_${OG_SIZE.height}/${item.posterImage}`
+      ? `https://res.cloudinary.com/${cloudName}/image/upload/f_jpg,c_fill,g_auto,w_${OG_SIZE.width},h_${OG_SIZE.height}/${posterPath(item.posterImage, item.posterVersion)}`
       : null;
 
   return new ImageResponse(

@@ -1,6 +1,7 @@
 import { Footer, Nav } from "@/components/custom";
 import { Hero, MovieOfTheWeek, MoviesAndTVSeries, Reviews, Discussions } from "@/components/sections";
 import { getHomepageData, getAllContent } from "@/lib/server-queries";
+import { posterPath } from "@/lib/utils";
 
 export default async function Home() {
   const [{ movieOfTheWeek, movieOfTheWeekDiscussion, moviesAndTVSeries, reviews, discussions }, allContent] =
@@ -15,7 +16,7 @@ export default async function Home() {
 
   // Every catalogue poster feeds the hero's moving poster-wall background.
   const posters = allContent
-    .map((item) => item.posterImage)
+    .map((item) => (item.posterImage ? posterPath(item.posterImage, item.posterVersion) : null))
     .filter((src): src is string => Boolean(src));
 
   return (

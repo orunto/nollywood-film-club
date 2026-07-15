@@ -184,3 +184,18 @@ export function generateImagePublicName(title: string, releaseDate?: Date | stri
   // Combine title and year
   return year ? `${snakeCaseTitle}_${year}` : snakeCaseTitle;
 }
+
+/**
+ * Prefixes a Cloudinary public ID with its version segment, for the places that
+ * build delivery URLs by hand rather than through CldImage (which takes a
+ * `version` prop instead). Posters are re-uploaded under the same public ID, so
+ * without the version the URL never changes and browsers keep serving the old
+ * image from cache.
+ *
+ * @example
+ * posterPath("nfc/everybody_loves_jenifa_2024", 1712345678)
+ * // Returns: "v1712345678/nfc/everybody_loves_jenifa_2024"
+ */
+export function posterPath(publicId: string, version?: number | null): string {
+  return version ? `v${version}/${publicId}` : publicId;
+}
