@@ -102,6 +102,7 @@ export default function ContentManagement() {
     synopsis: '',
     genre: '',
     posterImage: '',
+    posterVersion: null as number | null,
     trailerUrl: '',
     streamingUrl: '',
     streamingPlatform: '',
@@ -201,7 +202,11 @@ export default function ContentManagement() {
         });
         const uploadResult = await response.json();
         if (uploadResult.success) {
-          setFormData((prev) => ({ ...prev, posterImage: uploadResult.data.publicId }));
+          setFormData((prev) => ({
+            ...prev,
+            posterImage: uploadResult.data.publicId,
+            posterVersion: uploadResult.data.version,
+          }));
           setImportedPosterUrl(null);
           toast.success('Poster uploaded to Cloudinary');
         } else {
@@ -309,6 +314,7 @@ export default function ContentManagement() {
       synopsis: movie.synopsis || '',
       genre: movie.genre?.join(', ') || '',
       posterImage: movie.posterImage || '',
+      posterVersion: movie.posterVersion,
       trailerUrl: movie.trailerUrl || '',
       streamingUrl: movie.streamingUrl || '',
       streamingPlatform: movie.streamingPlatform || '',
@@ -376,6 +382,7 @@ export default function ContentManagement() {
       synopsis: '',
       genre: '',
       posterImage: '',
+      posterVersion: null,
       trailerUrl: '',
       streamingUrl: '',
       streamingPlatform: '',
@@ -714,7 +721,9 @@ export default function ContentManagement() {
                   <UploadImageButton
                     title={formData.title}
                     releaseDate={formData.releaseDate}
-                    onUploaded={(publicId) => setFormData((prev) => ({ ...prev, posterImage: publicId }))}
+                    onUploaded={(publicId, version) =>
+                      setFormData((prev) => ({ ...prev, posterImage: publicId, posterVersion: version }))
+                    }
                   />
                   {formData.posterImage ? (
                     <>
@@ -724,7 +733,7 @@ export default function ContentManagement() {
                         variant="ghost"
                         size="icon"
                         className="text-black/60 hover:text-black hover:bg-black/10 shrink-0"
-                        onClick={() => setFormData((prev) => ({ ...prev, posterImage: '' }))}
+                        onClick={() => setFormData((prev) => ({ ...prev, posterImage: '', posterVersion: null }))}
                         title="Remove poster"
                       >
                         <XIcon className="w-4 h-4" />

@@ -13,8 +13,8 @@ import { toSpotifyEmbedUrl } from "@/lib/utils";
 interface HeroProps {
     // Newest episode/discussion, used to source the Spotify player
     latestEpisode?: Discussion | null;
-    // Cloudinary public IDs for every film in the catalogue — powers the
-    // moving poster-wall background.
+    // Cloudinary poster paths (version-prefixed — see posterPath) for every
+    // film in the catalogue — powers the moving poster-wall background.
     posters?: string[];
 }
 

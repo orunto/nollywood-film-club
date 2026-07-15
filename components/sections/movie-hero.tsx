@@ -115,6 +115,7 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
                         <>
                             <CldImage
                                 src={movie.posterImage || "nollywood-film-club/elj"}
+                                version={movie.posterVersion ?? undefined}
                                 alt={`${movie.title} Movie Poster`}
                                 width={500}
                                 height={500}

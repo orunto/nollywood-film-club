@@ -62,6 +62,7 @@
         synopsis: movieData.synopsis,
         genre: movieData.genre,
         posterImage: movieData.posterImage,
+        posterVersion: movieData.posterVersion ?? null,
         trailerUrl: movieData.trailerUrl,
         streamingUrl: movieData.streamingUrl,
         streamingPlatform: movieData.streamingPlatform || null,

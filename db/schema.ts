@@ -58,6 +58,10 @@ export const content = pgTable("content", {
   synopsis: text("synopsis"),
   genre: text("genre").array(), // Array of genres
   posterImage: text("poster_image"), // Cloudinary public ID
+  // Cloudinary version of the poster. Posters are re-uploaded under the same
+  // public ID, so without this the delivery URL never changes and browsers
+  // serve a stale image from cache.
+  posterVersion: integer("poster_version"),
   trailerUrl: text("trailer_url"), // YouTube URL
   streamingUrl: text("streaming_url"), // Direct streaming URL
   streamingPlatform: streamingPlatformEnum("streaming_platform"), // Platform enum
