@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stackServerApp } from "@/stack";
+import { authenticateUser } from "@/lib/user-auth";
 
 export async function POST(request: NextRequest) {
   try {
+    // Require a signed-in user. This endpoint enumerates the whole user list to
+    // check name availability, so leaving it open invited anonymous scraping and
+    // a cheap DoS. During onboarding the caller is already authenticated.
+    const authResult = await authenticateUser();
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const users = await stackServerApp.listUsers();
     const { username } = await request.json();
 

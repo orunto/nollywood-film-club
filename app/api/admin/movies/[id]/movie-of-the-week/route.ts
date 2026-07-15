@@ -2,12 +2,18 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { content } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { authenticateAdmin } from '@/lib/admin-auth';
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authResult = await authenticateAdmin();
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const { isMovieOfTheWeek } = await request.json();
     const {id} = await params;
     // If setting as movie of the week, first unset any existing movie of the week
@@ -43,7 +49,7 @@ export async function PATCH(
     console.error('Error updating movie of the week:', error);
     return NextResponse.json({ 
       success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+      error: 'Something went wrong. Please try again.' 
     }, { status: 500 });
   }
 }

@@ -26,7 +26,7 @@ export async function GET() {
       primaryEmail: u.primaryEmail,
       profileImageUrl: u.profileImageUrl,
       signedUpAt: u.signedUpAt,
-      role: (u.clientMetadata as { role?: string } | null)?.role === 'admin' ? 'admin' : 'user',
+      role: (u.clientReadOnlyMetadata as { role?: string } | null)?.role === 'admin' ? 'admin' : 'user',
       reviewCount: reviewCountMap.get(u.id) ?? 0,
     }));
 
@@ -38,7 +38,7 @@ export async function GET() {
     console.error('Error fetching users:', error);
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: 'Something went wrong. Please try again.',
     }, { status: 500 });
   }
 }

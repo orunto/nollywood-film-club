@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
 import { blogPosts } from '@/db/schema';
+import { authenticateAdmin } from '@/lib/admin-auth';
 
 export async function GET() {
   try {
+    const authResult = await authenticateAdmin();
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const posts = await db
       .select()
       .from(blogPosts)
@@ -17,13 +23,18 @@ export async function GET() {
     console.error('Error fetching blog posts:', error);
     return NextResponse.json({ 
       success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+      error: 'Something went wrong. Please try again.' 
     }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await authenticateAdmin();
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const postData = await request.json();
     
     const newPost = await db.insert(blogPosts).values({
@@ -44,7 +55,7 @@ export async function POST(request: NextRequest) {
     console.error('Error creating blog post:', error);
     return NextResponse.json({ 
       success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+      error: 'Something went wrong. Please try again.' 
     }, { status: 500 });
   }
 }

@@ -60,7 +60,7 @@ export async function PUT(
     console.error('Error updating movie:', error);
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Something went wrong. Please try again.'
     }, { status: 500 });
   }
 }
@@ -97,7 +97,7 @@ export async function DELETE(
     console.error('Error deleting movie:', error);
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Something went wrong. Please try again.'
     }, { status: 500 });
   }
 }

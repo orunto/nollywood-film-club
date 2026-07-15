@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
     console.error('Error posting pushback:', error);
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: 'Something went wrong. Please try again.',
     }, { status: 500 });
   }
 }

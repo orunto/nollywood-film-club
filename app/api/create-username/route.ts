@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stackServerApp } from '@/stack';
+import { isAdminUser } from '@/lib/roles';
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,10 +40,12 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Only allow users to set their own username, or admins to set any username
+      // Only allow users to set their own username, or admins to set any
+      // username. Admin status is read from clientReadOnlyMetadata (the client
+      // cannot forge it) — see lib/roles.ts.
       const isCurrentUser = currentUser.id === stackUserId;
-      const isAdmin = currentUser.clientMetadata?.role === 'admin';
-      
+      const isAdmin = isAdminUser(currentUser);
+
       if (!isCurrentUser && !isAdmin) {
         return NextResponse.json(
           { error: 'Unauthorized to set username for this user' },
@@ -52,10 +55,13 @@ export async function POST(request: NextRequest) {
 
       // Get the target user (could be the current user or another user if admin)
       const targetUser = isCurrentUser ? currentUser : await stackServerApp.getUser(stackUserId);
-      
+
       if (targetUser) {
+        // Merge, don't overwrite: a bare { username } would wipe any other
+        // clientMetadata the user has.
         await targetUser.update({
           clientMetadata: {
+            ...(targetUser.clientMetadata as object ?? {}),
             username: username.toLowerCase(),
           },
         });

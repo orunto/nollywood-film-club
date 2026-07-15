@@ -103,19 +103,31 @@ export const discussions = pgTable(
 );
 
 // User ratings/reviews table
-export const userRatings = pgTable("user_ratings", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  contentId: uuid("content_id").references(() => content.id, {
-    onDelete: "cascade",
-  }),
-  userId: text("user_id").notNull(), // Stack user ID
-  rating: integer("rating"), // 0 (didn't like), 5 (okay), or 10 (liked)
-  review: text("review"),
-  flagged: boolean("flagged").default(false), // marked for admin attention, still publicly visible
-  restricted: boolean("restricted").default(false), // hidden from public display
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
+export const userRatings = pgTable(
+  "user_ratings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    contentId: uuid("content_id").references(() => content.id, {
+      onDelete: "cascade",
+    }),
+    userId: text("user_id").notNull(), // Stack user ID
+    rating: integer("rating"), // 0 (didn't like), 5 (okay), or 10 (liked)
+    review: text("review"),
+    flagged: boolean("flagged").default(false), // marked for admin attention, still publicly visible
+    restricted: boolean("restricted").default(false), // hidden from public display
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    // One rating per user per title. The POST /api/user/ratings upsert is a
+    // racy read-then-write; without this, two concurrent submits could both
+    // insert and the same review would show up twice in the feed.
+    uniqueIndex("user_ratings_content_user_unique").on(
+      table.contentId,
+      table.userId,
+    ),
+  ],
+);
 
 // Reviews table (external blog reviews)
 export const reviews = pgTable("reviews", {
