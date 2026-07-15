@@ -78,3 +78,4 @@ Schema changes go in `db/schema.ts` and are applied with `drizzle-kit push` (con
 ## Deployment
 
 The app is designed for [Vercel](https://vercel.com): connect the repo, set the environment variables above in project settings, and deploy. Neon, Stack Auth, and Cloudinary are all serverless-friendly, so no additional infrastructure is needed.
+
