@@ -82,6 +82,7 @@ export default function ReviewCard({ review, expanded, className }: ReviewCardPr
           <span className="font-semibold">{review.username}</span>
           <span className="text-xs uppercase tracking-widest text-black/50">
             {formatWhen(review.createdAt)}
+            {review.edited && <span className="normal-case tracking-normal"> (edited)</span>}
           </span>
         </div>
 

@@ -4,11 +4,29 @@ import { userRatings, content } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { authenticateUser } from '@/lib/user-auth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const authResult = await authenticateUser();
     if (authResult instanceof NextResponse) {
       return authResult;
+    }
+
+    // ?contentId= returns the caller's single rating for that title (or null)
+    // so the rating sheet can preload into edit mode.
+    const contentId = request.nextUrl.searchParams.get('contentId');
+    if (contentId) {
+      const existing = await db
+        .select()
+        .from(userRatings)
+        .where(and(
+          eq(userRatings.contentId, contentId),
+          eq(userRatings.userId, authResult.user.id)
+        ));
+
+      return NextResponse.json({
+        success: true,
+        data: existing[0] ?? null,
+      });
     }
 
     const ratings = await db
@@ -68,6 +86,14 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // Empty/whitespace review means "no review" — stored as null. The sheet
+    // preloads the existing review before submitting, so an empty string here
+    // is an intentional clear, not an accidental overwrite.
+    const reviewValue =
+      typeof ratingData.review === 'string' && ratingData.review.trim() !== ''
+        ? ratingData.review
+        : null;
+
     // Atomic upsert against the user_ratings_content_user_unique index. This
     // replaces a read-then-write that could race two concurrent submits into
     // duplicate rows — now impossible at the DB level.
@@ -86,13 +112,14 @@ export async function POST(request: NextRequest) {
         contentId: ratingData.contentId,
         userId: authResult.user.id,
         rating: ratingData.rating,
-        review: ratingData.review ?? null,
+        review: reviewValue,
       })
       .onConflictDoUpdate({
         target: [userRatings.contentId, userRatings.userId],
         set: {
           rating: ratingData.rating,
-          review: ratingData.review ?? null,
+          review: reviewValue,
+          edited: true,
           updatedAt: new Date(),
         },
       })
