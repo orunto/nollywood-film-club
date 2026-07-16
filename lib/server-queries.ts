@@ -93,6 +93,7 @@ export interface UserRating {
   userId: string;
   rating: number | null; // 0 (didn't like), 5 (okay), or 10 (liked)
   review: string | null;
+  edited: boolean; // user re-submitted their rating/review
   flagged: boolean;
   restricted: boolean;
   createdAt: string;

@@ -513,6 +513,9 @@ export default function ContentDetailsClient({
                   >
                     <span className="text-xs tracking-widest text-black/50 uppercase">
                       {formatDate(userRating.createdAt)}
+                      {userRating.edited && (
+                        <span className="normal-case tracking-normal"> (edited)</span>
+                      )}
                     </span>
                     <div className="flex items-center gap-3">
                       <ScoreBox

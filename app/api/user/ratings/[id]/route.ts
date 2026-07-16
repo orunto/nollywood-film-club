@@ -17,11 +17,18 @@ export async function PUT(
 
     const ratingData = await request.json();
 
+    // Same normalisation as POST: empty/whitespace review is stored as null
+    const reviewValue =
+      typeof ratingData.review === 'string' && ratingData.review.trim() !== ''
+        ? ratingData.review
+        : null;
+
     const updatedRating = await db
       .update(userRatings)
       .set({
         rating: ratingData.rating,
-        review: ratingData.review,
+        review: reviewValue,
+        edited: true,
         updatedAt: new Date(),
       })
       .where(

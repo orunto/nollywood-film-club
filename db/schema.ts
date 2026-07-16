@@ -113,6 +113,9 @@ export const userRatings = pgTable(
     userId: text("user_id").notNull(), // Stack user ID
     rating: integer("rating"), // 0 (didn't like), 5 (okay), or 10 (liked)
     review: text("review"),
+    // True once the user re-submits their rating/review. Deliberately not
+    // derived from updatedAt — moderation routes bump that timestamp too.
+    edited: boolean("edited").notNull().default(false),
     flagged: boolean("flagged").default(false), // marked for admin attention, still publicly visible
     restricted: boolean("restricted").default(false), // hidden from public display
     createdAt: timestamp("created_at").defaultNow(),
