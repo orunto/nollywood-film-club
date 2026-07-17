@@ -36,7 +36,7 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { PlusIcon, PencilSimpleIcon, TrashIcon, StarIcon, MagnifyingGlassIcon, CheckIcon, CaretUpDownIcon, ArrowSquareOutIcon, XIcon } from "@phosphor-icons/react";
+import { PlusIcon, PencilSimpleIcon, TrashIcon, StarIcon, MagnifyingGlassIcon, CheckIcon, CaretUpDownIcon, ArrowSquareOutIcon, EyeIcon, XIcon } from "@phosphor-icons/react";
 import { EmptyListIllustration } from '@/components/graphics';
 import { CastMember, Content } from '@/lib/server-queries';
 import { contentTypeLabel, viewingCategoryLabel, VIEWING_CATEGORIES, type ViewingCategory } from '@/lib/utils';
@@ -44,6 +44,7 @@ import { toast } from 'sonner';
 import { SortableHead, useTableSort, SortAccessors } from './table-sort';
 import { AdminDiscussion } from './discussions-management';
 import UploadImageButton from './upload-image-button';
+import ContentPreview from './content-preview';
 
 interface JustWatchResult {
   id: string;
@@ -96,6 +97,8 @@ export default function ContentManagement() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingMovie, setEditingMovie] = useState<Content | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  // The row whose live page is open in the preview dialog; null when closed
+  const [previewMovie, setPreviewMovie] = useState<Content | null>(null);
   const [jwQuery, setJwQuery] = useState('');
   const [jwResults, setJwResults] = useState<JustWatchResult[]>([]);
   const [isSearchingJw, setIsSearchingJw] = useState(false);
@@ -610,6 +613,15 @@ export default function ContentManagement() {
                       >
                         <StarIcon weight={movie.isMovieOfTheWeek ? 'fill' : 'regular'} className="w-4 h-4" />
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-black/60 hover:text-black hover:bg-black/10"
+                        onClick={() => setPreviewMovie(movie)}
+                        title="Preview the live page"
+                      >
+                        <EyeIcon className="w-4 h-4" />
+                      </Button>
                       <Button variant="ghost" size="icon" className="text-black/60 hover:text-black hover:bg-black/10" onClick={() => handleEdit(movie)}>
                         <PencilSimpleIcon className="w-4 h-4" />
                       </Button>
@@ -624,6 +636,11 @@ export default function ContentManagement() {
           </Table>
         </div>
       )}
+
+      <ContentPreview
+        movie={previewMovie}
+        onOpenChange={(open) => !open && setPreviewMovie(null)}
+      />
 
       <Sheet open={isFormOpen} onOpenChange={setIsFormOpen}>
         <SheetContent side="right" className="w-full sm:max-w-xl flex flex-col gap-0 p-0 rounded-none shadow-none">
