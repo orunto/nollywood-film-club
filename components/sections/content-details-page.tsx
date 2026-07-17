@@ -38,6 +38,7 @@ export default async function ContentDetailsPage({
           related={related}
           spaceUrl={discussion?.spaceUrl}
           podcastLinks={discussion?.podcastLinks}
+          discussionDate={discussion?.discussionDate}
         />
       </main>
       <Footer />

@@ -18,7 +18,7 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Content } from "@/lib/server-queries";
-import { cn, scoreBadgeClass, toYoutubeEmbedUrl, contentPath, viewingCategoryLabel } from "@/lib/utils";
+import { cn, scoreBadgeClass, toYoutubeEmbedUrl, contentPath, viewingCategoryLabel, isUpcomingSpace, isStreamable, spaceDateLabel } from "@/lib/utils";
 import MovieRatingSheet from "@/components/custom/movie-rating-sheet";
 
 export const STREAMING_PLATFORMS: Record<string, {
@@ -54,13 +54,8 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
     const hasPodcastLink = Boolean(podcastLinks && podcastLinks.length > 0);
     const hasSpaceOrPodcast = Boolean(spaceUrl || hasPodcastLink);
 
-    // A space dated in the future has not been held yet, so there is nothing to
-    // listen to: offer a reminder instead. Dates are entered day-granular, so
-    // this flips to "listen" at midnight on the day itself.
-    const isUpcomingSpace = Boolean(discussionDate && new Date(discussionDate) > new Date());
-    const spaceDateLabel = discussionDate
-        ? new Date(discussionDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
-        : null;
+    const spaceUpcoming = isUpcomingSpace(discussionDate);
+    const spaceDate = spaceDateLabel(discussionDate);
 
     // Check if 24 hours have passed since the movie was created, or skip the
     // wait entirely once the podcast episode discussing it is actually out
@@ -96,12 +91,7 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
     const trailerEmbedUrl = movie.trailerUrl ? toYoutubeEmbedUrl(movie.trailerUrl) : null;
     const platform = movie.streamingPlatform ? STREAMING_PLATFORMS[movie.streamingPlatform] : null;
 
-    // The viewing category owns this slot: only a film that's actually streaming
-    // gets a link, so a stale streamingUrl on a film that has left the platform
-    // can't send anyone to a dead page. An unset category falls back to the URL.
-    const isStreamable =
-        (movie.viewingCategory === "streaming" || movie.viewingCategory === null) &&
-        Boolean(movie.streamingUrl);
+    const streamable = isStreamable(movie.viewingCategory, movie.streamingUrl);
 
     return <section className="w-full">
         <h1 className="pb-3 border-b border-black text-2xl font-semibold flex items-center gap-3">
@@ -223,7 +213,7 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
                 </div>
 
                 <div className="w-full pt-2 grid items-center gap-2">
-                    {isStreamable ? (
+                    {streamable ? (
                         <Link target="_blank" href={movie.streamingUrl!}>
                             <Button variant={'secondary'} className={cn("w-full py-4 max-h-13 flex gap-0", platform?.className)}>
                                 Stream on
@@ -251,18 +241,18 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
                                 <Button variant={'outline'} className="w-full py-4 bg-black text-white">
-                                    {isUpcomingSpace ? <BellIcon className="w-4 h-4" /> : <MicrophoneIcon className="w-4 h-4" />}
-                                    {isUpcomingSpace ? 'Save My Seat' : 'Listen to Space'}
+                                    {spaceUpcoming ? <BellIcon className="w-4 h-4" /> : <MicrophoneIcon className="w-4 h-4" />}
+                                    {spaceUpcoming ? 'Save My Seat' : 'Listen to Space'}
                                 </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                                 <AlertDialogHeader>
                                     <AlertDialogTitle>
-                                        {isUpcomingSpace ? `Save your seat for ${movie.title}` : `Listen to ${movie.title}`}
+                                        {spaceUpcoming ? `Save your seat for ${movie.title}` : `Listen to ${movie.title}`}
                                     </AlertDialogTitle>
                                     <AlertDialogDescription>
-                                        {isUpcomingSpace
-                                            ? `Live on X${spaceDateLabel ? ` on ${spaceDateLabel}` : ''}. Set a reminder. The opinions will not wait for you.`
+                                        {spaceUpcoming
+                                            ? `Live on X${spaceDate ? ` on ${spaceDate}` : ''}. Set a reminder. The opinions will not wait for you.`
                                             : 'Pick your platform. The opinions are the same on all of them.'}
                                     </AlertDialogDescription>
                                 </AlertDialogHeader>
@@ -277,7 +267,7 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
                                             <div className="flex items-center gap-3">
                                                 <MicrophoneStageIcon className="w-5 h-5" />
                                                 <span className="font-medium">
-                                                    {isUpcomingSpace ? 'Set a Reminder on X' : 'Twitter Space Link'}
+                                                    {spaceUpcoming ? 'Set a Reminder on X' : 'Twitter Space Link'}
                                                 </span>
                                             </div>
                                             <ArrowSquareOutIcon className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
