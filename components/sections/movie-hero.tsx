@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CldImage } from 'next-cloudinary';
 import { Button } from "@/components/ui/button";
-import { ArrowSquareOutIcon, MicrophoneIcon, MicrophoneStageIcon, PlayIcon, BroadcastIcon, YoutubeLogoIcon } from "@phosphor-icons/react";
+import { ArrowSquareOutIcon, BellIcon, MicrophoneIcon, MicrophoneStageIcon, PlayIcon, BroadcastIcon, YoutubeLogoIcon } from "@phosphor-icons/react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -44,14 +44,23 @@ interface MovieHeroProps {
     showRating?: boolean; // Whether to show the rating functionality
     spaceUrl?: string | null; // Twitter/X Space URL from the movie's discussion
     podcastLinks?: string[] | null; // Podcast platform links from the movie's discussion
+    discussionDate?: string | null; // When the space is/was held, from the movie's discussion
 }
 
-export default function MovieHero({ movie, title, showRating = true, spaceUrl, podcastLinks }: MovieHeroProps) {
+export default function MovieHero({ movie, title, showRating = true, spaceUrl, podcastLinks, discussionDate }: MovieHeroProps) {
     const router = useRouter();
     const [isPlaying, setIsPlaying] = useState(false);
 
     const hasPodcastLink = Boolean(podcastLinks && podcastLinks.length > 0);
     const hasSpaceOrPodcast = Boolean(spaceUrl || hasPodcastLink);
+
+    // A space dated in the future has not been held yet, so there is nothing to
+    // listen to: offer a reminder instead. Dates are entered day-granular, so
+    // this flips to "listen" at midnight on the day itself.
+    const isUpcomingSpace = Boolean(discussionDate && new Date(discussionDate) > new Date());
+    const spaceDateLabel = discussionDate
+        ? new Date(discussionDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+        : null;
 
     // Check if 24 hours have passed since the movie was created, or skip the
     // wait entirely once the podcast episode discussing it is actually out
@@ -242,15 +251,19 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
                                 <Button variant={'outline'} className="w-full py-4 bg-black text-white">
-                                    <MicrophoneIcon className="w-4 h-4" />
-                                    Listen to Space
+                                    {isUpcomingSpace ? <BellIcon className="w-4 h-4" /> : <MicrophoneIcon className="w-4 h-4" />}
+                                    {isUpcomingSpace ? 'Save My Seat' : 'Listen to Space'}
                                 </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                                 <AlertDialogHeader>
-                                    <AlertDialogTitle>Listen to {movie.title}</AlertDialogTitle>
+                                    <AlertDialogTitle>
+                                        {isUpcomingSpace ? `Save your seat for ${movie.title}` : `Listen to ${movie.title}`}
+                                    </AlertDialogTitle>
                                     <AlertDialogDescription>
-                                        Pick your platform. The opinions are the same on all of them.
+                                        {isUpcomingSpace
+                                            ? `Live on X${spaceDateLabel ? ` on ${spaceDateLabel}` : ''}. Set a reminder. The opinions will not wait for you.`
+                                            : 'Pick your platform. The opinions are the same on all of them.'}
                                     </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <div className="flex flex-col gap-2 py-4">
@@ -263,7 +276,9 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
                                         >
                                             <div className="flex items-center gap-3">
                                                 <MicrophoneStageIcon className="w-5 h-5" />
-                                                <span className="font-medium">Twitter Space Link</span>
+                                                <span className="font-medium">
+                                                    {isUpcomingSpace ? 'Set a Reminder on X' : 'Twitter Space Link'}
+                                                </span>
                                             </div>
                                             <ArrowSquareOutIcon className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                                         </a>

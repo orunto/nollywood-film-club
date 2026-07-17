@@ -9,7 +9,7 @@ import {
   userRatings,
   type CastMember,
 } from "@/db/schema";
-import { eq, avg, asc, desc, sql, and, inArray, isNotNull, ne } from "drizzle-orm";
+import { eq, avg, asc, desc, sql, and, inArray, isNotNull, isNull, lte, ne, or } from "drizzle-orm";
 import { stackServerApp } from "@/stack";
 import { contentSlug, type ViewingCategory } from "@/lib/utils";
 
@@ -361,6 +361,16 @@ export async function getDiscussions(): Promise<Discussion[]> {
       .select()
       .from(discussions)
       .leftJoin(content, eq(discussions.contentId, content.id))
+      // A scheduled space has not been held yet, so it has nothing to listen to:
+      // keep it off the homepage until its date arrives. Undated discussions stay,
+      // since a missing date means unscheduled, not upcoming. Filtered in SQL so an
+      // upcoming episode can't take a slot from the 20 the homepage asks for.
+      .where(
+        or(
+          isNull(discussions.discussionDate),
+          lte(discussions.discussionDate, new Date()),
+        ),
+      )
       .orderBy(
         sql`${discussions.episodeNumber} DESC NULLS LAST`,
         sql`${discussions.discussionDate} DESC NULLS LAST`,
