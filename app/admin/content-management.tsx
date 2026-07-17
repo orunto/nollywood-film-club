@@ -199,6 +199,10 @@ export default function ContentManagement() {
       streamingUrl: result.streamingUrl ?? '',
       streamingPlatform: result.streamingPlatform ?? '',
       otherPlatform: result.otherPlatform ?? '',
+      // A JustWatch offer means it is streaming somewhere right now, so say so
+      // rather than making someone set it by hand. No offer says nothing about
+      // where the film is, so leave whatever is already selected alone.
+      viewingCategory: result.streamingUrl ? 'streaming' : prev.viewingCategory,
     }));
     setCastMembers(result.castMembers);
     setImportedPosterUrl(result.posterUrl);
