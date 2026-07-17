@@ -4,7 +4,9 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { FilterState, SortValue, SORT_OPTIONS } from "@/lib/browse";
 
 const CONTENT_TYPES = ["movie", "tv_show", "short_film"];
-const FILTER_KEYS = ["year", "platform", "genre", "score"] as const;
+const FILTER_KEYS = ["year", "platform", "genre", "score", "watch"] as const;
+
+export type FilterKey = (typeof FILTER_KEYS)[number];
 
 export interface BrowseParams {
   filters: FilterState;
@@ -33,6 +35,7 @@ export function useBrowseParams() {
         platforms: splitParam(searchParams.get("platform")),
         genres: splitParam(searchParams.get("genre")),
         scores: splitParam(searchParams.get("score")),
+        viewingCategories: splitParam(searchParams.get("watch")),
       },
       query: searchParams.get("q") ?? "",
       sort: SORT_OPTIONS.some((o) => o.value === sort) ? (sort as SortValue) : "newest",
@@ -63,7 +66,7 @@ export function useBrowseParams() {
 
   // Toggles one value inside a comma-joined multi-select param
   const toggleFilter = useCallback(
-    (key: (typeof FILTER_KEYS)[number], value: string) => {
+    (key: FilterKey, value: string) => {
       const current = splitParam(searchParams.get(key));
       const next = current.includes(value)
         ? current.filter((v) => v !== value)

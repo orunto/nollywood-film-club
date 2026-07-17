@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CldImage } from 'next-cloudinary';
 import { Button } from "@/components/ui/button";
-import { ArrowSquareOutIcon, MicrophoneIcon, MicrophoneStageIcon, PlayIcon, BroadcastIcon, YoutubeLogoIcon } from "@phosphor-icons/react";
+import { ArrowSquareOutIcon, BellIcon, MicrophoneIcon, MicrophoneStageIcon, PlayIcon, BroadcastIcon, YoutubeLogoIcon } from "@phosphor-icons/react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -18,7 +18,7 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Content } from "@/lib/server-queries";
-import { cn, scoreBadgeClass, toYoutubeEmbedUrl, contentTypeLabel, contentPath } from "@/lib/utils";
+import { cn, scoreBadgeClass, toYoutubeEmbedUrl, contentPath, viewingCategoryLabel, isUpcomingSpace, isStreamable, spaceDateLabel } from "@/lib/utils";
 import MovieRatingSheet from "@/components/custom/movie-rating-sheet";
 
 export const STREAMING_PLATFORMS: Record<string, {
@@ -44,14 +44,18 @@ interface MovieHeroProps {
     showRating?: boolean; // Whether to show the rating functionality
     spaceUrl?: string | null; // Twitter/X Space URL from the movie's discussion
     podcastLinks?: string[] | null; // Podcast platform links from the movie's discussion
+    discussionDate?: string | null; // When the space is/was held, from the movie's discussion
 }
 
-export default function MovieHero({ movie, title, showRating = true, spaceUrl, podcastLinks }: MovieHeroProps) {
+export default function MovieHero({ movie, title, showRating = true, spaceUrl, podcastLinks, discussionDate }: MovieHeroProps) {
     const router = useRouter();
     const [isPlaying, setIsPlaying] = useState(false);
 
     const hasPodcastLink = Boolean(podcastLinks && podcastLinks.length > 0);
     const hasSpaceOrPodcast = Boolean(spaceUrl || hasPodcastLink);
+
+    const spaceUpcoming = isUpcomingSpace(discussionDate);
+    const spaceDate = spaceDateLabel(discussionDate);
 
     // Check if 24 hours have passed since the movie was created, or skip the
     // wait entirely once the podcast episode discussing it is actually out
@@ -87,6 +91,8 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
     const trailerEmbedUrl = movie.trailerUrl ? toYoutubeEmbedUrl(movie.trailerUrl) : null;
     const platform = movie.streamingPlatform ? STREAMING_PLATFORMS[movie.streamingPlatform] : null;
 
+    const streamable = isStreamable(movie.viewingCategory, movie.streamingUrl);
+
     return <section className="w-full">
         <h1 className="pb-3 border-b border-black text-2xl font-semibold flex items-center gap-3">
             {title || movie.title}
@@ -97,9 +103,6 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
                         {movie.rating && (
                             <Badge className="text-xs text-black bg-transparent border border-black">{movie.rating}</Badge>
                         )}
-                        <Badge className="text-xs text-black bg-transparent border border-black">
-                            {contentTypeLabel(movie.contentType)}
-                        </Badge>
                     </>
 
                 )
@@ -172,9 +175,6 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
                             {movie.rating && (
                                 <Badge className="text-xs text-black bg-transparent border border-black">{movie.rating}</Badge>
                             )}
-                            <Badge className="text-xs text-black bg-transparent border border-black">
-                                {contentTypeLabel(movie.contentType)}
-                            </Badge>
                         </h2>
                       </Link>
                     )}
@@ -213,8 +213,8 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
                 </div>
 
                 <div className="w-full pt-2 grid items-center gap-2">
-                    {movie.streamingUrl && (
-                        <Link target="_blank" href={movie.streamingUrl}>
+                    {streamable ? (
+                        <Link target="_blank" href={movie.streamingUrl!}>
                             <Button variant={'secondary'} className={cn("w-full py-4 max-h-13 flex gap-0", platform?.className)}>
                                 Stream on
                                 <span className="inline-flex items-center gap-1.5 font-semibold">
@@ -228,20 +228,32 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
                                 </span>
                             </Button>
                         </Link>
+                    ) : movie.viewingCategory && (
+                        <Button
+                            variant={'secondary'}
+                            disabled
+                            className="w-full py-4 max-h-13 font-semibold disabled:opacity-100 bg-black/5 text-black/60"
+                        >
+                            {viewingCategoryLabel(movie.viewingCategory)}
+                        </Button>
                     )}
                     {hasSpaceOrPodcast && (
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
                                 <Button variant={'outline'} className="w-full py-4 bg-black text-white">
-                                    <MicrophoneIcon className="w-4 h-4" />
-                                    Listen to Space
+                                    {spaceUpcoming ? <BellIcon className="w-4 h-4" /> : <MicrophoneIcon className="w-4 h-4" />}
+                                    {spaceUpcoming ? 'Save My Seat' : 'Listen to Space'}
                                 </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                                 <AlertDialogHeader>
-                                    <AlertDialogTitle>Listen to {movie.title}</AlertDialogTitle>
+                                    <AlertDialogTitle>
+                                        {spaceUpcoming ? `Save your seat for ${movie.title}` : `Listen to ${movie.title}`}
+                                    </AlertDialogTitle>
                                     <AlertDialogDescription>
-                                        Pick your platform. The opinions are the same on all of them.
+                                        {spaceUpcoming
+                                            ? `Live on X${spaceDate ? ` on ${spaceDate}` : ''}. Set a reminder. The opinions will not wait for you.`
+                                            : 'Pick your platform. The opinions are the same on all of them.'}
                                     </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <div className="flex flex-col gap-2 py-4">
@@ -254,7 +266,9 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
                                         >
                                             <div className="flex items-center gap-3">
                                                 <MicrophoneStageIcon className="w-5 h-5" />
-                                                <span className="font-medium">Twitter Space Link</span>
+                                                <span className="font-medium">
+                                                    {spaceUpcoming ? 'Set a Reminder on X' : 'Twitter Space Link'}
+                                                </span>
                                             </div>
                                             <ArrowSquareOutIcon className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                                         </a>

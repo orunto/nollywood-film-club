@@ -32,12 +32,13 @@ export default async function ContentDetailsPage({
       <Nav />
       <main className="min-h-screen">
         <ContentDetailsClient
-          movie={item}
+          movie={item} 
           userRatings={userRatings}
           criticReviews={criticReviews}
           related={related}
           spaceUrl={discussion?.spaceUrl}
           podcastLinks={discussion?.podcastLinks}
+          discussionDate={discussion?.discussionDate}
         />
       </main>
       <Footer />

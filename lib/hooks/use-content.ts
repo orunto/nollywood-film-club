@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import type { ViewingCategory } from '@/lib/utils';
 
 // Types
 export interface Content {
@@ -16,6 +17,7 @@ export interface Content {
   streamingUrl: string | null;
   streamingPlatform: string | null;
   otherPlatform: string | null;
+  viewingCategory: ViewingCategory | null;
   isMovieOfTheWeek: boolean;
   createdAt: string;
   updatedAt: string;

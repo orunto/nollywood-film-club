@@ -107,6 +107,67 @@ export function contentTypeLabel(contentType: "movie" | "tv_show" | "short_film"
   return CONTENT_TYPE_LABELS[contentType];
 }
 
+// Where a content item can be watched right now. Declaration order drives the
+// admin select and the browse filter list.
+export const VIEWING_CATEGORIES = [
+  { value: "in_cinemas", label: "In Cinemas" },
+  { value: "streaming", label: "Streaming Now" },
+  { value: "coming_to_cinemas", label: "Coming to Cinemas" },
+  { value: "coming_to_streaming", label: "Coming to Streaming" },
+  { value: "unavailable", label: "Not Available Anywhere" },
+] as const;
+
+export type ViewingCategory = (typeof VIEWING_CATEGORIES)[number]["value"];
+
+export function viewingCategoryLabel(category: ViewingCategory): string {
+  return VIEWING_CATEGORIES.find((c) => c.value === category)!.label;
+}
+
+// Longer form of the same idea, for the "Where to Watch" slot where a sentence
+// reads better than the badge's clipped label.
+const VIEWING_CATEGORY_NOTES: Record<ViewingCategory, string> = {
+  in_cinemas: "Currently in cinemas.",
+  streaming: "Streaming now.",
+  coming_to_cinemas: "Coming to cinemas.",
+  coming_to_streaming: "Coming to streaming.",
+  unavailable: "Not available anywhere yet.",
+};
+
+export function viewingCategoryNote(category: ViewingCategory): string {
+  return VIEWING_CATEGORY_NOTES[category];
+}
+
+// The viewing category owns the streaming link: only a film that is actually
+// streaming gets one, so a stale streamingUrl on a film that has left the
+// platform can't send anyone to a dead page. An unset category falls back to
+// the URL, so rows from before the category existed keep working.
+export function isStreamable(
+  viewingCategory: ViewingCategory | null,
+  streamingUrl: string | null,
+): boolean {
+  return (
+    (viewingCategory === "streaming" || viewingCategory === null) &&
+    Boolean(streamingUrl)
+  );
+}
+
+// A space dated ahead of now has not been held yet, so there is no recording to
+// send anyone to: offer a reminder instead. Dates are entered day-granular (the
+// admin field is a date picker), so this flips at midnight on the day itself
+// rather than when the space actually starts.
+export function isUpcomingSpace(discussionDate?: string | null): boolean {
+  return Boolean(discussionDate && new Date(discussionDate) > new Date());
+}
+
+export function spaceDateLabel(discussionDate?: string | null): string | null {
+  if (!discussionDate) return null;
+  return new Date(discussionDate).toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+}
+
 // URL slug utilities
 // Details pages live under a type-specific base path with an SEO slug of
 // title + release year, e.g. /movie/everybody-loves-jenifa-2024

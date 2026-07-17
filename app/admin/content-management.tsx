@@ -36,14 +36,15 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { PlusIcon, PencilSimpleIcon, TrashIcon, StarIcon, MagnifyingGlassIcon, CheckIcon, CaretUpDownIcon, ArrowSquareOutIcon, XIcon } from "@phosphor-icons/react";
+import { PlusIcon, PencilSimpleIcon, TrashIcon, StarIcon, MagnifyingGlassIcon, CheckIcon, CaretUpDownIcon, ArrowSquareOutIcon, EyeIcon, XIcon } from "@phosphor-icons/react";
 import { EmptyListIllustration } from '@/components/graphics';
 import { CastMember, Content } from '@/lib/server-queries';
-import { contentTypeLabel } from '@/lib/utils';
+import { contentTypeLabel, viewingCategoryLabel, VIEWING_CATEGORIES, type ViewingCategory } from '@/lib/utils';
 import { toast } from 'sonner';
 import { SortableHead, useTableSort, SortAccessors } from './table-sort';
 import { AdminDiscussion } from './discussions-management';
 import UploadImageButton from './upload-image-button';
+import ContentPreview from './content-preview';
 
 interface JustWatchResult {
   id: string;
@@ -62,6 +63,18 @@ interface JustWatchResult {
   otherPlatform: string | null;
   streamingUrl: string | null;
 }
+
+// Sentinel for the discussion picker: not an id, means "create a new discussion
+// from the fields below and link it to this content on save"
+const NEW_DISCUSSION = '__new__';
+
+const emptyDiscussionDraft = {
+  episodeNumber: '',
+  title: '',
+  spaceUrl: '',
+  discussionDate: '',
+  podcastLinks: '',
+};
 
 const inputClass = "border-black/20 rounded-sm focus-visible:ring-black/20 focus-visible:border-black shadow-none";
 const badgeClass = "text-xs text-black bg-transparent border border-black rounded-sm";
@@ -84,6 +97,8 @@ export default function ContentManagement() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingMovie, setEditingMovie] = useState<Content | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  // The row whose live page is open in the preview dialog; null when closed
+  const [previewMovie, setPreviewMovie] = useState<Content | null>(null);
   const [jwQuery, setJwQuery] = useState('');
   const [jwResults, setJwResults] = useState<JustWatchResult[]>([]);
   const [isSearchingJw, setIsSearchingJw] = useState(false);
@@ -91,7 +106,12 @@ export default function ContentManagement() {
   const [isUploadingPoster, setIsUploadingPoster] = useState(false);
   const [linkedDiscussionId, setLinkedDiscussionId] = useState('');
   const [discussionPickerOpen, setDiscussionPickerOpen] = useState(false);
-  // Set from a JustWatch import or the row being edited — no manual editor
+  // Fields for a discussion created inline; only read when linkedDiscussionId
+  // is NEW_DISCUSSION. episodeNumber clashes report back into episodeError.
+  const [discussionDraft, setDiscussionDraft] = useState(emptyDiscussionDraft);
+  const [episodeError, setEpisodeError] = useState<string | null>(null);
+  // Seeded from a JustWatch import or the row being edited, then editable by
+  // hand below. Blank rows are dropped server-side — see lib/cast.ts
   const [castMembers, setCastMembers] = useState<CastMember[] | null>(null);
   const [formData, setFormData] = useState({
     title: '',
@@ -107,10 +127,11 @@ export default function ContentManagement() {
     streamingUrl: '',
     streamingPlatform: '',
     otherPlatform: '',
+    viewingCategory: '' as ViewingCategory | '',
     isMovieOfTheWeek: false,
   });
 
-  const formatDate = (date: string | Date | null): string => {
+  const formatDate =(date: string | Date | null): string => {
     if (!date) return '';
     const parsed = new Date(date);
     return isNaN(parsed.getTime()) ? '' : parsed.toISOString().split('T')[0];
@@ -181,6 +202,10 @@ export default function ContentManagement() {
       streamingUrl: result.streamingUrl ?? '',
       streamingPlatform: result.streamingPlatform ?? '',
       otherPlatform: result.otherPlatform ?? '',
+      // A JustWatch offer means it is streaming somewhere right now, so say so
+      // rather than making someone set it by hand. No offer says nothing about
+      // where the film is, so leave whatever is already selected alone.
+      viewingCategory: result.streamingUrl ? 'streaming' : prev.viewingCategory,
     }));
     setCastMembers(result.castMembers);
     setImportedPosterUrl(result.posterUrl);
@@ -235,7 +260,8 @@ export default function ContentManagement() {
           body: JSON.stringify({ contentId: null }),
         });
       }
-      if (linkedDiscussionId) {
+      // NEW_DISCUSSION has nothing to link yet — createLinkedDiscussion makes it
+      if (linkedDiscussionId && linkedDiscussionId !== NEW_DISCUSSION) {
         const response = await fetch(`/api/admin/discussions/${linkedDiscussionId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -252,9 +278,61 @@ export default function ContentManagement() {
     }
   };
 
+  // Creates the inline discussion and links it to the just-saved content.
+  // Returns false only when the form should stay open for a fix — a clashing
+  // episode number, which is the one failure the admin can act on.
+  const createLinkedDiscussion = async (contentId: string): Promise<boolean> => {
+    if (linkedDiscussionId !== NEW_DISCUSSION) return true;
+    try {
+      const response = await fetch('/api/admin/discussions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          // Title defaults to the film's — the common case is "the episode about X"
+          title: discussionDraft.title.trim() || formData.title,
+          contentId,
+          spaceUrl: discussionDraft.spaceUrl.trim() || null,
+          episodeNumber: discussionDraft.episodeNumber
+            ? parseInt(discussionDraft.episodeNumber, 10)
+            : null,
+          discussionDate: discussionDraft.discussionDate || null,
+          podcastLinks: discussionDraft.podcastLinks
+            .split(/[\n,]/)
+            .map((link) => link.trim())
+            .filter(Boolean),
+        }),
+      });
+      const result = await response.json();
+      if (result.success) return true;
+
+      if (result.field === 'episodeNumber') {
+        setEpisodeError(result.error);
+        return false;
+      }
+      toast.error(result.error || 'Content saved, but creating the discussion failed');
+    } catch (error) {
+      console.error('Error creating discussion:', error);
+      toast.error('Content saved, but creating the discussion failed');
+    }
+    return true;
+  };
+
+  const addCastMember = (role: CastMember['role']) => {
+    setCastMembers((prev) => [...(prev ?? []), { role, name: '', characterName: null }]);
+  };
+
+  const updateCastMember = (index: number, patch: Partial<CastMember>) => {
+    setCastMembers((prev) => (prev ?? []).map((m, i) => (i === index ? { ...m, ...patch } : m)));
+  };
+
+  const removeCastMember = (index: number) => {
+    setCastMembers((prev) => (prev ?? []).filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setEpisodeError(null);
     try {
       const movieData = {
         ...formData,
@@ -278,11 +356,22 @@ export default function ContentManagement() {
       const result = await response.json();
       if (result.success) {
         const savedContentId: string | undefined = result.data?.id ?? editingMovie?.id;
+        const wasAdding = !editingMovie;
         if (savedContentId) {
           await syncDiscussionLink(savedContentId);
+          const discussionSaved = await createLinkedDiscussion(savedContentId);
+          if (!discussionSaved) {
+            // The content row is already saved — switch the open form over to
+            // editing it so fixing the episode number and resubmitting updates
+            // that row instead of adding a second one.
+            await fetchMovies();
+            if (wasAdding && result.data) setEditingMovie(result.data);
+            toast.error('Content saved — fix the episode number to create the discussion');
+            return;
+          }
         }
         await fetchMovies();
-        toast.success(`Movie ${editingMovie ? 'updated' : 'added'} successfully`);
+        toast.success(`Movie ${wasAdding ? 'added' : 'updated'} successfully`);
         setIsFormOpen(false);
         setEditingMovie(null);
         resetForm();
@@ -319,6 +408,7 @@ export default function ContentManagement() {
       streamingUrl: movie.streamingUrl || '',
       streamingPlatform: movie.streamingPlatform || '',
       otherPlatform: movie.otherPlatform || '',
+      viewingCategory: movie.viewingCategory || '',
       isMovieOfTheWeek: movie.isMovieOfTheWeek,
     });
     setCastMembers(movie.castMembers);
@@ -326,6 +416,8 @@ export default function ContentManagement() {
     setJwResults([]);
     setImportedPosterUrl(null);
     setLinkedDiscussionId(discussions.find((d) => d.contentId === movie.id)?.id ?? '');
+    setDiscussionDraft(emptyDiscussionDraft);
+    setEpisodeError(null);
     setIsFormOpen(true);
   };
 
@@ -387,6 +479,7 @@ export default function ContentManagement() {
       streamingUrl: '',
       streamingPlatform: '',
       otherPlatform: '',
+      viewingCategory: '',
       isMovieOfTheWeek: false,
     });
     setCastMembers(null);
@@ -394,6 +487,8 @@ export default function ContentManagement() {
     setJwResults([]);
     setImportedPosterUrl(null);
     setLinkedDiscussionId('');
+    setDiscussionDraft(emptyDiscussionDraft);
+    setEpisodeError(null);
   };
 
   const filteredMovies = movies.filter((m) => {
@@ -489,9 +584,16 @@ export default function ContentManagement() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge className={badgeClass}>
-                      {contentTypeLabel(movie.contentType)}
-                    </Badge>
+                    <div className="flex flex-wrap items-center gap-1">
+                      <Badge className={badgeClass}>
+                        {contentTypeLabel(movie.contentType)}
+                      </Badge>
+                      {movie.viewingCategory && (
+                        <Badge className={badgeClass}>
+                          {viewingCategoryLabel(movie.viewingCategory)}
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-black/60">{movie.rating || '—'}</TableCell>
                   <TableCell className="text-black/60">
@@ -511,6 +613,15 @@ export default function ContentManagement() {
                       >
                         <StarIcon weight={movie.isMovieOfTheWeek ? 'fill' : 'regular'} className="w-4 h-4" />
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-black/60 hover:text-black hover:bg-black/10"
+                        onClick={() => setPreviewMovie(movie)}
+                        title="Preview the live page"
+                      >
+                        <EyeIcon className="w-4 h-4" />
+                      </Button>
                       <Button variant="ghost" size="icon" className="text-black/60 hover:text-black hover:bg-black/10" onClick={() => handleEdit(movie)}>
                         <PencilSimpleIcon className="w-4 h-4" />
                       </Button>
@@ -525,6 +636,11 @@ export default function ContentManagement() {
           </Table>
         </div>
       )}
+
+      <ContentPreview
+        movie={previewMovie}
+        onOpenChange={(open) => !open && setPreviewMovie(null)}
+      />
 
       <Sheet open={isFormOpen} onOpenChange={setIsFormOpen}>
         <SheetContent side="right" className="w-full sm:max-w-xl flex flex-col gap-0 p-0 rounded-none shadow-none">
@@ -598,14 +714,6 @@ export default function ContentManagement() {
                 <p className="text-xs font-light text-black/60">
                   Selecting a result fills the form below. Review before saving.
                 </p>
-                {castMembers && castMembers.length > 0 && (
-                  <p className="text-xs font-light text-black/60">
-                    Cast on record: {castMembers.filter((c) => c.role === 'actor').map((c) => c.name).join(', ') || '—'}
-                    {castMembers.some((c) => c.role === 'director') && (
-                      <> · Directed by {castMembers.filter((c) => c.role === 'director').map((c) => c.name).join(', ')}</>
-                    )}
-                  </p>
-                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -809,6 +917,27 @@ export default function ContentManagement() {
                 </div>
               </div>
 
+              <div>
+                <Label htmlFor="viewingCategory">Viewing Category</Label>
+                <Select
+                  value={formData.viewingCategory}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, viewingCategory: value as ViewingCategory })
+                  }
+                >
+                  <SelectTrigger className={inputClass}>
+                    <SelectValue placeholder="Select viewing category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {VIEWING_CATEGORIES.map((category) => (
+                      <SelectItem key={category.value} value={category.value}>
+                        {category.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               {formData.streamingPlatform === 'other' && (
                 <div>
                   <Label htmlFor="otherPlatform">Other Platform Name</Label>
@@ -821,6 +950,79 @@ export default function ContentManagement() {
                   />
                 </div>
               )}
+
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between gap-2">
+                  <Label>Cast &amp; Crew</Label>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="rounded-sm border-black/20 shadow-none font-normal"
+                      onClick={() => addCastMember('director')}
+                    >
+                      <PlusIcon className="w-3 h-3" />
+                      Director
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="rounded-sm border-black/20 shadow-none font-normal"
+                      onClick={() => addCastMember('actor')}
+                    >
+                      <PlusIcon className="w-3 h-3" />
+                      Actor
+                    </Button>
+                  </div>
+                </div>
+
+                {!castMembers || castMembers.length === 0 ? (
+                  <p className="text-xs font-light text-black/60">
+                    No cast on record. Import from JustWatch above, or add them by hand.
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {castMembers.map((member, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <Badge className={`${badgeClass} shrink-0 w-16 justify-center`}>
+                          {member.role === 'director' ? 'Director' : 'Actor'}
+                        </Badge>
+                        <Input
+                          className={`${inputClass} flex-1`}
+                          value={member.name}
+                          onChange={(e) => updateCastMember(index, { name: e.target.value })}
+                          placeholder="Name"
+                          aria-label={`${member.role === 'director' ? 'Director' : 'Actor'} name`}
+                        />
+                        {member.role === 'actor' && (
+                          <Input
+                            className={`${inputClass} flex-1`}
+                            value={member.characterName ?? ''}
+                            onChange={(e) => updateCastMember(index, { characterName: e.target.value })}
+                            placeholder="Character (optional)"
+                            aria-label="Character name"
+                          />
+                        )}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="shrink-0 text-black/60 hover:text-black hover:bg-black/10"
+                          onClick={() => removeCastMember(index)}
+                          aria-label={`Remove ${member.name || 'this entry'}`}
+                        >
+                          <TrashIcon className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <p className="text-xs font-light text-black/60">
+                      Entries with no name are dropped when you save.
+                    </p>
+                  </div>
+                )}
+              </div>
 
               <div>
                 <Label>Linked Discussion Episode</Label>
@@ -835,6 +1037,7 @@ export default function ContentManagement() {
                     >
                       <span className="truncate">
                         {(() => {
+                          if (linkedDiscussionId === NEW_DISCUSSION) return 'New discussion';
                           const linked = discussions.find((d) => d.id === linkedDiscussionId);
                           if (!linked) return 'Search discussion episodes…';
                           return `${linked.episodeNumber !== null ? `#${linked.episodeNumber} · ` : ''}${linked.title}`;
@@ -859,6 +1062,22 @@ export default function ContentManagement() {
                             <CheckIcon className={`w-4 h-4 ${linkedDiscussionId === '' ? 'opacity-100' : 'opacity-0'}`} />
                             None
                           </CommandItem>
+                          <CommandItem
+                            value="__create__ new discussion"
+                            onSelect={() => {
+                              setLinkedDiscussionId(NEW_DISCUSSION);
+                              setEpisodeError(null);
+                              // Seed the title from the film — the usual case
+                              setDiscussionDraft((prev) => ({
+                                ...prev,
+                                title: prev.title || formData.title,
+                              }));
+                              setDiscussionPickerOpen(false);
+                            }}
+                          >
+                            <PlusIcon className="w-4 h-4" />
+                            Create new discussion
+                          </CommandItem>
                           {discussions.map((discussion) => (
                             <CommandItem
                               key={discussion.id}
@@ -881,9 +1100,83 @@ export default function ContentManagement() {
                   </PopoverContent>
                 </Popover>
                 <p className="text-xs font-light text-black/60 mt-1">
-                  The selected discussion will be linked to this content when you save.
+                  {linkedDiscussionId === NEW_DISCUSSION
+                    ? 'The discussion will be created and linked to this content when you save.'
+                    : 'The selected discussion will be linked to this content when you save.'}
                 </p>
               </div>
+
+              {linkedDiscussionId === NEW_DISCUSSION && (
+                <div className="flex flex-col gap-4 border border-black/20 rounded-sm p-4">
+                  <div className="grid grid-cols-[7rem_1fr] gap-4">
+                    <div>
+                      <Label htmlFor="episodeNumber">Episode #</Label>
+                      <Input
+                        id="episodeNumber"
+                        type="number"
+                        className={inputClass}
+                        value={discussionDraft.episodeNumber}
+                        onChange={(e) => {
+                          setEpisodeError(null);
+                          setDiscussionDraft({ ...discussionDraft, episodeNumber: e.target.value });
+                        }}
+                        placeholder="13"
+                        aria-invalid={Boolean(episodeError)}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="discussionTitle">Discussion Title</Label>
+                      <Input
+                        id="discussionTitle"
+                        className={inputClass}
+                        value={discussionDraft.title}
+                        onChange={(e) => setDiscussionDraft({ ...discussionDraft, title: e.target.value })}
+                        placeholder={formData.title || 'Defaults to the film title'}
+                      />
+                    </div>
+                  </div>
+                  {episodeError && (
+                    <p className="text-xs text-red-700 -mt-2">{episodeError}</p>
+                  )}
+
+                  <div>
+                    <Label htmlFor="spaceUrl">Space URL</Label>
+                    <Input
+                      id="spaceUrl"
+                      className={inputClass}
+                      value={discussionDraft.spaceUrl}
+                      onChange={(e) => setDiscussionDraft({ ...discussionDraft, spaceUrl: e.target.value })}
+                      placeholder="https://x.com/i/spaces/…"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="discussionDate">Discussion Date</Label>
+                    <Input
+                      id="discussionDate"
+                      type="date"
+                      className={inputClass}
+                      value={discussionDraft.discussionDate}
+                      onChange={(e) => setDiscussionDraft({ ...discussionDraft, discussionDate: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="podcastLinks">Podcast Links</Label>
+                    <Textarea
+                      id="podcastLinks"
+                      className={inputClass}
+                      rows={2}
+                      value={discussionDraft.podcastLinks}
+                      onChange={(e) => setDiscussionDraft({ ...discussionDraft, podcastLinks: e.target.value })}
+                      placeholder="One per line, or comma separated"
+                    />
+                    <p className="text-xs font-light text-black/60 mt-1">
+                      Adding a podcast link lets people rate the film straight away, instead of waiting 24 hours.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <div className="flex items-center space-x-2">
                 <Switch

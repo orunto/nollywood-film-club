@@ -41,6 +41,13 @@ export const streamingPlatformEnum = pgEnum("streaming_platform", [
   "peacock",
   "other",
 ]);
+export const viewingCategoryEnum = pgEnum("viewing_category", [
+  "in_cinemas",
+  "streaming",
+  "coming_to_cinemas",
+  "coming_to_streaming",
+  "unavailable",
+]);
 
 // Cast/crew credit stored on a content row — names only, no photos
 export interface CastMember {
@@ -50,30 +57,42 @@ export interface CastMember {
 }
 
 // Movies/TV Shows table
-export const content = pgTable("content", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  title: text("title").notNull(),
-  contentType: contentTypeEnum("content_type").notNull(),
-  runtime: integer("runtime"), // in minutes
-  releaseDate: timestamp("release_date"),
-  rating: ratingEnum("rating"),
-  synopsis: text("synopsis"),
-  genre: text("genre").array(), // Array of genres
-  posterImage: text("poster_image"), // Cloudinary public ID
-  // Cloudinary version of the poster. Posters are re-uploaded under the same
-  // public ID, so without this the delivery URL never changes and browsers
-  // serve a stale image from cache.
-  posterVersion: integer("poster_version"),
-  trailerUrl: text("trailer_url"), // YouTube URL
-  streamingUrl: text("streaming_url"), // Direct streaming URL
-  streamingPlatform: streamingPlatformEnum("streaming_platform"), // Platform enum
-  otherPlatform: text("other_platform"), // Name if platform is 'other'
-  castMembers: jsonb("cast_members").$type<CastMember[]>(), // From JustWatch credits — see scripts/fetch-cast.ts
-  isMovieOfTheWeek: boolean("is_movie_of_the_week").default(false),
-  catalogNumber: integer("catalog_number"), // Order content was added, like discussions.episode_number
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
+export const content = pgTable(
+  "content",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    title: text("title").notNull(),
+    contentType: contentTypeEnum("content_type").notNull(),
+    runtime: integer("runtime"), // in minutes
+    releaseDate: timestamp("release_date"),
+    rating: ratingEnum("rating"),
+    synopsis: text("synopsis"),
+    genre: text("genre").array(), // Array of genres
+    posterImage: text("poster_image"), // Cloudinary public ID
+    // Cloudinary version of the poster. Posters are re-uploaded under the same
+    // public ID, so without this the delivery URL never changes and browsers
+    // serve a stale image from cache.
+    posterVersion: integer("poster_version"),
+    trailerUrl: text("trailer_url"), // YouTube URL
+    streamingUrl: text("streaming_url"), // Direct streaming URL
+    streamingPlatform: streamingPlatformEnum("streaming_platform"), // Platform enum
+    otherPlatform: text("other_platform"), // Name if platform is 'other'
+    viewingCategory: viewingCategoryEnum("viewing_category"), // Where you can watch it right now
+    castMembers: jsonb("cast_members").$type<CastMember[]>(), // From JustWatch credits — see scripts/fetch-cast.ts
+    isMovieOfTheWeek: boolean("is_movie_of_the_week").default(false),
+    catalogNumber: integer("catalog_number"), // Order content was added, like discussions.episode_number
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    // At most one movie of the week. Three routes can promote a film, and the
+    // form's POST/PUT used to write the flag straight through, which is how two
+    // rows ended up true. Demotion lives in lib/motw.ts; this is the backstop.
+    uniqueIndex("motw_singleton")
+      .on(table.isMovieOfTheWeek)
+      .where(sql`${table.isMovieOfTheWeek}`),
+  ],
+);
 
 // Discussion spaces table — a discussion may be about a movie/TV show
 // (contentId set) or a standalone topic (contentId null)

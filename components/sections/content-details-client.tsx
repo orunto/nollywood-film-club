@@ -6,6 +6,7 @@ import { CldImage } from "next-cloudinary";
 import {
   ArrowLeftIcon,
   ArrowSquareOutIcon,
+  BellIcon,
   BroadcastIcon,
   MicrophoneIcon,
   MicrophoneStageIcon,
@@ -34,8 +35,13 @@ import {
   cn,
   contentTypeLabel,
   getAverageRatingLabel,
+  isStreamable,
+  isUpcomingSpace,
   scoreBadgeClass,
+  spaceDateLabel,
   toYoutubeEmbedUrl,
+  viewingCategoryLabel,
+  viewingCategoryNote,
 } from "@/lib/utils";
 
 interface ContentDetailsClientProps {
@@ -45,6 +51,7 @@ interface ContentDetailsClientProps {
   related: Content[];
   spaceUrl?: string | null;
   podcastLinks?: string[] | null;
+  discussionDate?: string | null;
 }
 
 const formatDate = (value: string | null) =>
@@ -106,6 +113,7 @@ export default function ContentDetailsClient({
   related,
   spaceUrl,
   podcastLinks,
+  discussionDate,
 }: ContentDetailsClientProps) {
   const router = useRouter();
   const [isPlaying, setIsPlaying] = useState(false);
@@ -122,6 +130,10 @@ export default function ContentDetailsClient({
 
   const hasPodcastLink = Boolean(podcastLinks && podcastLinks.length > 0);
   const hasSpaceOrPodcast = Boolean(spaceUrl || hasPodcastLink);
+
+  const spaceUpcoming = isUpcomingSpace(discussionDate);
+  const spaceDate = spaceDateLabel(discussionDate);
+  const streamable = isStreamable(movie.viewingCategory, movie.streamingUrl);
 
   // A tab opened straight onto this page — a shared link, or "open in new tab"
   // from anywhere — has a single history entry, so router.back() would sit there
@@ -154,8 +166,8 @@ export default function ContentDetailsClient({
   return (
     <div className="w-full flex flex-col min-h-screen">
       {/* Meta band — year / rating / runtime strip above the hero */}
-      <div className="w-full bg-black text-white border-t border-white/15">
-        <div className="flex items-center justify-between gap-4 lg:px-10 px-6 py-3">
+      <div className="w-full bg-black text-white border-white/15">
+        <div className="flex md:items-center items-start justify-between gap-4 lg:px-10 px-6 py-3">
           <button
             onClick={handleBack}
             className="flex items-center gap-2 text-sm font-medium hover:opacity-70 transition-opacity cursor-pointer"
@@ -163,7 +175,7 @@ export default function ContentDetailsClient({
             <ArrowLeftIcon className="h-4 w-4" />
             Go Back
           </button>
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex md:flex-row flex-col md:items-center items-end gap-2 text-sm">
             {movie.isMovieOfTheWeek && (
               <Badge className="bg-white text-black rounded-sm mr-2">
                 Movie of the Week
@@ -228,13 +240,18 @@ export default function ContentDetailsClient({
               <h1 className="text-3xl font-bold flex items-start gap-3 flex-wrap">
                 {movie.title}
               </h1>
-              <div className="flex items-center gap-2 pt-3">
+              <div className="flex flex-wrap items-center gap-2 pt-3">
                 <Badge className="text-xs text-black bg-transparent border border-black rounded-sm">
                   {contentTypeLabel(movie.contentType)}
                 </Badge>
                 {movie.rating && (
                   <Badge className="text-xs text-black bg-transparent border border-black rounded-sm">
                     {movie.rating}
+                  </Badge>
+                )}
+                {movie.viewingCategory && (
+                  <Badge className="text-xs text-black bg-transparent border border-black rounded-sm">
+                    {viewingCategoryLabel(movie.viewingCategory)}
                   </Badge>
                 )}
               </div>
@@ -281,8 +298,8 @@ export default function ContentDetailsClient({
             {/* Where to watch */}
             <div className="border-t border-black/10 p-5 flex flex-col gap-3">
               <span className="text-lg font-semibold">Where to Watch</span>
-              {movie.streamingUrl ? (
-                <Link target="_blank" href={movie.streamingUrl}>
+              {streamable ? (
+                <Link target="_blank" href={movie.streamingUrl!}>
                   <Button
                     variant="secondary"
                     className={cn("w-full py-4 max-h-13 flex gap-0", platform?.className)}
@@ -303,23 +320,34 @@ export default function ContentDetailsClient({
                 </Link>
               ) : (
                 <span className="text-sm text-black/60">
-                  Not streaming anywhere yet.
+                  {movie.viewingCategory
+                    ? viewingCategoryNote(movie.viewingCategory)
+                    : "Not streaming anywhere yet."}
                 </span>
               )}
               {hasSpaceOrPodcast && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button variant="outline" className="w-full py-4 bg-black text-white">
-                      <MicrophoneIcon className="w-4 h-4" />
-                      Listen to Space
+                      {spaceUpcoming ? (
+                        <BellIcon className="w-4 h-4" />
+                      ) : (
+                        <MicrophoneIcon className="w-4 h-4" />
+                      )}
+                      {spaceUpcoming ? "Save My Seat" : "Listen to Space"}
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Listen to {movie.title}</AlertDialogTitle>
+                      <AlertDialogTitle>
+                        {spaceUpcoming
+                          ? `Save your seat for ${movie.title}`
+                          : `Listen to ${movie.title}`}
+                      </AlertDialogTitle>
                       <AlertDialogDescription>
-                        Choose your preferred platform to listen to the recording of
-                        this discussion.
+                        {spaceUpcoming
+                          ? `Live on X${spaceDate ? ` on ${spaceDate}` : ""}. Set a reminder. The opinions will not wait for you.`
+                          : "Choose your preferred platform to listen to the recording of this discussion."}
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <div className="flex flex-col gap-2 py-4">
@@ -332,7 +360,9 @@ export default function ContentDetailsClient({
                         >
                           <div className="flex items-center gap-3">
                             <MicrophoneStageIcon className="w-5 h-5" />
-                            <span className="font-medium">Twitter Space Link</span>
+                            <span className="font-medium">
+                              {spaceUpcoming ? "Set a Reminder on X" : "Twitter Space Link"}
+                            </span>
                           </div>
                           <ArrowSquareOutIcon className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                         </a>
