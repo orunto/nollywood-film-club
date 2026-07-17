@@ -3,6 +3,7 @@ import { db } from '@/db/client';
 import { content } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { authenticateAdmin } from '@/lib/admin-auth';
+import { demoteOtherMoviesOfTheWeek } from '@/lib/motw';
 
 export async function PATCH(
   request: Request,
@@ -16,22 +17,19 @@ export async function PATCH(
 
     const { isMovieOfTheWeek } = await request.json();
     const {id} = await params;
-    // If setting as movie of the week, first unset any existing movie of the week
-    if (isMovieOfTheWeek) {
-      await db
+    const updatedMovie = await db.transaction(async (tx) => {
+      if (isMovieOfTheWeek) {
+        await demoteOtherMoviesOfTheWeek(tx, String(id));
+      }
+      return tx
         .update(content)
-        .set({ isMovieOfTheWeek: false })
-        .where(eq(content.isMovieOfTheWeek, true));
-    }
-    
-    const updatedMovie = await db
-      .update(content)
-      .set({
-        isMovieOfTheWeek,
-        updatedAt: new Date(),
-      })
-      .where(eq(content.id, String(id)))
-      .returning();
+        .set({
+          isMovieOfTheWeek,
+          updatedAt: new Date(),
+        })
+        .where(eq(content.id, String(id)))
+        .returning();
+    });
 
     if (updatedMovie.length === 0) {
       return NextResponse.json({ 

@@ -4,6 +4,7 @@
   import { desc, sql } from 'drizzle-orm';
   import { authenticateAdmin } from '@/lib/admin-auth';
   import { VIEWING_CATEGORIES } from '@/lib/utils';
+  import { demoteOtherMoviesOfTheWeek } from '@/lib/motw';
 
   export async function GET() {
     try {
@@ -62,27 +63,34 @@
         }, { status: 400 });
       }
 
-      const newMovie = await db.insert(content).values({
-        title: movieData.title,
-        contentType: movieData.contentType,
-        runtime: movieData.runtime,
-        releaseDate: movieData.releaseDate ? new Date(movieData.releaseDate) : null,
-        // Empty strings are not valid enum values — store null instead
-        rating: movieData.rating || null,
-        synopsis: movieData.synopsis,
-        genre: movieData.genre,
-        posterImage: movieData.posterImage,
-        posterVersion: movieData.posterVersion ?? null,
-        trailerUrl: movieData.trailerUrl,
-        streamingUrl: movieData.streamingUrl,
-        streamingPlatform: movieData.streamingPlatform || null,
-        otherPlatform: movieData.otherPlatform,
-        viewingCategory: movieData.viewingCategory || null,
-        castMembers: Array.isArray(movieData.castMembers) ? movieData.castMembers : null,
-        isMovieOfTheWeek: movieData.isMovieOfTheWeek || false,
-        // catalogNumber is derived from linked discussion episode numbers —
-        // see lib/catalog-sync.ts. Starts NULL (sorts last) until linked.
-      }).returning();
+      const newMovie = await db.transaction(async (tx) => {
+        // Demote before inserting, not after: motw_singleton rejects any moment
+        // where two rows are true, and the new row has no id to except yet.
+        if (movieData.isMovieOfTheWeek) {
+          await demoteOtherMoviesOfTheWeek(tx);
+        }
+        return tx.insert(content).values({
+          title: movieData.title,
+          contentType: movieData.contentType,
+          runtime: movieData.runtime,
+          releaseDate: movieData.releaseDate ? new Date(movieData.releaseDate) : null,
+          // Empty strings are not valid enum values — store null instead
+          rating: movieData.rating || null,
+          synopsis: movieData.synopsis,
+          genre: movieData.genre,
+          posterImage: movieData.posterImage,
+          posterVersion: movieData.posterVersion ?? null,
+          trailerUrl: movieData.trailerUrl,
+          streamingUrl: movieData.streamingUrl,
+          streamingPlatform: movieData.streamingPlatform || null,
+          otherPlatform: movieData.otherPlatform,
+          viewingCategory: movieData.viewingCategory || null,
+          castMembers: Array.isArray(movieData.castMembers) ? movieData.castMembers : null,
+          isMovieOfTheWeek: movieData.isMovieOfTheWeek || false,
+          // catalogNumber is derived from linked discussion episode numbers —
+          // see lib/catalog-sync.ts. Starts NULL (sorts last) until linked.
+        }).returning();
+      });
   
       return NextResponse.json({ 
         success: true, 
