@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { authenticateAdmin } from '@/lib/admin-auth';
 import { VIEWING_CATEGORIES } from '@/lib/utils';
 import { demoteOtherMoviesOfTheWeek } from '@/lib/motw';
+import { sanitizeCastMembers } from '@/lib/cast';
 
 export async function PUT(
   request: Request,
@@ -53,7 +54,7 @@ export async function PUT(
           streamingPlatform: movieData.streamingPlatform || null,
           otherPlatform: movieData.otherPlatform,
           viewingCategory: movieData.viewingCategory || null,
-          castMembers: Array.isArray(movieData.castMembers) ? movieData.castMembers : null,
+          castMembers: sanitizeCastMembers(movieData.castMembers),
           isMovieOfTheWeek: movieData.isMovieOfTheWeek,
           // catalogNumber is derived from linked discussion episode numbers —
           // see lib/catalog-sync.ts. Never set directly from client input.

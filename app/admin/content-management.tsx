@@ -107,7 +107,8 @@ export default function ContentManagement() {
   // is NEW_DISCUSSION. episodeNumber clashes report back into episodeError.
   const [discussionDraft, setDiscussionDraft] = useState(emptyDiscussionDraft);
   const [episodeError, setEpisodeError] = useState<string | null>(null);
-  // Set from a JustWatch import or the row being edited — no manual editor
+  // Seeded from a JustWatch import or the row being edited, then editable by
+  // hand below. Blank rows are dropped server-side — see lib/cast.ts
   const [castMembers, setCastMembers] = useState<CastMember[] | null>(null);
   const [formData, setFormData] = useState({
     title: '',
@@ -307,6 +308,18 @@ export default function ContentManagement() {
       toast.error('Content saved, but creating the discussion failed');
     }
     return true;
+  };
+
+  const addCastMember = (role: CastMember['role']) => {
+    setCastMembers((prev) => [...(prev ?? []), { role, name: '', characterName: null }]);
+  };
+
+  const updateCastMember = (index: number, patch: Partial<CastMember>) => {
+    setCastMembers((prev) => (prev ?? []).map((m, i) => (i === index ? { ...m, ...patch } : m)));
+  };
+
+  const removeCastMember = (index: number) => {
+    setCastMembers((prev) => (prev ?? []).filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -680,14 +693,6 @@ export default function ContentManagement() {
                 <p className="text-xs font-light text-black/60">
                   Selecting a result fills the form below. Review before saving.
                 </p>
-                {castMembers && castMembers.length > 0 && (
-                  <p className="text-xs font-light text-black/60">
-                    Cast on record: {castMembers.filter((c) => c.role === 'actor').map((c) => c.name).join(', ') || '—'}
-                    {castMembers.some((c) => c.role === 'director') && (
-                      <> · Directed by {castMembers.filter((c) => c.role === 'director').map((c) => c.name).join(', ')}</>
-                    )}
-                  </p>
-                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -924,6 +929,79 @@ export default function ContentManagement() {
                   />
                 </div>
               )}
+
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between gap-2">
+                  <Label>Cast &amp; Crew</Label>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="rounded-sm border-black/20 shadow-none font-normal"
+                      onClick={() => addCastMember('director')}
+                    >
+                      <PlusIcon className="w-3 h-3" />
+                      Director
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="rounded-sm border-black/20 shadow-none font-normal"
+                      onClick={() => addCastMember('actor')}
+                    >
+                      <PlusIcon className="w-3 h-3" />
+                      Actor
+                    </Button>
+                  </div>
+                </div>
+
+                {!castMembers || castMembers.length === 0 ? (
+                  <p className="text-xs font-light text-black/60">
+                    No cast on record. Import from JustWatch above, or add them by hand.
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {castMembers.map((member, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <Badge className={`${badgeClass} shrink-0 w-16 justify-center`}>
+                          {member.role === 'director' ? 'Director' : 'Actor'}
+                        </Badge>
+                        <Input
+                          className={`${inputClass} flex-1`}
+                          value={member.name}
+                          onChange={(e) => updateCastMember(index, { name: e.target.value })}
+                          placeholder="Name"
+                          aria-label={`${member.role === 'director' ? 'Director' : 'Actor'} name`}
+                        />
+                        {member.role === 'actor' && (
+                          <Input
+                            className={`${inputClass} flex-1`}
+                            value={member.characterName ?? ''}
+                            onChange={(e) => updateCastMember(index, { characterName: e.target.value })}
+                            placeholder="Character (optional)"
+                            aria-label="Character name"
+                          />
+                        )}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="shrink-0 text-black/60 hover:text-black hover:bg-black/10"
+                          onClick={() => removeCastMember(index)}
+                          aria-label={`Remove ${member.name || 'this entry'}`}
+                        >
+                          <TrashIcon className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <p className="text-xs font-light text-black/60">
+                      Entries with no name are dropped when you save.
+                    </p>
+                  </div>
+                )}
+              </div>
 
               <div>
                 <Label>Linked Discussion Episode</Label>
