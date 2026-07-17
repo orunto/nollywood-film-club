@@ -4,6 +4,7 @@ import { discussions } from '@/db/schema';
 import { desc, sql } from 'drizzle-orm';
 import { authenticateAdmin } from '@/lib/admin-auth';
 import { syncCatalogNumbers } from '@/lib/catalog-sync';
+import { isDuplicateEpisodeNumber } from '@/lib/db-errors';
 
 export async function GET() {
   try {
@@ -63,6 +64,15 @@ export async function POST(request: NextRequest) {
       message: 'Discussion created successfully'
     });
   } catch (error) {
+    // discussions_episode_number_unique — surface the clash instead of a generic
+    // failure, so the admin can fix the number without losing the form.
+    if (isDuplicateEpisodeNumber(error)) {
+      return NextResponse.json({
+        success: false,
+        error: 'That episode number is already taken by another discussion.',
+        field: 'episodeNumber',
+      }, { status: 409 });
+    }
     console.error('Error creating discussion:', error);
     return NextResponse.json({
       success: false,

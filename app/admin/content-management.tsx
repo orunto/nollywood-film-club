@@ -63,6 +63,18 @@ interface JustWatchResult {
   streamingUrl: string | null;
 }
 
+// Sentinel for the discussion picker: not an id, means "create a new discussion
+// from the fields below and link it to this content on save"
+const NEW_DISCUSSION = '__new__';
+
+const emptyDiscussionDraft = {
+  episodeNumber: '',
+  title: '',
+  spaceUrl: '',
+  discussionDate: '',
+  podcastLinks: '',
+};
+
 const inputClass = "border-black/20 rounded-sm focus-visible:ring-black/20 focus-visible:border-black shadow-none";
 const badgeClass = "text-xs text-black bg-transparent border border-black rounded-sm";
 
@@ -91,6 +103,10 @@ export default function ContentManagement() {
   const [isUploadingPoster, setIsUploadingPoster] = useState(false);
   const [linkedDiscussionId, setLinkedDiscussionId] = useState('');
   const [discussionPickerOpen, setDiscussionPickerOpen] = useState(false);
+  // Fields for a discussion created inline; only read when linkedDiscussionId
+  // is NEW_DISCUSSION. episodeNumber clashes report back into episodeError.
+  const [discussionDraft, setDiscussionDraft] = useState(emptyDiscussionDraft);
+  const [episodeError, setEpisodeError] = useState<string | null>(null);
   // Set from a JustWatch import or the row being edited — no manual editor
   const [castMembers, setCastMembers] = useState<CastMember[] | null>(null);
   const [formData, setFormData] = useState({
@@ -236,7 +252,8 @@ export default function ContentManagement() {
           body: JSON.stringify({ contentId: null }),
         });
       }
-      if (linkedDiscussionId) {
+      // NEW_DISCUSSION has nothing to link yet — createLinkedDiscussion makes it
+      if (linkedDiscussionId && linkedDiscussionId !== NEW_DISCUSSION) {
         const response = await fetch(`/api/admin/discussions/${linkedDiscussionId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -253,9 +270,49 @@ export default function ContentManagement() {
     }
   };
 
+  // Creates the inline discussion and links it to the just-saved content.
+  // Returns false only when the form should stay open for a fix — a clashing
+  // episode number, which is the one failure the admin can act on.
+  const createLinkedDiscussion = async (contentId: string): Promise<boolean> => {
+    if (linkedDiscussionId !== NEW_DISCUSSION) return true;
+    try {
+      const response = await fetch('/api/admin/discussions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          // Title defaults to the film's — the common case is "the episode about X"
+          title: discussionDraft.title.trim() || formData.title,
+          contentId,
+          spaceUrl: discussionDraft.spaceUrl.trim() || null,
+          episodeNumber: discussionDraft.episodeNumber
+            ? parseInt(discussionDraft.episodeNumber, 10)
+            : null,
+          discussionDate: discussionDraft.discussionDate || null,
+          podcastLinks: discussionDraft.podcastLinks
+            .split(/[\n,]/)
+            .map((link) => link.trim())
+            .filter(Boolean),
+        }),
+      });
+      const result = await response.json();
+      if (result.success) return true;
+
+      if (result.field === 'episodeNumber') {
+        setEpisodeError(result.error);
+        return false;
+      }
+      toast.error(result.error || 'Content saved, but creating the discussion failed');
+    } catch (error) {
+      console.error('Error creating discussion:', error);
+      toast.error('Content saved, but creating the discussion failed');
+    }
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setEpisodeError(null);
     try {
       const movieData = {
         ...formData,
@@ -279,11 +336,22 @@ export default function ContentManagement() {
       const result = await response.json();
       if (result.success) {
         const savedContentId: string | undefined = result.data?.id ?? editingMovie?.id;
+        const wasAdding = !editingMovie;
         if (savedContentId) {
           await syncDiscussionLink(savedContentId);
+          const discussionSaved = await createLinkedDiscussion(savedContentId);
+          if (!discussionSaved) {
+            // The content row is already saved — switch the open form over to
+            // editing it so fixing the episode number and resubmitting updates
+            // that row instead of adding a second one.
+            await fetchMovies();
+            if (wasAdding && result.data) setEditingMovie(result.data);
+            toast.error('Content saved — fix the episode number to create the discussion');
+            return;
+          }
         }
         await fetchMovies();
-        toast.success(`Movie ${editingMovie ? 'updated' : 'added'} successfully`);
+        toast.success(`Movie ${wasAdding ? 'added' : 'updated'} successfully`);
         setIsFormOpen(false);
         setEditingMovie(null);
         resetForm();
@@ -328,6 +396,8 @@ export default function ContentManagement() {
     setJwResults([]);
     setImportedPosterUrl(null);
     setLinkedDiscussionId(discussions.find((d) => d.contentId === movie.id)?.id ?? '');
+    setDiscussionDraft(emptyDiscussionDraft);
+    setEpisodeError(null);
     setIsFormOpen(true);
   };
 
@@ -397,6 +467,8 @@ export default function ContentManagement() {
     setJwResults([]);
     setImportedPosterUrl(null);
     setLinkedDiscussionId('');
+    setDiscussionDraft(emptyDiscussionDraft);
+    setEpisodeError(null);
   };
 
   const filteredMovies = movies.filter((m) => {
@@ -866,6 +938,7 @@ export default function ContentManagement() {
                     >
                       <span className="truncate">
                         {(() => {
+                          if (linkedDiscussionId === NEW_DISCUSSION) return 'New discussion';
                           const linked = discussions.find((d) => d.id === linkedDiscussionId);
                           if (!linked) return 'Search discussion episodes…';
                           return `${linked.episodeNumber !== null ? `#${linked.episodeNumber} · ` : ''}${linked.title}`;
@@ -890,6 +963,22 @@ export default function ContentManagement() {
                             <CheckIcon className={`w-4 h-4 ${linkedDiscussionId === '' ? 'opacity-100' : 'opacity-0'}`} />
                             None
                           </CommandItem>
+                          <CommandItem
+                            value="__create__ new discussion"
+                            onSelect={() => {
+                              setLinkedDiscussionId(NEW_DISCUSSION);
+                              setEpisodeError(null);
+                              // Seed the title from the film — the usual case
+                              setDiscussionDraft((prev) => ({
+                                ...prev,
+                                title: prev.title || formData.title,
+                              }));
+                              setDiscussionPickerOpen(false);
+                            }}
+                          >
+                            <PlusIcon className="w-4 h-4" />
+                            Create new discussion
+                          </CommandItem>
                           {discussions.map((discussion) => (
                             <CommandItem
                               key={discussion.id}
@@ -912,9 +1001,83 @@ export default function ContentManagement() {
                   </PopoverContent>
                 </Popover>
                 <p className="text-xs font-light text-black/60 mt-1">
-                  The selected discussion will be linked to this content when you save.
+                  {linkedDiscussionId === NEW_DISCUSSION
+                    ? 'The discussion will be created and linked to this content when you save.'
+                    : 'The selected discussion will be linked to this content when you save.'}
                 </p>
               </div>
+
+              {linkedDiscussionId === NEW_DISCUSSION && (
+                <div className="flex flex-col gap-4 border border-black/20 rounded-sm p-4">
+                  <div className="grid grid-cols-[7rem_1fr] gap-4">
+                    <div>
+                      <Label htmlFor="episodeNumber">Episode #</Label>
+                      <Input
+                        id="episodeNumber"
+                        type="number"
+                        className={inputClass}
+                        value={discussionDraft.episodeNumber}
+                        onChange={(e) => {
+                          setEpisodeError(null);
+                          setDiscussionDraft({ ...discussionDraft, episodeNumber: e.target.value });
+                        }}
+                        placeholder="13"
+                        aria-invalid={Boolean(episodeError)}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="discussionTitle">Discussion Title</Label>
+                      <Input
+                        id="discussionTitle"
+                        className={inputClass}
+                        value={discussionDraft.title}
+                        onChange={(e) => setDiscussionDraft({ ...discussionDraft, title: e.target.value })}
+                        placeholder={formData.title || 'Defaults to the film title'}
+                      />
+                    </div>
+                  </div>
+                  {episodeError && (
+                    <p className="text-xs text-red-700 -mt-2">{episodeError}</p>
+                  )}
+
+                  <div>
+                    <Label htmlFor="spaceUrl">Space URL</Label>
+                    <Input
+                      id="spaceUrl"
+                      className={inputClass}
+                      value={discussionDraft.spaceUrl}
+                      onChange={(e) => setDiscussionDraft({ ...discussionDraft, spaceUrl: e.target.value })}
+                      placeholder="https://x.com/i/spaces/…"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="discussionDate">Discussion Date</Label>
+                    <Input
+                      id="discussionDate"
+                      type="date"
+                      className={inputClass}
+                      value={discussionDraft.discussionDate}
+                      onChange={(e) => setDiscussionDraft({ ...discussionDraft, discussionDate: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="podcastLinks">Podcast Links</Label>
+                    <Textarea
+                      id="podcastLinks"
+                      className={inputClass}
+                      rows={2}
+                      value={discussionDraft.podcastLinks}
+                      onChange={(e) => setDiscussionDraft({ ...discussionDraft, podcastLinks: e.target.value })}
+                      placeholder="One per line, or comma separated"
+                    />
+                    <p className="text-xs font-light text-black/60 mt-1">
+                      Adding a podcast link lets people rate the film straight away, instead of waiting 24 hours.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <div className="flex items-center space-x-2">
                 <Switch
