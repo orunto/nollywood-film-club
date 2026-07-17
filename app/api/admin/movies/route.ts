@@ -3,6 +3,7 @@
   import { content } from '@/db/schema';
   import { desc, sql } from 'drizzle-orm';
   import { authenticateAdmin } from '@/lib/admin-auth';
+  import { VIEWING_CATEGORIES } from '@/lib/utils';
 
   export async function GET() {
     try {
@@ -52,6 +53,15 @@
         }, { status: 400 });
       }
       
+      // Optional — an unset category is null, but a set one must be valid
+      if (movieData.viewingCategory &&
+          !VIEWING_CATEGORIES.some((c) => c.value === movieData.viewingCategory)) {
+        return NextResponse.json({
+          success: false,
+          error: 'Invalid viewing category'
+        }, { status: 400 });
+      }
+
       const newMovie = await db.insert(content).values({
         title: movieData.title,
         contentType: movieData.contentType,
@@ -67,6 +77,7 @@
         streamingUrl: movieData.streamingUrl,
         streamingPlatform: movieData.streamingPlatform || null,
         otherPlatform: movieData.otherPlatform,
+        viewingCategory: movieData.viewingCategory || null,
         castMembers: Array.isArray(movieData.castMembers) ? movieData.castMembers : null,
         isMovieOfTheWeek: movieData.isMovieOfTheWeek || false,
         // catalogNumber is derived from linked discussion episode numbers —

@@ -120,7 +120,8 @@ export default function BrowseContent({
     state.filters.years.length +
     state.filters.platforms.length +
     state.filters.genres.length +
-    state.filters.scores.length;
+    state.filters.scores.length +
+    state.filters.viewingCategories.length;
 
   const goToPage = (target: number) => {
     setParam({ page: String(target) });

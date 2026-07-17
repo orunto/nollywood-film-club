@@ -41,6 +41,13 @@ export const streamingPlatformEnum = pgEnum("streaming_platform", [
   "peacock",
   "other",
 ]);
+export const viewingCategoryEnum = pgEnum("viewing_category", [
+  "in_cinemas",
+  "streaming",
+  "coming_to_cinemas",
+  "coming_to_streaming",
+  "unavailable",
+]);
 
 // Cast/crew credit stored on a content row — names only, no photos
 export interface CastMember {
@@ -68,6 +75,7 @@ export const content = pgTable("content", {
   streamingUrl: text("streaming_url"), // Direct streaming URL
   streamingPlatform: streamingPlatformEnum("streaming_platform"), // Platform enum
   otherPlatform: text("other_platform"), // Name if platform is 'other'
+  viewingCategory: viewingCategoryEnum("viewing_category"), // Where you can watch it right now
   castMembers: jsonb("cast_members").$type<CastMember[]>(), // From JustWatch credits — see scripts/fetch-cast.ts
   isMovieOfTheWeek: boolean("is_movie_of_the_week").default(false),
   catalogNumber: integer("catalog_number"), // Order content was added, like discussions.episode_number

@@ -85,6 +85,13 @@
       "when": 1784226979977,
       "tag": "0011_sturdy_speedball",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1784313600000,
+      "tag": "0012_viewing_category",
+      "breakpoints": true
     }
   ]
 }

@@ -11,7 +11,7 @@ import {
 } from "@/db/schema";
 import { eq, avg, asc, desc, sql, and, inArray, isNotNull, ne } from "drizzle-orm";
 import { stackServerApp } from "@/stack";
-import { contentSlug } from "@/lib/utils";
+import { contentSlug, type ViewingCategory } from "@/lib/utils";
 
 export type { CastMember };
 
@@ -31,6 +31,7 @@ export interface Content {
   streamingUrl: string | null;
   streamingPlatform: string | null;
   otherPlatform: string | null;
+  viewingCategory: ViewingCategory | null;
   castMembers: CastMember[] | null;
   isMovieOfTheWeek: boolean;
   catalogNumber: number | null;
@@ -155,6 +156,7 @@ export async function getMoviesAndTVSeries(): Promise<Content[]> {
         streamingUrl: content.streamingUrl,
         streamingPlatform: content.streamingPlatform,
         otherPlatform: content.otherPlatform,
+        viewingCategory: content.viewingCategory,
         castMembers: content.castMembers,
         isMovieOfTheWeek: content.isMovieOfTheWeek,
         catalogNumber: content.catalogNumber,
@@ -209,6 +211,7 @@ export async function getAllContent(): Promise<Content[]> {
         streamingUrl: content.streamingUrl,
         streamingPlatform: content.streamingPlatform,
         otherPlatform: content.otherPlatform,
+        viewingCategory: content.viewingCategory,
         castMembers: content.castMembers,
         isMovieOfTheWeek: content.isMovieOfTheWeek,
         catalogNumber: content.catalogNumber,
@@ -446,6 +449,7 @@ export async function getContentById(id: string): Promise<Content | null> {
         streamingUrl: content.streamingUrl,
         streamingPlatform: content.streamingPlatform,
         otherPlatform: content.otherPlatform,
+        viewingCategory: content.viewingCategory,
         castMembers: content.castMembers,
         isMovieOfTheWeek: content.isMovieOfTheWeek,
         catalogNumber: content.catalogNumber,

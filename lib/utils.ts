@@ -107,6 +107,22 @@ export function contentTypeLabel(contentType: "movie" | "tv_show" | "short_film"
   return CONTENT_TYPE_LABELS[contentType];
 }
 
+// Where a content item can be watched right now. Declaration order drives the
+// admin select and the browse filter list.
+export const VIEWING_CATEGORIES = [
+  { value: "in_cinemas", label: "In Cinemas" },
+  { value: "streaming", label: "Streaming Now" },
+  { value: "coming_to_cinemas", label: "Coming to Cinemas" },
+  { value: "coming_to_streaming", label: "Coming to Streaming" },
+  { value: "unavailable", label: "Not Available Anywhere" },
+] as const;
+
+export type ViewingCategory = (typeof VIEWING_CATEGORIES)[number]["value"];
+
+export function viewingCategoryLabel(category: ViewingCategory): string {
+  return VIEWING_CATEGORIES.find((c) => c.value === category)!.label;
+}
+
 // URL slug utilities
 // Details pages live under a type-specific base path with an SEO slug of
 // title + release year, e.g. /movie/everybody-loves-jenifa-2024

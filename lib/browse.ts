@@ -1,4 +1,5 @@
 import { Content } from "@/lib/server-queries";
+import { VIEWING_CATEGORIES } from "@/lib/utils";
 
 // Pure helpers for the /movies-and-tv browse page. No React — keep these
 // unit-testable and shared between the client components.
@@ -43,6 +44,7 @@ export interface FilterState {
   platforms: string[];
   genres: string[]; // lowercase keys
   scores: string[]; // ScoreBand values
+  viewingCategories: string[]; // ViewingCategory values
 }
 
 export interface FilterOption {
@@ -54,6 +56,7 @@ export interface DerivedOptions {
   years: FilterOption[];
   platforms: FilterOption[];
   genres: FilterOption[];
+  viewingCategories: FilterOption[];
 }
 
 // Band boundaries mirror scoreBadgeClass (lib/utils.ts): exactly 7 renders the
@@ -70,6 +73,7 @@ export function deriveFilterOptions(items: Content[]): DerivedOptions {
   // lowercase key -> first-seen casing, since genre is freeform admin input
   const genres = new Map<string, string>();
   const platforms = new Set<string>();
+  const viewingCategories = new Set<string>();
 
   for (const item of items) {
     if (item.releaseDate) years.add(new Date(item.releaseDate).getFullYear());
@@ -80,6 +84,7 @@ export function deriveFilterOptions(items: Content[]): DerivedOptions {
       if (!genres.has(key)) genres.set(key, label);
     }
     if (item.streamingPlatform) platforms.add(item.streamingPlatform);
+    if (item.viewingCategory) viewingCategories.add(item.viewingCategory);
   }
 
   return {
@@ -92,6 +97,9 @@ export function deriveFilterOptions(items: Content[]): DerivedOptions {
     platforms: Object.keys(PLATFORM_LABELS)
       .filter((p) => platforms.has(p))
       .map((p) => ({ value: p, label: PLATFORM_LABELS[p] })),
+    viewingCategories: VIEWING_CATEGORIES.filter((c) => viewingCategories.has(c.value)).map(
+      (c) => ({ value: c.value, label: c.label }),
+    ),
   };
 }
 
@@ -117,6 +125,11 @@ export function applyFilters(items: Content[], state: FilterState): Content[] {
     if (state.platforms.length > 0) {
       if (!item.streamingPlatform) return false;
       if (!state.platforms.includes(item.streamingPlatform)) return false;
+    }
+
+    if (state.viewingCategories.length > 0) {
+      if (!item.viewingCategory) return false;
+      if (!state.viewingCategories.includes(item.viewingCategory)) return false;
     }
 
     if (state.genres.length > 0) {

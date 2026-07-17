@@ -40,7 +40,7 @@ const ContentCard = forwardRef<HTMLAnchorElement, ContentCardProps>(
                             {item.title}
                         </CardTitle>
 
-                        <CardDescription className="flex items-center gap-2">
+                        <CardDescription className="flex flex-wrap items-center gap-2">
                             <Badge className="w-fit text-xs text-black bg-transparent border border-black">
                                 {contentTypeLabel(item.contentType)}
                             </Badge>

@@ -18,7 +18,7 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Content } from "@/lib/server-queries";
-import { cn, scoreBadgeClass, toYoutubeEmbedUrl, contentTypeLabel, contentPath } from "@/lib/utils";
+import { cn, scoreBadgeClass, toYoutubeEmbedUrl, contentPath, viewingCategoryLabel } from "@/lib/utils";
 import MovieRatingSheet from "@/components/custom/movie-rating-sheet";
 
 export const STREAMING_PLATFORMS: Record<string, {
@@ -87,6 +87,13 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
     const trailerEmbedUrl = movie.trailerUrl ? toYoutubeEmbedUrl(movie.trailerUrl) : null;
     const platform = movie.streamingPlatform ? STREAMING_PLATFORMS[movie.streamingPlatform] : null;
 
+    // The viewing category owns this slot: only a film that's actually streaming
+    // gets a link, so a stale streamingUrl on a film that has left the platform
+    // can't send anyone to a dead page. An unset category falls back to the URL.
+    const isStreamable =
+        (movie.viewingCategory === "streaming" || movie.viewingCategory === null) &&
+        Boolean(movie.streamingUrl);
+
     return <section className="w-full">
         <h1 className="pb-3 border-b border-black text-2xl font-semibold flex items-center gap-3">
             {title || movie.title}
@@ -97,9 +104,6 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
                         {movie.rating && (
                             <Badge className="text-xs text-black bg-transparent border border-black">{movie.rating}</Badge>
                         )}
-                        <Badge className="text-xs text-black bg-transparent border border-black">
-                            {contentTypeLabel(movie.contentType)}
-                        </Badge>
                     </>
 
                 )
@@ -172,9 +176,6 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
                             {movie.rating && (
                                 <Badge className="text-xs text-black bg-transparent border border-black">{movie.rating}</Badge>
                             )}
-                            <Badge className="text-xs text-black bg-transparent border border-black">
-                                {contentTypeLabel(movie.contentType)}
-                            </Badge>
                         </h2>
                       </Link>
                     )}
@@ -213,8 +214,8 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
                 </div>
 
                 <div className="w-full pt-2 grid items-center gap-2">
-                    {movie.streamingUrl && (
-                        <Link target="_blank" href={movie.streamingUrl}>
+                    {isStreamable ? (
+                        <Link target="_blank" href={movie.streamingUrl!}>
                             <Button variant={'secondary'} className={cn("w-full py-4 max-h-13 flex gap-0", platform?.className)}>
                                 Stream on
                                 <span className="inline-flex items-center gap-1.5 font-semibold">
@@ -228,6 +229,14 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
                                 </span>
                             </Button>
                         </Link>
+                    ) : movie.viewingCategory && (
+                        <Button
+                            variant={'secondary'}
+                            disabled
+                            className="w-full py-4 max-h-13 font-semibold disabled:opacity-100 bg-black/5 text-black/60"
+                        >
+                            {viewingCategoryLabel(movie.viewingCategory)}
+                        </Button>
                     )}
                     {hasSpaceOrPodcast && (
                         <AlertDialog>

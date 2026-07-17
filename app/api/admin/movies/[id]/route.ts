@@ -3,6 +3,7 @@ import { db } from '@/db/client';
 import { content } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { authenticateAdmin } from '@/lib/admin-auth';
+import { VIEWING_CATEGORIES } from '@/lib/utils';
 
 export async function PUT(
   request: Request,
@@ -17,6 +18,15 @@ export async function PUT(
     }
 
     const movieData = await request.json();
+
+    // Optional — an unset category is null, but a set one must be valid
+    if (movieData.viewingCategory &&
+        !VIEWING_CATEGORIES.some((c) => c.value === movieData.viewingCategory)) {
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid viewing category'
+      }, { status: 400 });
+    }
 
     const updatedMovie = await db
       .update(content)
@@ -35,6 +45,7 @@ export async function PUT(
         streamingUrl: movieData.streamingUrl,
         streamingPlatform: movieData.streamingPlatform || null,
         otherPlatform: movieData.otherPlatform,
+        viewingCategory: movieData.viewingCategory || null,
         castMembers: Array.isArray(movieData.castMembers) ? movieData.castMembers : null,
         isMovieOfTheWeek: movieData.isMovieOfTheWeek,
         // catalogNumber is derived from linked discussion episode numbers —

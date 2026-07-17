@@ -36,6 +36,7 @@ import {
   getAverageRatingLabel,
   scoreBadgeClass,
   toYoutubeEmbedUrl,
+  viewingCategoryLabel,
 } from "@/lib/utils";
 
 interface ContentDetailsClientProps {
@@ -228,13 +229,18 @@ export default function ContentDetailsClient({
               <h1 className="text-3xl font-bold flex items-start gap-3 flex-wrap">
                 {movie.title}
               </h1>
-              <div className="flex items-center gap-2 pt-3">
+              <div className="flex flex-wrap items-center gap-2 pt-3">
                 <Badge className="text-xs text-black bg-transparent border border-black rounded-sm">
                   {contentTypeLabel(movie.contentType)}
                 </Badge>
                 {movie.rating && (
                   <Badge className="text-xs text-black bg-transparent border border-black rounded-sm">
                     {movie.rating}
+                  </Badge>
+                )}
+                {movie.viewingCategory && (
+                  <Badge className="text-xs text-black bg-transparent border border-black rounded-sm">
+                    {viewingCategoryLabel(movie.viewingCategory)}
                   </Badge>
                 )}
               </div>

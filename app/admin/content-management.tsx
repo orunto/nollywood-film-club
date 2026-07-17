@@ -39,7 +39,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { PlusIcon, PencilSimpleIcon, TrashIcon, StarIcon, MagnifyingGlassIcon, CheckIcon, CaretUpDownIcon, ArrowSquareOutIcon, XIcon } from "@phosphor-icons/react";
 import { EmptyListIllustration } from '@/components/graphics';
 import { CastMember, Content } from '@/lib/server-queries';
-import { contentTypeLabel } from '@/lib/utils';
+import { contentTypeLabel, viewingCategoryLabel, VIEWING_CATEGORIES, type ViewingCategory } from '@/lib/utils';
 import { toast } from 'sonner';
 import { SortableHead, useTableSort, SortAccessors } from './table-sort';
 import { AdminDiscussion } from './discussions-management';
@@ -107,10 +107,11 @@ export default function ContentManagement() {
     streamingUrl: '',
     streamingPlatform: '',
     otherPlatform: '',
+    viewingCategory: '' as ViewingCategory | '',
     isMovieOfTheWeek: false,
   });
 
-  const formatDate = (date: string | Date | null): string => {
+  const formatDate =(date: string | Date | null): string => {
     if (!date) return '';
     const parsed = new Date(date);
     return isNaN(parsed.getTime()) ? '' : parsed.toISOString().split('T')[0];
@@ -319,6 +320,7 @@ export default function ContentManagement() {
       streamingUrl: movie.streamingUrl || '',
       streamingPlatform: movie.streamingPlatform || '',
       otherPlatform: movie.otherPlatform || '',
+      viewingCategory: movie.viewingCategory || '',
       isMovieOfTheWeek: movie.isMovieOfTheWeek,
     });
     setCastMembers(movie.castMembers);
@@ -387,6 +389,7 @@ export default function ContentManagement() {
       streamingUrl: '',
       streamingPlatform: '',
       otherPlatform: '',
+      viewingCategory: '',
       isMovieOfTheWeek: false,
     });
     setCastMembers(null);
@@ -489,9 +492,16 @@ export default function ContentManagement() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge className={badgeClass}>
-                      {contentTypeLabel(movie.contentType)}
-                    </Badge>
+                    <div className="flex flex-wrap items-center gap-1">
+                      <Badge className={badgeClass}>
+                        {contentTypeLabel(movie.contentType)}
+                      </Badge>
+                      {movie.viewingCategory && (
+                        <Badge className={badgeClass}>
+                          {viewingCategoryLabel(movie.viewingCategory)}
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-black/60">{movie.rating || '—'}</TableCell>
                   <TableCell className="text-black/60">
@@ -807,6 +817,27 @@ export default function ContentManagement() {
                     placeholder="https://..."
                   />
                 </div>
+              </div>
+
+              <div>
+                <Label htmlFor="viewingCategory">Viewing Category</Label>
+                <Select
+                  value={formData.viewingCategory}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, viewingCategory: value as ViewingCategory })
+                  }
+                >
+                  <SelectTrigger className={inputClass}>
+                    <SelectValue placeholder="Select viewing category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {VIEWING_CATEGORIES.map((category) => (
+                      <SelectItem key={category.value} value={category.value}>
+                        {category.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {formData.streamingPlatform === 'other' && (
