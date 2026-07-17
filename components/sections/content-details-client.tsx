@@ -166,8 +166,8 @@ export default function ContentDetailsClient({
   return (
     <div className="w-full flex flex-col min-h-screen">
       {/* Meta band — year / rating / runtime strip above the hero */}
-      <div className="w-full bg-black text-white border-t border-white/15">
-        <div className="flex items-center justify-between gap-4 lg:px-10 px-6 py-3">
+      <div className="w-full bg-black text-white border-white/15">
+        <div className="flex md:items-center items-start justify-between gap-4 lg:px-10 px-6 py-3">
           <button
             onClick={handleBack}
             className="flex items-center gap-2 text-sm font-medium hover:opacity-70 transition-opacity cursor-pointer"
@@ -175,7 +175,7 @@ export default function ContentDetailsClient({
             <ArrowLeftIcon className="h-4 w-4" />
             Go Back
           </button>
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex md:flex-row flex-col md:items-center items-end gap-2 text-sm">
             {movie.isMovieOfTheWeek && (
               <Badge className="bg-white text-black rounded-sm mr-2">
                 Movie of the Week

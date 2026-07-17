@@ -32,7 +32,7 @@ export default async function ContentDetailsPage({
       <Nav />
       <main className="min-h-screen">
         <ContentDetailsClient
-          movie={item}
+          movie={item} 
           userRatings={userRatings}
           criticReviews={criticReviews}
           related={related}
