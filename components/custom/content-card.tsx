@@ -15,7 +15,7 @@ const ContentCard = forwardRef<HTMLAnchorElement, ContentCardProps>(
     function ContentCard({ item, className, ...rest }, ref) {
         return (
             <Link href={contentPath(item)} ref={ref} className={cn(className)} {...rest}>
-                <Card className="@container rounded-sm h-full shadow-none p-0 2xl:gap-12 gap-8">
+                <Card className="@container rounded-sm h-full shadow-none p-0 gap-0">
                     <CardHeader className="px-4 bg-primary/50 max-h-30 overflow-y-visible relative z-10 overflow-visible rounded-t-sm">
                         {/* Static 16:9 box; the absolutely-positioned inner container is
                             what grows on hover (to 200% = the old 112.5% of width), so the
@@ -35,7 +35,7 @@ const ContentCard = forwardRef<HTMLAnchorElement, ContentCardProps>(
                         </div>
                     </CardHeader>
 
-                    <CardContent className="p-4 relative flex flex-col gap-2 lg:mt-0 mt-8">
+                    <CardContent className="p-4 relative flex flex-col gap-2 lg:mt-10 mt-8 min-h-41.5">
                         <CardTitle className="text-base @xs:text-lg @md:text-xl font-semibold flex items-center gap-2 mt-5 lg:mt-0">
                             {item.title}
                         </CardTitle>
