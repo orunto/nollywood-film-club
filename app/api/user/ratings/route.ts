@@ -71,7 +71,14 @@ export async function POST(request: NextRequest) {
     }
 
     const ratingData = await request.json();
-    
+
+    if (!ratingData || typeof ratingData !== 'object') {
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid request body'
+      }, { status: 400 });
+    }
+
     // Basic validation
     if (!ratingData.contentId) {
       return NextResponse.json({ 

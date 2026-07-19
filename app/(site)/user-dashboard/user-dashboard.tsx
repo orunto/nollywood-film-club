@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useUser, AccountSettings } from "@stackframe/stack";
@@ -98,6 +98,7 @@ export default function UserDashboard({ user }: UserDashboardProps) {
   const [tab, setTab] = useState("reviews");
   const [userRatings, setUserRatings] = useState<UserRating[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   // Edit review
   const [editingRating, setEditingRating] = useState<UserRating | null>(null);
@@ -120,20 +121,30 @@ export default function UserDashboard({ user }: UserDashboardProps) {
   const [savingUsername, setSavingUsername] = useState(false);
   const debouncedUsername = useDebounce(username, 500);
 
-  useEffect(() => {
-    const loadRatings = async () => {
-      try {
-        const res = await fetch("/api/user/ratings");
-        const data = await res.json();
-        if (data.success) setUserRatings(data.data);
-      } catch (error) {
-        console.error("Error fetching ratings:", error);
-      } finally {
-        setLoading(false);
+  const loadRatings = useCallback(async () => {
+    setLoading(true);
+    setLoadError(false);
+    try {
+      const res = await fetch("/api/user/ratings");
+      const data = await res.json();
+      if (data.success) {
+        setUserRatings(data.data);
+      } else {
+        setLoadError(true);
+        toast.error(data.error || "Failed to load your reviews");
       }
-    };
-    loadRatings();
+    } catch (error) {
+      console.error("Error fetching ratings:", error);
+      setLoadError(true);
+      toast.error("Failed to load your reviews");
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadRatings();
+  }, [loadRatings]);
 
   // Live username availability — skips the check when unchanged or invalid so a
   // user keeping their own handle never sees it flagged as taken.
@@ -255,7 +266,7 @@ export default function UserDashboard({ user }: UserDashboardProps) {
       const res = await fetch("/api/create-username", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: username.trim(), stackUserId: user.id }),
+        body: JSON.stringify({ username: username.trim().toLowerCase(), stackUserId: user.id }),
       });
       if (res.ok) {
         toast.success("Username updated");
@@ -341,6 +352,15 @@ export default function UserDashboard({ user }: UserDashboardProps) {
                 <div className="flex items-center justify-center gap-2 rounded-sm border border-black/10 p-10 text-sm text-black/50">
                   <CircleNotchIcon className="h-4 w-4 animate-spin" />
                   Loading your reviews...
+                </div>
+              ) : loadError ? (
+                <div className="flex flex-col items-center gap-3 rounded-sm border border-black/10 p-10 text-center">
+                  <p className="text-sm text-black/60">
+                    We couldn&apos;t load your reviews.
+                  </p>
+                  <Button variant="outline" onClick={loadRatings}>
+                    Try again
+                  </Button>
                 </div>
               ) : userRatings.length === 0 ? (
                 <div className="flex flex-col items-center rounded-sm border border-black/10 p-10 text-center">
