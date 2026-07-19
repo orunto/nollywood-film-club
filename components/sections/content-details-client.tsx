@@ -30,6 +30,7 @@ import ContentCard from "@/components/custom/content-card";
 import ScoreBox from "@/components/custom/score-box";
 import MovieRatingSheet from "@/components/custom/movie-rating-sheet";
 import ReviewText from "@/components/custom/review-text";
+import PushbackSheet from "@/components/custom/pushback-sheet";
 import { STREAMING_PLATFORMS } from "@/components/sections/movie-hero";
 import { Content, Review, UserRating } from "@/lib/server-queries";
 import {
@@ -556,6 +557,15 @@ export default function ContentDetailsClient({
                       </span>
                     </div>
                     {userRating.review && <ReviewText source={userRating.review} />}
+                    <PushbackSheet
+                      reviewId={userRating.id}
+                      review={{
+                        username:
+                          userRating.username || `User ${userRating.userId.substring(0, 8)}`,
+                        rating: userRating.rating,
+                        body: userRating.review,
+                      }}
+                    />
                   </article>
                 ))}
               </div>

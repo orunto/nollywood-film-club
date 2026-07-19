@@ -3,7 +3,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChatCircleIcon, DotsThreeIcon, FlagIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,9 +15,12 @@ import {
   MAX_PUSHBACK_DEPTH,
   MAX_PUSHBACK_INDENT,
   MAX_PUSHBACK_LENGTH,
+  MAX_PUSHBACK_LENGTH_STORED,
 } from "@/lib/pushback";
 import type { PushbackNode } from "@/lib/server-queries";
 import ReportDialog from "./report-dialog";
+import MarkdownEditor from "./markdown-editor";
+import ReviewText from "./review-text";
 
 const formatWhen = (value: string) =>
   value
@@ -30,21 +32,22 @@ const formatWhen = (value: string) =>
     : "";
 
 // Shared composer: posts pushback on the review, or a reply to another
-// pushback when parentId is set.
+// pushback when parentId is set. Body is Markdown, with the same inline
+// formatting as reviews.
 function Composer({
   reviewId,
   parentId,
   placeholder,
-  autoFocus,
   onDone,
   onCancel,
+  afterPost,
 }: {
   reviewId: string;
   parentId?: string | null;
   placeholder: string;
-  autoFocus?: boolean;
   onDone: () => void;
   onCancel?: () => void;
+  afterPost: () => void;
 }) {
   const router = useRouter();
   const [body, setBody] = useState("");
@@ -74,9 +77,9 @@ function Composer({
 
       setBody("");
       onDone();
-      // Server component owns the thread, so let it refetch rather than
-      // duplicating tree-insert logic on the client.
-      router.refresh();
+      // The owner of the thread (permalink page or pushback sheet) decides how
+      // to reflect the new reply — a server refetch or a client refetch.
+      afterPost();
       toast.success(result.message);
     } catch (error) {
       console.error("Error posting pushback:", error);
@@ -86,48 +89,50 @@ function Composer({
     }
   };
 
-  const over = body.length > MAX_PUSHBACK_LENGTH;
+  const over = body.length > MAX_PUSHBACK_LENGTH_STORED;
 
   return (
     <div className="flex flex-col gap-2">
-      <Textarea
+      <MarkdownEditor
         value={body}
-        onChange={(e) => setBody(e.target.value)}
+        onChange={setBody}
+        disabled={isSending}
+        maxLength={MAX_PUSHBACK_LENGTH}
         placeholder={placeholder}
-        autoFocus={autoFocus}
-        rows={3}
-        className="rounded-sm border-black/40 shadow-none focus-visible:border-black focus-visible:ring-black/20"
       />
-      <div className="flex items-center justify-between gap-3">
-        <span className={cn("text-xs", over ? "text-red-700" : "text-black/40")}>
-          {body.length}/{MAX_PUSHBACK_LENGTH}
-        </span>
-        <div className="flex items-center gap-2">
-          {onCancel && (
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={onCancel}
-              className="rounded-sm text-black/60 hover:bg-black/5 hover:text-black"
-            >
-              Cancel
-            </Button>
-          )}
+      <div className="flex items-center justify-end gap-2">
+        {onCancel && (
           <Button
             type="button"
-            onClick={submit}
-            disabled={!body.trim() || over || isSending}
-            className="rounded-sm bg-black text-white hover:bg-black/80"
+            variant="ghost"
+            onClick={onCancel}
+            className="rounded-sm text-black/60 hover:bg-black/5 hover:text-black"
           >
-            {isSending ? "Posting…" : "Push back"}
+            Cancel
           </Button>
-        </div>
+        )}
+        <Button
+          type="button"
+          onClick={submit}
+          disabled={!body.trim() || over || isSending}
+          className="rounded-sm bg-black text-white hover:bg-black/80"
+        >
+          {isSending ? "Posting…" : "Push back"}
+        </Button>
       </div>
     </div>
   );
 }
 
-function PushbackItem({ node, reviewId }: { node: PushbackNode; reviewId: string }) {
+function PushbackItem({
+  node,
+  reviewId,
+  afterPost,
+}: {
+  node: PushbackNode;
+  reviewId: string;
+  afterPost: () => void;
+}) {
   const [isReplying, setIsReplying] = useState(false);
   const [isReporting, setIsReporting] = useState(false);
 
@@ -168,7 +173,7 @@ function PushbackItem({ node, reviewId }: { node: PushbackNode; reviewId: string
           </DropdownMenu>
         </div>
 
-        <p className="text-sm font-light leading-relaxed whitespace-pre-line">{node.body}</p>
+        <ReviewText source={node.body} />
 
         {canReply && (
           <button
@@ -187,9 +192,9 @@ function PushbackItem({ node, reviewId }: { node: PushbackNode; reviewId: string
               reviewId={reviewId}
               parentId={node.id}
               placeholder={`Push back on ${node.username}…`}
-              autoFocus
               onDone={() => setIsReplying(false)}
               onCancel={() => setIsReplying(false)}
+              afterPost={afterPost}
             />
           </div>
         )}
@@ -198,7 +203,7 @@ function PushbackItem({ node, reviewId }: { node: PushbackNode; reviewId: string
       {node.replies.length > 0 && (
         <div className="flex flex-col">
           {node.replies.map((reply) => (
-            <PushbackItem key={reply.id} node={reply} reviewId={reviewId} />
+            <PushbackItem key={reply.id} node={reply} reviewId={reviewId} afterPost={afterPost} />
           ))}
         </div>
       )}
@@ -216,30 +221,43 @@ function PushbackItem({ node, reviewId }: { node: PushbackNode; reviewId: string
 export default function PushbackThread({
   reviewId,
   thread,
+  onPosted,
+  showHeading = true,
 }: {
   reviewId: string;
   thread: PushbackNode[];
+  // How to reflect a newly posted reply. Defaults to a server refetch
+  // (router.refresh), which is what the permalink page relies on; the sheet
+  // passes a client refetch instead.
+  onPosted?: () => void;
+  showHeading?: boolean;
 }) {
+  const router = useRouter();
+  const afterPost = onPosted ?? (() => router.refresh());
+
   const total = thread.reduce(function count(sum: number, node): number {
     return sum + 1 + node.replies.reduce(count, 0);
   }, 0);
 
   return (
     <section className="flex flex-col gap-4">
-      <h2 className="border-b border-black pb-3 text-xl font-semibold">
-        Pushback {total > 0 && <span className="text-black/40">({total})</span>}
-      </h2>
+      {showHeading && (
+        <h2 className="border-b border-black pb-3 text-xl font-semibold">
+          Pushback {total > 0 && <span className="text-black/40">({total})</span>}
+        </h2>
+      )}
 
       <Composer
         reviewId={reviewId}
         placeholder="Disagree with the whole thing. Politely, if you can manage it."
         onDone={() => {}}
+        afterPost={afterPost}
       />
 
       {thread.length > 0 ? (
         <div className="flex flex-col divide-y divide-black/10">
           {thread.map((node) => (
-            <PushbackItem key={node.id} node={node} reviewId={reviewId} />
+            <PushbackItem key={node.id} node={node} reviewId={reviewId} afterPost={afterPost} />
           ))}
         </div>
       ) : (

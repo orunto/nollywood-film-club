@@ -3,7 +3,20 @@ import { db } from '@/db/client';
 import { pushbacks, userRatings } from '@/db/schema';
 import { and, eq } from 'drizzle-orm';
 import { authenticateUser } from '@/lib/user-auth';
-import { MAX_PUSHBACK_DEPTH, MAX_PUSHBACK_LENGTH } from '@/lib/pushback';
+import { getReviewThread } from '@/lib/server-queries';
+import { MAX_PUSHBACK_DEPTH, MAX_PUSHBACK_LENGTH_STORED } from '@/lib/pushback';
+
+// Returns a review's pushback thread (public, same data the permalink renders).
+// Lets the pushback sheet load a thread client-side without a page navigation.
+// Query: ?reviewId=
+export async function GET(request: NextRequest) {
+  const reviewId = request.nextUrl.searchParams.get('reviewId');
+  if (!reviewId) {
+    return NextResponse.json({ success: false, error: 'A reviewId is required' }, { status: 400 });
+  }
+  const thread = await getReviewThread(reviewId);
+  return NextResponse.json({ success: true, data: thread });
+}
 
 // Posts pushback on a review, or a reply to existing pushback.
 // Body: { reviewId, parentId?, body }
@@ -29,10 +42,10 @@ export async function POST(request: NextRequest) {
         error: 'Pushback cannot be empty',
       }, { status: 400 });
     }
-    if (text.length > MAX_PUSHBACK_LENGTH) {
+    if (text.length > MAX_PUSHBACK_LENGTH_STORED) {
       return NextResponse.json({
         success: false,
-        error: `Pushback must be ${MAX_PUSHBACK_LENGTH} characters or fewer`,
+        error: 'Pushback is too long',
       }, { status: 400 });
     }
 
