@@ -3,27 +3,26 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "../ui/button";
 import { ListIcon } from "@phosphor-icons/react";
-import { useState, useEffect } from "react";
-import { CurrentUser, useStackApp } from "@stackframe/stack";
-import { isAdminUser } from "@/lib/roles";
+import { useState } from "react";
 import UserMenu from "./user-menu";
 
-export default function Nav() {
-    const [menu, setmenu] = useState(false);
-    const [user, setUser] = useState<CurrentUser | null>(null);
-    const [isAdmin, setIsAdmin] = useState(false);
-    const app = useStackApp();
+// Serializable subset of the auth user needed to render the nav. Resolved on
+// the server (see nav-server.tsx / getNavUser) so the client no longer performs
+// its own getUser() round-trip on mount.
+export interface NavUser {
+  displayName: string | null;
+  primaryEmail: string | null;
+  profileImageUrl: string | null;
+  username: string | null;
+}
 
-    useEffect(() => {
-        const checkUser = async () => {
-            const currentUser = await app.getUser();
-            setUser(currentUser);
-            // UI hint only — shows/hides the Admin link. Real enforcement is
-            // server-side in authenticateAdmin(); the client cannot forge this.
-            setIsAdmin(isAdminUser(currentUser));
-        };
-        checkUser();
-    }, [app]);
+interface NavProps {
+  user: NavUser | null;
+  isAdmin: boolean;
+}
+
+export default function Nav({ user, isAdmin }: NavProps) {
+    const [menu, setmenu] = useState(false);
 
     return (
         <nav className={"flex lg:flex-row flex-col justify-between items-center w-full bg-black lg:px-10 lg:py-3 text-white lg:overflow-hidden overflow-y-visible z-50 relative lg:max-h-[unset] max-h-16"}>

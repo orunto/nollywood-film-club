@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import type { CurrentUser } from "@stackframe/stack";
+import { useUser } from "@stackframe/stack";
+import type { NavUser } from "./nav";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -20,7 +21,7 @@ import {
 } from "@phosphor-icons/react";
 
 type UserMenuProps = {
-  user: CurrentUser;
+  user: NavUser;
   isAdmin?: boolean;
 };
 
@@ -35,15 +36,16 @@ function initialsOf(name: string) {
 
 export default function UserMenu({ user, isAdmin = false }: UserMenuProps) {
   const [isLoading, setIsLoading] = useState(false);
+  // Display comes from server-provided props (no flash); the live client user is
+  // only needed to perform the sign-out action.
+  const liveUser = useUser();
 
-  const username = (user as { clientMetadata?: { username?: string } })
-    .clientMetadata?.username;
-  const label = username || user.displayName || user.primaryEmail || "Member";
+  const label = user.username || user.displayName || user.primaryEmail || "Member";
 
   const onLogout = async () => {
     setIsLoading(true);
     try {
-      await user.signOut();
+      await liveUser?.signOut();
     } catch (err: unknown) {
       console.error(err);
     } finally {

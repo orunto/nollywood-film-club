@@ -1,4 +1,4 @@
-import { Footer, Nav } from "@/components/custom";
+import { Footer } from "@/components/custom";
 import { Hero, MovieOfTheWeek, MoviesAndTVSeries, Reviews, Discussions } from "@/components/sections";
 import { getHomepageData, getAllContent } from "@/lib/server-queries";
 import { posterPath } from "@/lib/utils";
@@ -21,7 +21,6 @@ export default async function Home() {
 
   return (
     <>
-      <Nav />
       <main className="min-h-screen">
         <Hero latestEpisode={latestEpisode} posters={posters} />
         <div className="w-full flex flex-col lg:px-10 lg:py-8 py-10 px-6 gap-15">

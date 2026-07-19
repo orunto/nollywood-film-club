@@ -59,7 +59,7 @@ export default function MoviesAndTVSeries({ moviesAndTVSeries }: MoviesAndTVSeri
                         <ContentCard
                             key={index}
                             item={item}
-                            className="flex-none lg:w-[calc((100%-160px)/4.4)] w-[calc((100%-48px)/1.4)]"
+                            className="flex-none lg:w-[calc((100%-80px)/4)] w-[calc((100%-48px)/1.4)]"
                         />
                     ))}
                 </div>

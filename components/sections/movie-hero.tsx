@@ -18,7 +18,7 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Content } from "@/lib/server-queries";
-import { cn, scoreBadgeClass, toYoutubeEmbedUrl, contentPath, viewingCategoryLabel, isUpcomingSpace, isStreamable, spaceDateLabel } from "@/lib/utils";
+import { cn, scoreBadgeClass, toYoutubeEmbedUrl, contentPath, viewingCategoryLabel, isUpcomingSpace, isStreamable, spaceDateLabel, isRatingOpen } from "@/lib/utils";
 import MovieRatingSheet from "@/components/custom/movie-rating-sheet";
 
 export const STREAMING_PLATFORMS: Record<string, {
@@ -57,10 +57,9 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
     const spaceUpcoming = isUpcomingSpace(discussionDate);
     const spaceDate = spaceDateLabel(discussionDate);
 
-    // Check if 24 hours have passed since the movie was created, or skip the
-    // wait entirely once the podcast episode discussing it is actually out
-    const isRatingEnabled = hasPodcastLink || (movie && movie.createdAt &&
-        (new Date().getTime() - new Date(movie.createdAt).getTime()) > (24 * 60 * 60 * 1000));
+    // Rating opens once the club has discussed the film: the podcast episode is
+    // out, or 24h have passed since the space (discussion_date).
+    const isRatingEnabled = isRatingOpen(discussionDate, hasPodcastLink);
 
     const handlePlay = () => {
         setIsPlaying(true);
@@ -307,7 +306,7 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
                 <MovieRatingSheet
                     movieId={movie.id}
                     movieTitle={movie.title}
-                    isRatingEnabled={isRatingEnabled || false}
+                    isRatingEnabled={isRatingEnabled}
                     onRatingSubmit={handleRatingSubmit}
                 />
             </div>

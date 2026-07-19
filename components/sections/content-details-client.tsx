@@ -29,12 +29,15 @@ import {
 import ContentCard from "@/components/custom/content-card";
 import ScoreBox from "@/components/custom/score-box";
 import MovieRatingSheet from "@/components/custom/movie-rating-sheet";
+import ReviewText from "@/components/custom/review-text";
+import PushbackSheet from "@/components/custom/pushback-sheet";
 import { STREAMING_PLATFORMS } from "@/components/sections/movie-hero";
 import { Content, Review, UserRating } from "@/lib/server-queries";
 import {
   cn,
   contentTypeLabel,
   getAverageRatingLabel,
+  isRatingOpen,
   isStreamable,
   isUpcomingSpace,
   scoreBadgeClass,
@@ -143,12 +146,9 @@ export default function ContentDetailsClient({
     else router.push("/");
   };
 
-  // Rating opens 24h after the title lands in the catalog, or as soon as the
-  // podcast episode discussing it is out
-  const isRatingEnabled =
-    hasPodcastLink ||
-    (Boolean(movie.createdAt) &&
-      Date.now() - new Date(movie.createdAt).getTime() > 24 * 60 * 60 * 1000);
+  // Rating opens once the club has discussed the film: the podcast episode is
+  // out, or 24h have passed since the space (discussion_date).
+  const isRatingEnabled = isRatingOpen(discussionDate, hasPodcastLink);
 
   const ratingsWithReview = userRatings.filter((r) => r.review);
   const visibleUserReviews =
@@ -556,11 +556,16 @@ export default function ContentDetailsClient({
                         {userRating.username || `User ${userRating.userId.substring(0, 8)}`}
                       </span>
                     </div>
-                    {userRating.review && (
-                      <p className="text-sm font-light leading-relaxed">
-                        {userRating.review}
-                      </p>
-                    )}
+                    {userRating.review && <ReviewText source={userRating.review} />}
+                    <PushbackSheet
+                      reviewId={userRating.id}
+                      review={{
+                        username:
+                          userRating.username || `User ${userRating.userId.substring(0, 8)}`,
+                        rating: userRating.rating,
+                        body: userRating.review,
+                      }}
+                    />
                   </article>
                 ))}
               </div>

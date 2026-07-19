@@ -5,7 +5,13 @@
 export const MAX_PUSHBACK_DEPTH = 5;
 
 // Pushback is a reply, not an essay — the review is where the long take goes.
+// This is the visible-character limit shown in the editor.
 export const MAX_PUSHBACK_LENGTH = 1000;
+
+// Pushbacks are Markdown too, so the stored string can run a little past the
+// visible limit because of formatting syntax (**, *, "- "). The write route
+// caps the raw body here so a formatted, at-limit reply isn't rejected.
+export const MAX_PUSHBACK_LENGTH_STORED = MAX_PUSHBACK_LENGTH + 200;
 
 // Past this depth the UI stops indenting and renders replies flush, the way X
 // does. The thread keeps nesting in the data; it just stops marching off the

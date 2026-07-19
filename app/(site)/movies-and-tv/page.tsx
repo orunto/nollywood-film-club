@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { Footer, Nav } from "@/components/custom";
+import { Footer } from "@/components/custom";
 import { getAllContent } from "@/lib/server-queries";
 import BrowseContent from "./browse-content";
 
@@ -15,7 +15,6 @@ export default async function MoviesAndTVPage() {
 
     return (
         <>
-            <Nav />
             <main className="min-h-screen">
                 <div className="w-full flex flex-col lg:px-10 lg:py-8 py-10 px-6 min-h-screen">
                     <section className="w-full">

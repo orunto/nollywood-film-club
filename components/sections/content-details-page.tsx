@@ -6,7 +6,7 @@ import {
   getUserRatingsForContent,
 } from "@/lib/server-queries";
 import ContentDetailsClient from "@/components/sections/content-details-client";
-import { Footer, Nav } from "@/components/custom";
+import { Footer } from "@/components/custom";
 
 interface ContentDetailsPageProps {
   rawParam: string;
@@ -29,7 +29,6 @@ export default async function ContentDetailsPage({
 
   return (
     <>
-      <Nav />
       <main className="min-h-screen">
         <ContentDetailsClient
           movie={item} 

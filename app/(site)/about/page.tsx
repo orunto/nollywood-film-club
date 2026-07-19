@@ -7,7 +7,7 @@ import {
     UsersIcon,
     WaveformIcon,
 } from "@phosphor-icons/react/dist/ssr";
-import { Footer, Nav } from "@/components/custom";
+import { Footer } from "@/components/custom";
 
 export const metadata: Metadata = {
     title: "About | Nollywood Film Club",
@@ -99,7 +99,6 @@ const HOUSE_RULES = [
 export default function AboutPage() {
     return (
         <>
-            <Nav />
             <main className="min-h-screen">
                 {/* Intro — black band, same language as the hero, closed out by a
                     big-numeral stat strip (numbers as visual anchors) */}

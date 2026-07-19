@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeftIcon } from "@phosphor-icons/react/dist/ssr";
-import { Footer, Nav } from "@/components/custom";
+import { Footer } from "@/components/custom";
 import ReviewCard from "@/components/custom/review-card";
 import PushbackThread from "@/components/custom/pushback-thread";
 import { getFeedReviewById, getReviewThread } from "@/lib/server-queries";
+import { markdownToPlainText } from "@/lib/utils";
 
 export async function generateMetadata({
   params,
@@ -19,7 +20,9 @@ export async function generateMetadata({
   const film = review.film?.title ?? "a film";
   return {
     title: `${review.username} on ${film} | Nollywood Film Club`,
-    description: review.review?.slice(0, 160) ?? undefined,
+    description: review.review
+      ? markdownToPlainText(review.review).slice(0, 160)
+      : undefined,
   };
 }
 
@@ -39,7 +42,6 @@ export default async function ReviewPermalinkPage({
 
   return (
     <>
-      <Nav />
       <main className="min-h-screen">
         <div className="w-full bg-black text-white">
           <div className="flex items-center justify-between gap-4 px-6 py-3 lg:px-10">
