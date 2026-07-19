@@ -18,6 +18,13 @@ export async function PUT(
 
     const ratingData = await request.json();
 
+    if (!ratingData || typeof ratingData !== 'object') {
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid request body'
+      }, { status: 400 });
+    }
+
     if (typeof ratingData.review === 'string' && ratingData.review.length > REVIEW_MAX_STORED) {
       return NextResponse.json({
         success: false,
