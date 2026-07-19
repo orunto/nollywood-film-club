@@ -125,4 +125,40 @@
   }
 }
 
+/* WYSIWYG review editor (Tiptap). Tailwind preflight strips list styling and
+   Placeholder needs a pseudo-element, so the editor content is styled here. */
+.review-editor:focus {
+  outline: none;
+}
+.review-editor p {
+  margin: 0 0 0.5rem;
+}
+.review-editor p:last-child {
+  margin-bottom: 0;
+}
+.review-editor ul,
+.review-editor ol {
+  margin: 0 0 0.5rem;
+  padding-left: 1.25rem;
+}
+.review-editor ul {
+  list-style: disc;
+}
+.review-editor ol {
+  list-style: decimal;
+}
+.review-editor strong {
+  font-weight: 600;
+}
+.review-editor em {
+  font-style: italic;
+}
+.review-editor p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: rgb(0 0 0 / 0.4);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
 /* Custom scrollbar styling */

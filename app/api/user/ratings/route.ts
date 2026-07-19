@@ -3,7 +3,7 @@ import { db } from '@/db/client';
 import { userRatings, content } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { authenticateUser } from '@/lib/user-auth';
-import { REVIEW_MAX } from '@/lib/reviews';
+import { REVIEW_MAX, REVIEW_MAX_STORED } from '@/lib/reviews';
 
 export async function GET(request: NextRequest) {
   try {
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    if (typeof ratingData.review === 'string' && ratingData.review.length > REVIEW_MAX) {
+    if (typeof ratingData.review === 'string' && ratingData.review.length > REVIEW_MAX_STORED) {
       return NextResponse.json({
         success: false,
         error: `Review must be ${REVIEW_MAX} characters or fewer`
