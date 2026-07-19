@@ -1,20 +1,29 @@
 'use client';
 import { useState } from "react";
-import { StarIcon, ThumbsUpIcon, ThumbsDownIcon, MinusIcon } from "@phosphor-icons/react";
+import { StarIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
   Sheet,
-  SheetClose,
   SheetContent,
   SheetFooter,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { useRouter } from "next/navigation";
+import { REVIEW_MAX } from "@/lib/reviews";
+import { useIsDesktop } from "@/hooks/use-media-query";
+import MarkdownEditor from "./markdown-editor";
+import RatingRadios from "./rating-radios";
 
 interface MovieRatingSheetProps {
   movieId: string;
@@ -39,6 +48,7 @@ export default function MovieRatingSheet({
   const [loadFailed, setLoadFailed] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const router = useRouter();
+  const isDesktop = useIsDesktop();
 
   const loadExistingRating = async () => {
     setLoading(true);
@@ -121,95 +131,81 @@ export default function MovieRatingSheet({
   };
 
   const canSubmit = !loading && !loadFailed && rating !== null;
+  const title = isEditing ? `Update your rating of ${movieTitle}` : `Rate ${movieTitle}`;
+
+  const trigger = (
+    <div title={isRatingEnabled ? "Rate this movie" : "Come back after our space 😉"} className="w-full">
+      <Button
+        disabled={!isRatingEnabled}
+        variant={'outline'}
+        className="w-full py-4 border-primary text-primary"
+      >
+        Rate this Movie <StarIcon />
+      </Button>
+    </div>
+  );
+
+  const form = (
+    <div className="space-y-6">
+      <RatingRadios value={rating} onChange={setRating} disabled={loading} />
+
+      <div>
+        <h3 className="lg:text-base text-sm font-medium mb-2">Your Review (Optional)</h3>
+        <MarkdownEditor
+          value={review}
+          onChange={setReview}
+          disabled={loading}
+          maxLength={REVIEW_MAX}
+          placeholder="Share your thoughts about this movie..."
+        />
+      </div>
+
+      {loadFailed && (
+        <p className="text-sm text-destructive">
+          Couldn&apos;t load your existing rating.{" "}
+          <button type="button" className="underline" onClick={loadExistingRating}>
+            Try again
+          </button>
+        </p>
+      )}
+    </div>
+  );
+
+  const footerButtons = (
+    <>
+      <Button variant="outline" onClick={() => setOpen(false)}>
+        Cancel
+      </Button>
+      <Button onClick={handleRatingSubmit} disabled={!canSubmit}>
+        {isEditing ? 'Update Rating' : 'Submit Rating'}
+      </Button>
+    </>
+  );
+
+  if (isDesktop) {
+    return (
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogTrigger asChild>{trigger}</DialogTrigger>
+        <DialogContent className="sm:max-w-lg rounded-sm">
+          <DialogHeader>
+            <DialogTitle className="text-lg">{title}</DialogTitle>
+          </DialogHeader>
+          {form}
+          <DialogFooter>{footerButtons}</DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetTrigger asChild>
-        <div title={isRatingEnabled ? "Rate this movie" : "Come back after our space 😉"} className="w-full">
-          <Button
-            disabled={!isRatingEnabled}
-            variant={'outline'}
-            className="w-full py-4 border-primary text-primary"
-          >
-            Rate this Movie <StarIcon />
-          </Button>
-        </div>
-      </SheetTrigger>
-      <SheetContent side="bottom" className="h-[500px] flex flex-col lg:px-40 gap-0">
+      <SheetTrigger asChild>{trigger}</SheetTrigger>
+      <SheetContent side="bottom" className="flex max-h-[90vh] flex-col gap-0 overflow-y-auto">
         <SheetHeader>
-          <SheetTitle className="lg:text-xl text-lg">
-            {isEditing ? `Update your rating of ${movieTitle}` : `Rate ${movieTitle}`}
-          </SheetTitle>
+          <SheetTitle className="text-lg">{title}</SheetTitle>
         </SheetHeader>
-        <div className="flex-1 p-4">
-          <div className="space-y-6">
-            <Select
-              value={rating === null ? undefined : String(rating)}
-              onValueChange={(value) =>
-                setRating(Number(value))
-              }
-              disabled={loading}
-            >
-              <SelectTrigger id="edit-rating" className="w-full">
-                <SelectValue placeholder={loading ? "Loading..." : "Select a rating"} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">
-                  <div className="flex items-center gap-2">
-                    <ThumbsUpIcon className="w-4 h-4" />
-                    I liked it
-                    {/*(10 points)*/}
-                  </div>
-                </SelectItem>
-                <SelectItem value="5">
-                  <div className="flex items-center gap-2">
-                    <MinusIcon className="w-4 h-4" />
-                    It was okay
-                    {/*(5 points)*/}
-                  </div>
-                </SelectItem>
-                <SelectItem value="0">
-                  <div className="flex items-center gap-2">
-                    <ThumbsDownIcon className="w-4 h-4" />
-                    I didn&apos;t like it
-                    {/*(0 points)*/}
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            <div>
-              <h3 className="lg:text-base text-sm font-medium mb-2">Your Review (Optional)</h3>
-              <Textarea
-              className="h-50 lg:text-base text-sm focus-visible:ring-0 focus-visible:border-primary/50"
-                placeholder="Share your thoughts about this movie..."
-                value={review}
-                onChange={(e) => setReview(e.target.value)}
-                disabled={loading}
-                rows={4}
-              />
-            </div>
-            {loadFailed && (
-              <p className="text-sm text-destructive">
-                Couldn&apos;t load your existing rating.{" "}
-                <button type="button" className="underline" onClick={loadExistingRating}>
-                  Try again
-                </button>
-              </p>
-            )}
-          </div>
-        </div>
-
-        <SheetFooter>
-          <SheetClose asChild>
-            <Button variant="outline">Cancel</Button>
-          </SheetClose>
-          <Button
-            onClick={handleRatingSubmit}
-            disabled={!canSubmit}
-          >
-            {isEditing ? 'Update Rating' : 'Submit Rating'}
-          </Button>
-        </SheetFooter>
+        <div className="flex-1 p-4">{form}</div>
+        <SheetFooter>{footerButtons}</SheetFooter>
       </SheetContent>
     </Sheet>
   );

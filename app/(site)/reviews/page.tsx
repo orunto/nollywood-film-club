@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Footer, Nav } from "@/components/custom";
+import { Footer } from "@/components/custom";
 import ReviewCard from "@/components/custom/review-card";
 import { EmptyReviewsIllustration } from "@/components/graphics";
 import {
@@ -43,7 +43,6 @@ export default async function ReviewsFeedPage({
 
   return (
     <>
-      <Nav />
       <main className="min-h-screen">
         <div className="flex min-h-screen w-full flex-col px-6 py-10 lg:px-10 lg:py-8">
           <section className="w-full">

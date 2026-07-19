@@ -10,10 +10,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn, contentPath, contentTypeLabel } from "@/lib/utils";
+import { cn, contentPath, contentTypeLabel, markdownToPlainText } from "@/lib/utils";
 import type { FeedReview } from "@/lib/server-queries";
 import ScoreBox from "./score-box";
 import ReportDialog from "./report-dialog";
+import ReviewText from "./review-text";
 
 const formatWhen = (value: string) =>
   value
@@ -105,16 +106,17 @@ export default function ReviewCard({ review, expanded, className }: ReviewCardPr
         </DropdownMenu>
       </div>
 
-      {review.review && (
-        <p
-          className={cn(
-            "text-sm font-light leading-relaxed whitespace-pre-line",
-            !expanded && "line-clamp-4",
-          )}
-        >
-          {review.review}
-        </p>
-      )}
+      {review.review &&
+        (expanded ? (
+          // Full Markdown on the permalink / detail view.
+          <ReviewText source={review.review} />
+        ) : (
+          // Collapsed feed card: clamp a plain-text excerpt so line-clamp stays
+          // clean across Markdown block elements.
+          <p className="text-sm font-light leading-relaxed line-clamp-4">
+            {markdownToPlainText(review.review)}
+          </p>
+        ))}
 
       {!expanded && (
         <Link

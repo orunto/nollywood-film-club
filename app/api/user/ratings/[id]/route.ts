@@ -3,6 +3,7 @@ import { db } from '@/db/client';
 import { userRatings } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { authenticateUser } from '@/lib/user-auth';
+import { REVIEW_MAX } from '@/lib/reviews';
 
 export async function PUT(
   request: Request,
@@ -16,6 +17,13 @@ export async function PUT(
     }
 
     const ratingData = await request.json();
+
+    if (typeof ratingData.review === 'string' && ratingData.review.length > REVIEW_MAX) {
+      return NextResponse.json({
+        success: false,
+        error: `Review must be ${REVIEW_MAX} characters or fewer`
+      }, { status: 400 });
+    }
 
     // Same normalisation as POST: empty/whitespace review is stored as null
     const reviewValue =

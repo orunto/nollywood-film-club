@@ -11,7 +11,9 @@ import {
 } from "@/db/schema";
 import { eq, avg, asc, desc, sql, and, inArray, isNotNull, isNull, lte, ne, or } from "drizzle-orm";
 import { stackServerApp } from "@/stack";
+import { isAdminUser } from "@/lib/roles";
 import { contentSlug, type ViewingCategory } from "@/lib/utils";
+import type { NavUser } from "@/components/custom/nav";
 
 export type { CastMember };
 
@@ -553,6 +555,27 @@ export async function getUserDisplayMap(
   );
   return new Map(entries);
 }
+
+// Current request's user serialized to the nav's minimal shape, plus the admin
+// flag. Wrapped in cache() so this getUser() is shared with any other
+// server-side getUser() in the same request.
+export const getNavUser = cache(
+  async (): Promise<{ user: NavUser | null; isAdmin: boolean }> => {
+    const user = await stackServerApp.getUser();
+    if (!user) return { user: null, isAdmin: false };
+    const username =
+      (user.clientMetadata as { username?: string } | null)?.username ?? null;
+    return {
+      user: {
+        displayName: user.displayName ?? null,
+        primaryEmail: user.primaryEmail ?? null,
+        profileImageUrl: user.profileImageUrl ?? null,
+        username,
+      },
+      isAdmin: isAdminUser(user),
+    };
+  },
+);
 
 // Shared helper: given raw userRatings rows, look up each reviewer's
 // username/profileImage from Stack Auth and map to the public UserRating shape.

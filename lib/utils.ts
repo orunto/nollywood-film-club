@@ -168,6 +168,42 @@ export function spaceDateLabel(discussionDate?: string | null): string | null {
   });
 }
 
+// Rating opens at least a day after the club has discussed the film: either the
+// discussion's podcast episode is already out, or 24h have passed since the
+// space was held (discussion_date). It is deliberately NOT tied to when the film
+// was added to the catalog.
+export function isRatingOpen(
+  discussionDate: string | null | undefined,
+  hasPodcastLink: boolean,
+): boolean {
+  if (hasPodcastLink) return true;
+  if (!discussionDate) return false;
+  const spaceTime = new Date(discussionDate).getTime();
+  if (Number.isNaN(spaceTime)) return false;
+  return Date.now() - spaceTime > 24 * 60 * 60 * 1000;
+}
+
+// Reviews are stored as Markdown. For clamped card excerpts and meta
+// descriptions we need readable plain text, so strip the common Markdown
+// syntax rather than rendering it.
+export function markdownToPlainText(md: string): string {
+  return md
+    .replace(/```[\s\S]*?```/g, " ") // fenced code
+    .replace(/`([^`]+)`/g, "$1") // inline code
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ") // images
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1") // links -> text
+    .replace(/^\s{0,3}#{1,6}\s+/gm, "") // headings
+    .replace(/^\s{0,3}>\s?/gm, "") // blockquotes
+    .replace(/^\s*[-*+]\s+/gm, "") // bullet markers
+    .replace(/^\s*\d+\.\s+/gm, "") // ordered markers
+    .replace(/(\*\*|__)(.*?)\1/g, "$2") // bold
+    .replace(/(\*|_)(.*?)\1/g, "$2") // italic
+    .replace(/~~(.*?)~~/g, "$2") // strikethrough
+    .replace(/\r?\n{2,}/g, "\n") // collapse blank lines
+    .replace(/[ \t]+/g, " ")
+    .trim();
+}
+
 // URL slug utilities
 // Details pages live under a type-specific base path with an SEO slug of
 // title + release year, e.g. /movie/everybody-loves-jenifa-2024
