@@ -280,7 +280,7 @@ export default function BrowseContent({
 
           <section ref={gridRef} className="flex flex-col gap-8 scroll-mt-4">
             {pageItems.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                 {pageItems.map((item) => (
                   <ContentCard key={item.id} item={item} />
                 ))}
