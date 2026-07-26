@@ -1,30 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { v2 as cloudinary } from 'cloudinary';
 import { authenticateAdmin } from '@/lib/admin-auth';
 import { generateImagePublicName } from '@/lib/utils';
+import {
+  cloudinary,
+  configureCloudinary,
+  missingCloudinaryEnv,
+  CLOUDINARY_FOLDER,
+} from '@/lib/cloudinary';
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-// Every poster lives under this Cloudinary folder, matching the seeded posters
-const CLOUDINARY_FOLDER = 'nfc';
+// Cloudinary fetches the remote poster itself, so this only ever streams a
+// small JSON body — but the fetch is a network round trip on its side and the
+// platform default (10s on Vercel Hobby) is tight for a slow origin.
+export const maxDuration = 30;
 
-function configureCloudinary(): boolean {
-  const { NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET } =
-    process.env;
-  if (!NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
-    return false;
-  }
-  cloudinary.config({
-    cloud_name: NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
-    api_key: CLOUDINARY_API_KEY,
-    api_secret: CLOUDINARY_API_SECRET,
-  });
-  return true;
-}
-
-// Uploads an image to Cloudinary and returns its public ID.
-// Accepts either multipart/form-data with a "file" field, or JSON with a
-// remote image "url" (e.g. a JustWatch poster). Optional title/releaseDate
-// name the upload via generateImagePublicName, matching seeded posters.
+// Uploads a remote image (e.g. a JustWatch poster) to Cloudinary by URL and
+// returns its public ID. Optional title/releaseDate name the upload via
+// generateImagePublicName, matching seeded posters.
+//
+// Browser file uploads do NOT come through here — they go straight from the
+// client to Cloudinary using a signature from ./sign, so they aren't capped by
+// the serverless request body limit. See app/admin/upload-image-button.tsx.
 export async function POST(request: NextRequest) {
   try {
     const authResult = await authenticateAdmin();
@@ -32,59 +27,43 @@ export async function POST(request: NextRequest) {
       return authResult;
     }
 
-    if (!configureCloudinary()) {
-      return NextResponse.json({
-        success: false,
-        error: 'Cloudinary credentials are not configured. Set CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET.'
-      }, { status: 500 });
+    const missing = missingCloudinaryEnv();
+    if (missing.length > 0) {
+      console.error('Cloudinary env vars missing:', missing.join(', '));
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Cloudinary is not configured. Missing: ${missing.join(', ')}`,
+        },
+        { status: 500 }
+      );
     }
-
-    let source: string;
-    let title: string | null = null;
-    let releaseDate: string | null = null;
+    configureCloudinary();
 
     const contentType = request.headers.get('content-type') ?? '';
     if (contentType.includes('multipart/form-data')) {
-      const form = await request.formData();
-      const file = form.get('file');
-      if (!(file instanceof File)) {
-        return NextResponse.json({
+      return NextResponse.json(
+        {
           success: false,
-          error: 'A "file" field is required'
-        }, { status: 400 });
-      }
-      if (!file.type.startsWith('image/')) {
-        return NextResponse.json({
-          success: false,
-          error: 'Only image files can be uploaded'
-        }, { status: 400 });
-      }
-      if (file.size > MAX_FILE_SIZE) {
-        return NextResponse.json({
-          success: false,
-          error: 'Image must be 10MB or smaller'
-        }, { status: 400 });
-      }
-      const buffer = Buffer.from(await file.arrayBuffer());
-      source = `data:${file.type};base64,${buffer.toString('base64')}`;
-      title = (form.get('title') as string) || null;
-      releaseDate = (form.get('releaseDate') as string) || null;
-    } else {
-      const body = await request.json();
-      if (typeof body.url !== 'string' || !body.url.startsWith('https://')) {
-        return NextResponse.json({
-          success: false,
-          error: 'A valid https image "url" is required'
-        }, { status: 400 });
-      }
-      source = body.url;
-      title = body.title || null;
-      releaseDate = body.releaseDate || null;
+          error: 'Direct file uploads are not accepted here. Sign the upload via /api/admin/upload-image/sign and post the file to Cloudinary from the browser.',
+        },
+        { status: 400 }
+      );
     }
 
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body.url !== 'string' || !body.url.startsWith('https://')) {
+      return NextResponse.json(
+        { success: false, error: 'A valid https image "url" is required' },
+        { status: 400 }
+      );
+    }
+
+    const title = typeof body.title === 'string' ? body.title : null;
+    const releaseDate = typeof body.releaseDate === 'string' ? body.releaseDate : null;
     const publicId = title ? generateImagePublicName(title, releaseDate) : undefined;
 
-    const result = await cloudinary.uploader.upload(source, {
+    const result = await cloudinary.uploader.upload(body.url, {
       public_id: publicId,
       folder: CLOUDINARY_FOLDER,
       overwrite: true,
@@ -95,13 +74,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: { publicId: result.public_id, version: result.version },
-      message: 'Image uploaded successfully'
+      message: 'Image uploaded successfully',
     });
   } catch (error) {
-    console.error('Error uploading image:', error);
-    return NextResponse.json({
-      success: false,
-      error: 'Something went wrong. Please try again.'
-    }, { status: 500 });
+    // Cloudinary rejections carry a message and http_code; a blanket "something
+    // went wrong" here is what made this route undiagnosable in production.
+    const detail =
+      error && typeof error === 'object' && 'message' in error
+        ? String((error as { message: unknown }).message)
+        : 'Unknown error';
+    console.error('Error uploading image to Cloudinary:', error);
+    return NextResponse.json(
+      { success: false, error: `Upload failed: ${detail}` },
+      { status: 500 }
+    );
   }
 }
