@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { REPORT_REASONS, type ReportReason, type ReportTarget } from "@/lib/pushback";
+import { REPORT_REASONS, type ReportReason, type ReportTarget } from "@/lib/comments";
 
 interface ReportDialogProps {
   targetType: ReportTarget;
@@ -25,7 +25,7 @@ interface ReportDialogProps {
 
 const NOUN: Record<ReportTarget, string> = {
   review: "review",
-  pushback: "pushback",
+  comment: "comment",
 };
 
 export default function ReportDialog({

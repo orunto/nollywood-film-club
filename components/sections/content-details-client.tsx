@@ -28,9 +28,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import ContentCard from "@/components/custom/content-card";
 import ScoreBox from "@/components/custom/score-box";
+import RatingFace from "@/components/custom/rating-face";
 import MovieRatingSheet from "@/components/custom/movie-rating-sheet";
 import ReviewText from "@/components/custom/review-text";
-import PushbackSheet from "@/components/custom/pushback-sheet";
+import CommentSheet from "@/components/custom/comment-sheet";
 import { STREAMING_PLATFORMS } from "@/components/sections/movie-hero";
 import { Content, Review, UserRating } from "@/lib/server-queries";
 import {
@@ -483,7 +484,7 @@ export default function ContentDetailsClient({
             <div className="flex items-center gap-4 pt-6 max-w-xl">
               <ScoreBox
                 score={movie.userRating}
-                className="h-14 w-14 shrink-0 rounded-full"
+                className="h-14 w-14 shrink-0 rounded-full text-base"
               />
               <div className="flex flex-col gap-2 grow">
                 <span className="text-sm font-semibold">
@@ -548,20 +549,16 @@ export default function ContentDetailsClient({
                       )}
                     </span>
                     <div className="flex items-center gap-3">
-                      <ScoreBox
-                        score={userRating.rating}
-                        className="h-12 w-12 shrink-0 text-lg rounded-full"
-                      />
+                      <RatingFace rating={userRating.rating} className="h-10 w-10" />
                       <span className="text-lg font-semibold">
-                        {userRating.username || `User ${userRating.userId.substring(0, 8)}`}
+                        {userRating.username}
                       </span>
                     </div>
                     {userRating.review && <ReviewText source={userRating.review} />}
-                    <PushbackSheet
+                    <CommentSheet
                       reviewId={userRating.id}
                       review={{
-                        username:
-                          userRating.username || `User ${userRating.userId.substring(0, 8)}`,
+                        username: userRating.username ?? "Deleted member",
                         rating: userRating.rating,
                         body: userRating.review,
                       }}

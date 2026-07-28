@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeftIcon } from "@phosphor-icons/react/dist/ssr";
 import { Footer } from "@/components/custom";
 import ReviewCard from "@/components/custom/review-card";
-import PushbackThread from "@/components/custom/pushback-thread";
+import CommentThread from "@/components/custom/comment-thread";
 import { getFeedReviewById, getReviewThread } from "@/lib/server-queries";
 import { markdownToPlainText } from "@/lib/utils";
 
@@ -57,7 +57,7 @@ export default async function ReviewPermalinkPage({
 
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 py-10 lg:px-10">
           <ReviewCard review={review} expanded />
-          <PushbackThread reviewId={review.id} thread={thread} />
+          <CommentThread reviewId={review.id} thread={thread} />
         </div>
       </main>
       <Footer />

@@ -14,6 +14,7 @@ export default function Footer() {
                 <Link href='/#discussions'>Discussions</Link>
                 <Link href='/#reviews'>Reviews</Link>
                 <Link href='/about'>About</Link>
+                <Link href='/contact'>Contact</Link>
                 <Link href='/auth'>Join the Club</Link>
             </div>
         </div>

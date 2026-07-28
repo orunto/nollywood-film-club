@@ -168,42 +168,42 @@ export const reviews = pgTable("reviews", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Pushback (replies) on a user review, threaded X-style.
+// Comments (replies) on a user review, threaded X-style.
 //
 // Every row carries `reviewId` — the root review — even when it is a reply to a
 // reply. That denormalisation is deliberate: a whole thread is one flat query
 // (WHERE review_id = ?) assembled into a tree in memory, and the trending feed
 // counts interactions with a plain GROUP BY. Neither needs a recursive CTE.
-export const pushbacks = pgTable(
-  "pushbacks",
+export const comments = pgTable(
+  "comments",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     reviewId: uuid("review_id")
       .notNull()
       .references(() => userRatings.id, { onDelete: "cascade" }),
     // null = a direct reply to the review itself
-    parentId: uuid("parent_id").references((): AnyPgColumn => pushbacks.id, {
+    parentId: uuid("parent_id").references((): AnyPgColumn => comments.id, {
       onDelete: "cascade",
     }),
     userId: text("user_id").notNull(), // Stack user ID — no FK, there is no local users table
     body: text("body").notNull(),
-    depth: integer("depth").notNull().default(0), // 0 = direct reply; capped at MAX_PUSHBACK_DEPTH
+    depth: integer("depth").notNull().default(0), // 0 = direct reply; capped at MAX_COMMENT_DEPTH
     flagged: boolean("flagged").default(false), // marked for admin attention, still publicly visible
     restricted: boolean("restricted").default(false), // hidden from public display
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },
   (table) => [
-    index("pushbacks_review_id_idx").on(table.reviewId),
-    index("pushbacks_parent_id_idx").on(table.parentId),
+    index("comments_review_id_idx").on(table.reviewId),
+    index("comments_parent_id_idx").on(table.parentId),
   ],
 );
 
-// User-submitted reports of a review or a pushback. Polymorphic: `targetId`
+// User-submitted reports of a review or a comment. Polymorphic: `targetId`
 // carries no FK, so the admin queue must tolerate a target that has since been
 // deleted. Reporting a target also flips its `flagged` column, which is what
 // puts it in front of the moderation UI admins already use.
-export const reportTargetEnum = pgEnum("report_target", ["review", "pushback"]);
+export const reportTargetEnum = pgEnum("report_target", ["review", "comment"]);
 export const reportReasonEnum = pgEnum("report_reason", [
   "spoiler",
   "harassment",
@@ -238,6 +238,36 @@ export const reports = pgTable(
   ],
 );
 
+// Bug reports and suggestions sent from the Contact page. Deliberately not tied
+// to a signed-in member: "I can't sign in" is a bug report we still want to
+// receive, so `userId` is nullable and `email` is the optional way back.
+export const contactCategoryEnum = pgEnum("contact_category", [
+  "bug",
+  "improvement",
+  "other",
+]);
+export const contactStatusEnum = pgEnum("contact_status", [
+  "open",
+  "actioned",
+  "dismissed",
+]);
+
+export const contactMessages = pgTable(
+  "contact_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    category: contactCategoryEnum("category").notNull(),
+    message: text("message").notNull(),
+    email: text("email"), // optional reply-to
+    userId: text("user_id"), // Stack user ID when signed in, else null
+    status: contactStatusEnum("status").notNull().default("open"),
+    resolvedBy: text("resolved_by"), // Stack user ID of the admin who closed it
+    resolvedAt: timestamp("resolved_at"),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [index("contact_messages_status_idx").on(table.status)],
+);
+
 // Blog posts table
 export const blogPosts = pgTable("blog_posts", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -270,20 +300,20 @@ export const userRatingRelations = relations(userRatings, ({ one, many }) => ({
     fields: [userRatings.contentId],
     references: [content.id],
   }),
-  pushbacks: many(pushbacks),
+  comments: many(comments),
 }));
 
-export const pushbackRelations = relations(pushbacks, ({ one, many }) => ({
+export const commentRelations = relations(comments, ({ one, many }) => ({
   review: one(userRatings, {
-    fields: [pushbacks.reviewId],
+    fields: [comments.reviewId],
     references: [userRatings.id],
   }),
-  parent: one(pushbacks, {
-    fields: [pushbacks.parentId],
-    references: [pushbacks.id],
-    relationName: "pushback_parent",
+  parent: one(comments, {
+    fields: [comments.parentId],
+    references: [comments.id],
+    relationName: "comment_parent",
   }),
-  replies: many(pushbacks, { relationName: "pushback_parent" }),
+  replies: many(comments, { relationName: "comment_parent" }),
 }));
 
 export const reviewRelations = relations(reviews, ({ one }) => ({

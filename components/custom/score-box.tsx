@@ -1,9 +1,9 @@
-import { cn } from "@/lib/utils";
-import { scoreBadgeClass } from "@/lib/utils";
+import { cn, nfcPercent, scoreBadgeClass } from "@/lib/utils";
 
-// The member rating chip (10 / 5 / 0, or N/A when someone reviewed without
-// rating). Shared by the film detail page and the review feed so a member's
-// score reads identically wherever it appears.
+// The NFC score chip — the average of every member's rating on a film, shown as
+// a percentage (see nfcPercent). Individual members get a face instead
+// (RatingFace); this is aggregate-only, so it is the one place a number is
+// still the right answer.
 export default function ScoreBox({
   score,
   className,
@@ -11,16 +11,18 @@ export default function ScoreBox({
   score: number | null;
   className?: string;
 }) {
+  const percent = nfcPercent(score);
+
   return (
     <div
       className={cn(
-        "flex items-center justify-center rounded-sm font-semibold text-white",
-        score === null ? "text-xs" : "text-2xl",
+        "flex items-center justify-center rounded-sm font-semibold text-white leading-none",
+        percent === null ? "text-xs" : "text-xl",
         scoreBadgeClass(score),
         className,
       )}
     >
-      {score ?? "N/A"}
+      {percent === null ? "N/A" : `${percent}%`}
     </div>
   );
 }

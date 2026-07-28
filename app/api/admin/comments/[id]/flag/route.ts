@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db/client';
-import { pushbacks } from '@/db/schema';
+import { comments } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { authenticateAdmin } from '@/lib/admin-auth';
 
-// Mirrors app/api/admin/user-ratings/[id]/restrict — restricted hides the row
-// from public display. Note this also hides any replies nested under it: the
-// thread builder in getReviewThread drops orphans rather than re-parenting them.
+// Mirrors app/api/admin/user-ratings/[id]/flag — flagged stays publicly
+// visible, it only marks the row for admin attention.
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -17,32 +16,32 @@ export async function PATCH(
       return authResult;
     }
 
-    const { restricted } = await request.json();
+    const { flagged } = await request.json();
     const { id } = await params;
 
     const updated = await db
-      .update(pushbacks)
+      .update(comments)
       .set({
-        restricted,
+        flagged,
         updatedAt: new Date(),
       })
-      .where(eq(pushbacks.id, id))
+      .where(eq(comments.id, id))
       .returning();
 
     if (updated.length === 0) {
       return NextResponse.json({
         success: false,
-        error: 'Pushback not found',
+        error: 'Comment not found',
       }, { status: 404 });
     }
 
     return NextResponse.json({
       success: true,
       data: updated[0],
-      message: restricted ? 'Pushback restricted' : 'Pushback restored',
+      message: flagged ? 'Comment flagged' : 'Comment unflagged',
     });
   } catch (error) {
-    console.error('Error updating pushback restriction:', error);
+    console.error('Error updating comment flag:', error);
     return NextResponse.json({
       success: false,
       error: 'Something went wrong. Please try again.',

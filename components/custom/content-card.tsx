@@ -4,7 +4,8 @@ import Link from "next/link";
 import { CldImage } from "next-cloudinary";
 import { Badge } from "../ui/badge";
 import { Content } from "@/lib/server-queries";
-import { cn, scoreBadgeClass, contentTypeLabel, contentPath } from "@/lib/utils";
+import { cn, contentTypeLabel, contentPath } from "@/lib/utils";
+import ScoreBox from "./score-box";
 
 interface ContentCardProps {
     item: Content;
@@ -60,15 +61,10 @@ const ContentCard = forwardRef<HTMLAnchorElement, ContentCardProps>(
 
                     <CardFooter className="p-4 flex justify-between border-t items-start">
                         <span className="text-black/40 text-xs @sm:text-sm">NFC SCORE</span>
-                        <Badge
-                            className={cn(
-                                "font-medium h-12 w-12 @sm:h-15 @sm:w-15 p-4",
-                                item.userRating === null ? "text-sm" : "text-lg @sm:text-xl",
-                                scoreBadgeClass(item.userRating),
-                            )}
-                        >
-                            {item.userRating ?? "N/A"}
-                        </Badge>
+                        <ScoreBox
+                            score={item.userRating}
+                            className="h-12 w-12 @sm:h-15 @sm:w-15 shrink-0 text-base @sm:text-lg"
+                        />
                     </CardFooter>
                 </Card>
             </Link>

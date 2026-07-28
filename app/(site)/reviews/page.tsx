@@ -16,7 +16,7 @@ import { countTrendingReviews, getTrendingReviews } from "@/lib/server-queries";
 export const metadata: Metadata = {
   title: "Reviews | Nollywood Film Club",
   description:
-    "What the club actually thinks, ranked by how much argument it started. Members review, members push back, nobody agrees.",
+    "What the club actually thinks, ranked by how much argument it started. Members review, members comment, nobody agrees.",
 };
 
 const PAGE_SIZE = 12;
@@ -54,7 +54,7 @@ export default async function ReviewsFeedPage({
             </div>
 
             <p className="pt-4 text-sm font-light text-black/60">
-              Trending means whatever started the most pushback lately. Not whatever was right.
+              Trending means whatever started the most comments lately. Not whatever was right.
             </p>
 
             {reviews.length > 0 ? (

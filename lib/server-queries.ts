@@ -1,9 +1,10 @@
 import { cache } from "react";
 import { db } from "@/db/client";
 import {
+  contactMessages,
   content,
   discussions,
-  pushbacks,
+  comments,
   reports,
   reviews,
   userRatings,
@@ -523,6 +524,25 @@ export interface UserDisplay {
   profileImage?: string;
 }
 
+// The one place a reviewer's display name is decided. Onboarding only sets
+// clientMetadata.username for accounts that pass through /auth/callback, so
+// plenty of members have none — those used to render as a slice of their Stack
+// UUID ("User 1b2h3f4a"), which is not a name anybody recognises. Fall through
+// the same order the nav uses (see UserMenu) before giving up on a label.
+export function resolveUsername(user: {
+  clientMetadata?: unknown;
+  displayName?: string | null;
+  primaryEmail?: string | null;
+}): string {
+  const username = (user.clientMetadata as { username?: string } | null)?.username;
+  if (username) return username;
+  if (user.displayName?.trim()) return user.displayName.trim();
+  // Local part only — the full address is not ours to publish next to a review
+  const localPart = user.primaryEmail?.split("@")[0];
+  if (localPart) return localPart;
+  return "Member";
+}
+
 // Display info for one reviewer, from Stack Auth (there is no local users
 // table). Wrapped in React cache() so a request that renders the same author
 // more than once — a feed and the threads under it — only looks them up once.
@@ -531,7 +551,7 @@ const getUserDisplay = cache(async (userId: string): Promise<UserDisplay> => {
     const user = await stackServerApp.getUser(userId);
     if (user) {
       return {
-        username: user.clientMetadata?.username || `User ${user.id.substring(0, 8)}`,
+        username: resolveUsername(user),
         profileImage: user.profileImageUrl || undefined,
       };
     }
@@ -539,7 +559,7 @@ const getUserDisplay = cache(async (userId: string): Promise<UserDisplay> => {
     console.error("Error fetching Stack user", userId, error);
   }
   // Deleted user, or Stack Auth is unreachable — never fail the whole page
-  return { username: `User ${userId.substring(0, 8)}` };
+  return { username: "Deleted member" };
 });
 
 // Resolve a batch of user IDs at once. Deduped and issued in parallel: this
@@ -595,9 +615,7 @@ async function enrichRatingsWithUsernames(
     restricted: item.restricted ?? false,
     createdAt: item.createdAt?.toISOString() || "",
     updatedAt: item.updatedAt?.toISOString() || "",
-    username:
-      userMap.get(item.userId)?.username ||
-      `User ${item.userId.substring(0, 8)}`,
+    username: userMap.get(item.userId)?.username ?? "Deleted member",
     profileImage: userMap.get(item.userId)?.profileImage,
   }));
 }
@@ -627,7 +645,7 @@ export async function getUserRatingsForContent(
 // the feed spans the whole catalogue, so unlike the detail page there is no
 // surrounding context to say what is being reviewed.
 export interface FeedReview extends UserRating {
-  pushbackCount: number;
+  commentCount: number;
   film: {
     title: string;
     contentType: "movie" | "tv_show" | "short_film";
@@ -638,14 +656,14 @@ export interface FeedReview extends UserRating {
 
 // Trending = interaction, decayed by age.
 //
-//   (pushback_count + 1) / (hours_since_posted + 2)^1.5
+//   (comment_count + 1) / (hours_since_posted + 2)^1.5
 //
-// The +1 matters: on a bare count every review with no pushback scores zero, so
+// The +1 matters: on a bare count every review with no comments scores zero, so
 // nothing new could ever surface and the feed would start empty forever. With
-// it, a fresh review ranks on recency alone and pushback multiplies from there.
+// it, a fresh review ranks on recency alone and comments multiply from there.
 // The +2 keeps a minutes-old review from dividing by ~0 and pinning the top.
 const HOT_SCORE = sql<number>`
-  (COUNT(${pushbacks.id}) + 1)::float
+  (COUNT(${comments.id}) + 1)::float
   / POWER(EXTRACT(EPOCH FROM (NOW() - ${userRatings.createdAt})) / 3600 + 2, 1.5)
 `;
 
@@ -670,16 +688,16 @@ export async function getTrendingReviews({
         contentType: content.contentType,
         releaseDate: content.releaseDate,
         posterImage: content.posterImage,
-        // Restricted pushback must not inflate the ranking, so it is filtered
+        // Restricted comment must not inflate the ranking, so it is filtered
         // in the join condition rather than the WHERE clause — a WHERE would
-        // drop reviews that have no pushback at all.
-        pushbackCount: sql<number>`COUNT(${pushbacks.id})::int`,
+        // drop reviews that have no comment at all.
+        commentCount: sql<number>`COUNT(${comments.id})::int`,
       })
       .from(userRatings)
       .leftJoin(content, eq(userRatings.contentId, content.id))
       .leftJoin(
-        pushbacks,
-        and(eq(pushbacks.reviewId, userRatings.id), eq(pushbacks.restricted, false)),
+        comments,
+        and(eq(comments.reviewId, userRatings.id), eq(comments.restricted, false)),
       )
       .where(FEED_VISIBLE)
       .groupBy(userRatings.id, content.id)
@@ -691,7 +709,7 @@ export async function getTrendingReviews({
 
     return enriched.map((rating, i) => ({
       ...rating,
-      pushbackCount: Number(rows[i].pushbackCount ?? 0),
+      commentCount: Number(rows[i].commentCount ?? 0),
       film: rows[i].title
         ? {
             title: rows[i].title as string,
@@ -732,13 +750,13 @@ export async function getFeedReviewById(id: string): Promise<FeedReview | null> 
         contentType: content.contentType,
         releaseDate: content.releaseDate,
         posterImage: content.posterImage,
-        pushbackCount: sql<number>`COUNT(${pushbacks.id})::int`,
+        commentCount: sql<number>`COUNT(${comments.id})::int`,
       })
       .from(userRatings)
       .leftJoin(content, eq(userRatings.contentId, content.id))
       .leftJoin(
-        pushbacks,
-        and(eq(pushbacks.reviewId, userRatings.id), eq(pushbacks.restricted, false)),
+        comments,
+        and(eq(comments.reviewId, userRatings.id), eq(comments.restricted, false)),
       )
       .where(and(eq(userRatings.id, id), eq(userRatings.restricted, false)))
       .groupBy(userRatings.id, content.id)
@@ -750,7 +768,7 @@ export async function getFeedReviewById(id: string): Promise<FeedReview | null> 
     const [enriched] = await enrichRatingsWithUsernames([row.rating]);
     return {
       ...enriched,
-      pushbackCount: Number(row.pushbackCount ?? 0),
+      commentCount: Number(row.commentCount ?? 0),
       film: row.title
         ? {
             title: row.title,
@@ -766,7 +784,7 @@ export async function getFeedReviewById(id: string): Promise<FeedReview | null> 
   }
 }
 
-export interface PushbackNode {
+export interface CommentNode {
   id: string;
   reviewId: string;
   parentId: string | null;
@@ -776,23 +794,23 @@ export interface PushbackNode {
   createdAt: string;
   username: string;
   profileImage?: string;
-  replies: PushbackNode[];
+  replies: CommentNode[];
 }
 
 // A whole thread in one flat query, assembled into a tree in memory. This is
-// what the denormalised `reviewId` on every pushback buys us — nesting with no
+// what the denormalised `reviewId` on every comment buys us — nesting with no
 // recursive CTE, at one round-trip regardless of depth.
-export async function getReviewThread(reviewId: string): Promise<PushbackNode[]> {
+export async function getReviewThread(reviewId: string): Promise<CommentNode[]> {
   try {
     const rows = await db
       .select()
-      .from(pushbacks)
-      .where(and(eq(pushbacks.reviewId, reviewId), eq(pushbacks.restricted, false)))
-      .orderBy(pushbacks.createdAt);
+      .from(comments)
+      .where(and(eq(comments.reviewId, reviewId), eq(comments.restricted, false)))
+      .orderBy(comments.createdAt);
 
     const userMap = await getUserDisplayMap(rows.map((r) => r.userId));
 
-    const nodes = new Map<string, PushbackNode>(
+    const nodes = new Map<string, CommentNode>(
       rows.map((r) => [
         r.id,
         {
@@ -803,14 +821,14 @@ export async function getReviewThread(reviewId: string): Promise<PushbackNode[]>
           body: r.body,
           depth: r.depth,
           createdAt: r.createdAt?.toISOString() ?? "",
-          username: userMap.get(r.userId)?.username ?? `User ${r.userId.substring(0, 8)}`,
+          username: userMap.get(r.userId)?.username ?? "Deleted member",
           profileImage: userMap.get(r.userId)?.profileImage,
           replies: [],
         },
       ]),
     );
 
-    const roots: PushbackNode[] = [];
+    const roots: CommentNode[] = [];
     for (const row of rows) {
       const node = nodes.get(row.id)!;
       if (!row.parentId) {
@@ -819,7 +837,7 @@ export async function getReviewThread(reviewId: string): Promise<PushbackNode[]>
       }
       const parent = nodes.get(row.parentId);
       // Parent missing means it was restricted and filtered out above. Drop the
-      // orphan rather than re-parenting it to the root: hiding a pushback hides
+      // orphan rather than re-parenting it to the root: hiding a comment hides
       // the conversation hanging off it, which is the point of restricting it.
       if (parent) parent.replies.push(node);
     }
@@ -834,7 +852,7 @@ export async function getReviewThread(reviewId: string): Promise<PushbackNode[]>
 // reported to judge it without opening another tab.
 export interface AdminReport {
   id: string;
-  targetType: "review" | "pushback";
+  targetType: "review" | "comment";
   targetId: string;
   reason: string;
   note: string | null;
@@ -867,7 +885,7 @@ export async function getReportsForAdmin(): Promise<AdminReport[]> {
     if (rows.length === 0) return [];
 
     const reviewIds = rows.filter((r) => r.targetType === "review").map((r) => r.targetId);
-    const pushbackIds = rows.filter((r) => r.targetType === "pushback").map((r) => r.targetId);
+    const commentIds = rows.filter((r) => r.targetType === "comment").map((r) => r.targetId);
 
     // Two batched lookups rather than one per report
     const reviewRows = reviewIds.length
@@ -885,37 +903,37 @@ export async function getReportsForAdmin(): Promise<AdminReport[]> {
           .where(inArray(userRatings.id, reviewIds))
       : [];
 
-    const pushbackRows = pushbackIds.length
+    const commentRows = commentIds.length
       ? await db
           .select({
-            id: pushbacks.id,
-            body: pushbacks.body,
-            userId: pushbacks.userId,
-            flagged: pushbacks.flagged,
-            restricted: pushbacks.restricted,
-            reviewId: pushbacks.reviewId,
+            id: comments.id,
+            body: comments.body,
+            userId: comments.userId,
+            flagged: comments.flagged,
+            restricted: comments.restricted,
+            reviewId: comments.reviewId,
             contentTitle: content.title,
           })
-          .from(pushbacks)
-          .leftJoin(userRatings, eq(pushbacks.reviewId, userRatings.id))
+          .from(comments)
+          .leftJoin(userRatings, eq(comments.reviewId, userRatings.id))
           .leftJoin(content, eq(userRatings.contentId, content.id))
-          .where(inArray(pushbacks.id, pushbackIds))
+          .where(inArray(comments.id, commentIds))
       : [];
 
     const reviewMap = new Map(reviewRows.map((r) => [r.id, r]));
-    const pushbackMap = new Map(pushbackRows.map((r) => [r.id, r]));
+    const commentMap = new Map(commentRows.map((r) => [r.id, r]));
 
     const userMap = await getUserDisplayMap([
       ...rows.map((r) => r.reporterId),
       ...reviewRows.map((r) => r.userId),
-      ...pushbackRows.map((r) => r.userId),
+      ...commentRows.map((r) => r.userId),
     ]);
 
     return rows.map((report) => {
       const target =
         report.targetType === "review"
           ? reviewMap.get(report.targetId)
-          : pushbackMap.get(report.targetId);
+          : commentMap.get(report.targetId);
 
       return {
         id: report.id,
@@ -926,9 +944,7 @@ export async function getReportsForAdmin(): Promise<AdminReport[]> {
         status: report.status,
         createdAt: report.createdAt?.toISOString() ?? "",
         reporterId: report.reporterId,
-        reporterName:
-          userMap.get(report.reporterId)?.username ??
-          `User ${report.reporterId.substring(0, 8)}`,
+        reporterName: userMap.get(report.reporterId)?.username ?? "Deleted member",
         targetBody: target?.body ?? null,
         targetAuthor: target ? (userMap.get(target.userId)?.username ?? null) : null,
         targetFlagged: target?.flagged ?? false,
@@ -937,7 +953,7 @@ export async function getReportsForAdmin(): Promise<AdminReport[]> {
         reviewId:
           report.targetType === "review"
             ? report.targetId
-            : (pushbackMap.get(report.targetId)?.reviewId ?? null),
+            : (commentMap.get(report.targetId)?.reviewId ?? null),
       };
     });
   } catch (error) {
@@ -968,6 +984,47 @@ export async function getAllUserRatingsForAdmin(): Promise<AdminUserRating[]> {
     }));
   } catch (error) {
     console.error("Error fetching user ratings for admin:", error);
+    return [];
+  }
+}
+
+// A contact-form submission as the admin queue shows it.
+export interface AdminContactMessage {
+  id: string;
+  category: "bug" | "improvement" | "other";
+  message: string;
+  email: string | null;
+  status: "open" | "actioned" | "dismissed";
+  createdAt: string;
+  // Null when the sender was not signed in, which the form allows on purpose
+  senderName: string | null;
+}
+
+// Admin-only: the Contact page inbox, newest first. Senders are resolved
+// through the same Stack Auth lookup reviewers get, so an admin sees a name
+// rather than a user id — when there is a sender at all.
+export async function getContactMessagesForAdmin(): Promise<AdminContactMessage[]> {
+  try {
+    const rows = await db
+      .select()
+      .from(contactMessages)
+      .orderBy(desc(contactMessages.createdAt));
+
+    const userMap = await getUserDisplayMap(
+      rows.map((row) => row.userId).filter((id): id is string => Boolean(id)),
+    );
+
+    return rows.map((row) => ({
+      id: row.id,
+      category: row.category,
+      message: row.message,
+      email: row.email,
+      status: row.status,
+      createdAt: row.createdAt?.toISOString() ?? "",
+      senderName: row.userId ? (userMap.get(row.userId)?.username ?? null) : null,
+    }));
+  } catch (error) {
+    console.error("Error fetching contact messages for admin:", error);
     return [];
   }
 }
