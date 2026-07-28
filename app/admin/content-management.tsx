@@ -36,10 +36,11 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { PlusIcon, PencilSimpleIcon, TrashIcon, StarIcon, MagnifyingGlassIcon, CheckIcon, CaretUpDownIcon, ArrowSquareOutIcon, EyeIcon, XIcon } from "@phosphor-icons/react";
+import { PlusIcon, PencilSimpleIcon, TrashIcon, StarIcon, MagnifyingGlassIcon, CheckIcon, CaretUpDownIcon, ArrowSquareOutIcon, EyeIcon, XIcon, ImageIcon } from "@phosphor-icons/react";
+import { CldImage } from 'next-cloudinary';
 import { EmptyListIllustration } from '@/components/graphics';
 import { CastMember, Content } from '@/lib/server-queries';
-import { contentTypeLabel, viewingCategoryLabel, VIEWING_CATEGORIES, type ViewingCategory } from '@/lib/utils';
+import { contentTypeLabel, detectStreamingPlatform, episodeLabel, viewingCategoryLabel, VIEWING_CATEGORIES, type ViewingCategory } from '@/lib/utils';
 import { toast } from 'sonner';
 import { SortableHead, useTableSort, SortAccessors } from './table-sort';
 import { AdminDiscussion } from './discussions-management';
@@ -66,7 +67,6 @@ interface JustWatchResult {
 
 // Sentinel for the discussion picker: not an id, means "create a new discussion
 // from the fields below and link it to this content on save"
-const NEW_DISCUSSION = '__new__';
 
 const emptyDiscussionDraft = {
   episodeNumber: '',
@@ -77,6 +77,8 @@ const emptyDiscussionDraft = {
 };
 
 const inputClass = "border-black/20 rounded-sm focus-visible:ring-black/20 focus-visible:border-black shadow-none";
+// Field groups: a Label sitting flush on its input reads as one blob
+const fieldClass = "flex flex-col gap-2";
 const badgeClass = "text-xs text-black bg-transparent border border-black rounded-sm";
 
 const sortAccessors: SortAccessors<Content> = {
@@ -104,10 +106,14 @@ export default function ContentManagement() {
   const [isSearchingJw, setIsSearchingJw] = useState(false);
   const [importedPosterUrl, setImportedPosterUrl] = useState<string | null>(null);
   const [isUploadingPoster, setIsUploadingPoster] = useState(false);
-  const [linkedDiscussionId, setLinkedDiscussionId] = useState('');
+  // A film can be discussed more than once — a rewatch, or a sequel week that
+  // revisits the original. The lowest linked episode number becomes the
+  // catalogue number, which syncCatalogNumbers already works out with MIN().
+  const [linkedDiscussionIds, setLinkedDiscussionIds] = useState<string[]>([]);
+  const [addingNewDiscussion, setAddingNewDiscussion] = useState(false);
   const [discussionPickerOpen, setDiscussionPickerOpen] = useState(false);
-  // Fields for a discussion created inline; only read when linkedDiscussionId
-  // is NEW_DISCUSSION. episodeNumber clashes report back into episodeError.
+  // Fields for a discussion created inline; only read when addingNewDiscussion
+  // is set. episodeNumber clashes report back into episodeError.
   const [discussionDraft, setDiscussionDraft] = useState(emptyDiscussionDraft);
   const [episodeError, setEpisodeError] = useState<string | null>(null);
   // Seeded from a JustWatch import or the row being edited, then editable by
@@ -246,35 +252,57 @@ export default function ContentManagement() {
     }
   };
 
-  // Point the chosen discussion's contentId at this content; unlink the previous one if it changed
+  // A pasted watch link already says which service it is and that the film is
+  // streaming right now, so fill both in rather than making somebody restate it.
+  // Only fires while the URL itself is being edited, so a deliberate change to
+  // either select afterwards survives. An unrecognised host touches nothing.
+  const handleStreamingUrlChange = (streamingUrl: string) => {
+    const platform = detectStreamingPlatform(streamingUrl);
+    setFormData((prev) => ({
+      ...prev,
+      streamingUrl,
+      ...(platform
+        ? {
+            streamingPlatform: platform,
+            // isStreamable() hides the watch link unless the category says
+            // streaming, so leaving this behind would silently lose the link.
+            viewingCategory: 'streaming' as ViewingCategory,
+          }
+        : {}),
+    }));
+  };
+
+  // Reconcile which discussions point at this content: a set diff, so a film
+  // can gain a second episode without losing its first. Each PATCH re-runs
+  // syncCatalogNumbers server-side, so the catalogue number settles on the
+  // lowest remaining episode without us computing anything here.
   const syncDiscussionLink = async (contentId: string) => {
-    const prevLinkedId = editingMovie
-      ? discussions.find((d) => d.contentId === editingMovie.id)?.id ?? ''
-      : '';
-    if (prevLinkedId === linkedDiscussionId) return;
+    const previous = editingMovie
+      ? discussions.filter((d) => d.contentId === editingMovie.id).map((d) => d.id)
+      : [];
+    const removed = previous.filter((id) => !linkedDiscussionIds.includes(id));
+    const added = linkedDiscussionIds.filter((id) => !previous.includes(id));
+    if (removed.length === 0 && added.length === 0) return;
+
+    const patch = (id: string, body: { contentId: string | null }) =>
+      fetch(`/api/admin/discussions/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }).then((response) => response.json());
+
     try {
-      if (prevLinkedId) {
-        await fetch(`/api/admin/discussions/${prevLinkedId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contentId: null }),
-        });
-      }
-      // NEW_DISCUSSION has nothing to link yet — createLinkedDiscussion makes it
-      if (linkedDiscussionId && linkedDiscussionId !== NEW_DISCUSSION) {
-        const response = await fetch(`/api/admin/discussions/${linkedDiscussionId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contentId }),
-        });
-        const result = await response.json();
-        if (!result.success) {
-          toast.error(result.error || 'Content saved, but linking the discussion failed');
-        }
+      const results = await Promise.all([
+        ...removed.map((id) => patch(id, { contentId: null })),
+        ...added.map((id) => patch(id, { contentId })),
+      ]);
+      const failed = results.find((result) => !result.success);
+      if (failed) {
+        toast.error(failed.error || 'Content saved, but linking the discussions failed');
       }
     } catch (error) {
-      console.error('Error linking discussion:', error);
-      toast.error('Content saved, but linking the discussion failed');
+      console.error('Error linking discussions:', error);
+      toast.error('Content saved, but linking the discussions failed');
     }
   };
 
@@ -282,7 +310,7 @@ export default function ContentManagement() {
   // Returns false only when the form should stay open for a fix — a clashing
   // episode number, which is the one failure the admin can act on.
   const createLinkedDiscussion = async (contentId: string): Promise<boolean> => {
-    if (linkedDiscussionId !== NEW_DISCUSSION) return true;
+    if (!addingNewDiscussion) return true;
     try {
       const response = await fetch('/api/admin/discussions', {
         method: 'POST',
@@ -415,7 +443,10 @@ export default function ContentManagement() {
     setJwQuery('');
     setJwResults([]);
     setImportedPosterUrl(null);
-    setLinkedDiscussionId(discussions.find((d) => d.contentId === movie.id)?.id ?? '');
+    setLinkedDiscussionIds(
+      discussions.filter((d) => d.contentId === movie.id).map((d) => d.id),
+    );
+    setAddingNewDiscussion(false);
     setDiscussionDraft(emptyDiscussionDraft);
     setEpisodeError(null);
     setIsFormOpen(true);
@@ -486,7 +517,8 @@ export default function ContentManagement() {
     setJwQuery('');
     setJwResults([]);
     setImportedPosterUrl(null);
-    setLinkedDiscussionId('');
+    setLinkedDiscussionIds([]);
+    setAddingNewDiscussion(false);
     setDiscussionDraft(emptyDiscussionDraft);
     setEpisodeError(null);
   };
@@ -717,7 +749,7 @@ export default function ContentManagement() {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                <div className={fieldClass}>
                   <Label htmlFor="title">Title</Label>
                   <Input
                     id="title"
@@ -727,7 +759,7 @@ export default function ContentManagement() {
                     required
                   />
                 </div>
-                <div>
+                <div className={fieldClass}>
                   <Label htmlFor="contentType">Content Type</Label>
                   <Select
                     value={formData.contentType}
@@ -745,17 +777,17 @@ export default function ContentManagement() {
                 </div>
               </div>
 
-              <div>
+              <div className={fieldClass}>
                 <Label>S/N (Catalog Number)</Label>
-                <p className="text-sm text-black/60 mt-1">
+                <p className="text-sm text-black/60">
                   {editingMovie?.catalogNumber != null
-                    ? `#${editingMovie.catalogNumber} — derived from the linked episode number below`
+                    ? `#${editingMovie.catalogNumber} — derived from the lowest linked episode number below`
                     : 'Assigned automatically once a discussion is linked below'}
                 </p>
               </div>
 
               <div className="grid grid-cols-3 gap-4">
-                <div>
+                <div className={fieldClass}>
                   <Label htmlFor="runtime">Runtime (minutes)</Label>
                   <Input
                     id="runtime"
@@ -765,7 +797,7 @@ export default function ContentManagement() {
                     onChange={(e) => setFormData({ ...formData, runtime: e.target.value })}
                   />
                 </div>
-                <div>
+                <div className={fieldClass}>
                   <Label htmlFor="releaseDate">Release Date</Label>
                   <Input
                     id="releaseDate"
@@ -775,7 +807,7 @@ export default function ContentManagement() {
                     onChange={(e) => setFormData({ ...formData, releaseDate: e.target.value })}
                   />
                 </div>
-                <div>
+                <div className={fieldClass}>
                   <Label htmlFor="rating">Rating</Label>
                   <Select
                     value={formData.rating}
@@ -801,7 +833,7 @@ export default function ContentManagement() {
                 </div>
               </div>
 
-              <div>
+              <div className={fieldClass}>
                 <Label htmlFor="genre">Genres (comma-separated)</Label>
                 <Input
                   id="genre"
@@ -812,7 +844,7 @@ export default function ContentManagement() {
                 />
               </div>
 
-              <div>
+              <div className={fieldClass}>
                 <Label htmlFor="synopsis">Synopsis</Label>
                 <Textarea
                   id="synopsis"
@@ -823,9 +855,27 @@ export default function ContentManagement() {
                 />
               </div>
 
-              <div>
+              <div className={fieldClass}>
                 <Label>Poster Image</Label>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
+                  {formData.posterImage ? (
+                    <CldImage
+                      // `version` is what makes a replacement visible: posters
+                      // re-upload under the same public ID, so without it the
+                      // browser keeps serving the poster you just replaced.
+                      key={`${formData.posterImage}-${formData.posterVersion ?? ''}`}
+                      src={formData.posterImage}
+                      version={formData.posterVersion ?? undefined}
+                      alt=""
+                      width={48}
+                      height={72}
+                      className="h-18 w-12 shrink-0 rounded-sm object-cover border border-black/10 bg-black/5"
+                    />
+                  ) : (
+                    <div className="h-18 w-12 shrink-0 rounded-sm border border-dashed border-black/20 bg-black/5 flex items-center justify-center">
+                      <ImageIcon className="w-4 h-4 text-black/30" />
+                    </div>
+                  )}
                   <UploadImageButton
                     title={formData.title}
                     releaseDate={formData.releaseDate}
@@ -852,10 +902,10 @@ export default function ContentManagement() {
                   )}
                 </div>
                 {isUploadingPoster && (
-                  <p className="text-xs font-light text-black/60 mt-1">Uploading JustWatch poster to Cloudinary…</p>
+                  <p className="text-xs font-light text-black/60">Uploading JustWatch poster to Cloudinary…</p>
                 )}
                 {importedPosterUrl && !isUploadingPoster && (
-                  <p className="text-xs font-light text-black/60 mt-1">
+                  <p className="text-xs font-light text-black/60">
                     <a
                       href={importedPosterUrl}
                       target="_blank"
@@ -870,7 +920,7 @@ export default function ContentManagement() {
                 )}
               </div>
 
-              <div>
+              <div className={fieldClass}>
                 <Label htmlFor="trailerUrl">Trailer URL (YouTube embed)</Label>
                 <Input
                   id="trailerUrl"
@@ -882,7 +932,7 @@ export default function ContentManagement() {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                <div className={fieldClass}>
                   <Label htmlFor="streamingPlatform">Streaming Platform</Label>
                   <Select
                     value={formData.streamingPlatform}
@@ -905,19 +955,19 @@ export default function ContentManagement() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
+                <div className={fieldClass}>
                   <Label htmlFor="streamingUrl">Streaming URL</Label>
                   <Input
                     id="streamingUrl"
                     className={inputClass}
                     value={formData.streamingUrl}
-                    onChange={(e) => setFormData({ ...formData, streamingUrl: e.target.value })}
+                    onChange={(e) => handleStreamingUrlChange(e.target.value)}
                     placeholder="https://..."
                   />
                 </div>
               </div>
 
-              <div>
+              <div className={fieldClass}>
                 <Label htmlFor="viewingCategory">Viewing Category</Label>
                 <Select
                   value={formData.viewingCategory}
@@ -939,7 +989,7 @@ export default function ContentManagement() {
               </div>
 
               {formData.streamingPlatform === 'other' && (
-                <div>
+                <div className={fieldClass}>
                   <Label htmlFor="otherPlatform">Other Platform Name</Label>
                   <Input
                     id="otherPlatform"
@@ -1024,8 +1074,8 @@ export default function ContentManagement() {
                 )}
               </div>
 
-              <div>
-                <Label>Linked Discussion Episode</Label>
+              <div className={fieldClass}>
+                <Label>Linked Discussion Episodes</Label>
                 <Popover open={discussionPickerOpen} onOpenChange={setDiscussionPickerOpen}>
                   <PopoverTrigger asChild>
                     <Button
@@ -1033,15 +1083,12 @@ export default function ContentManagement() {
                       variant="outline"
                       role="combobox"
                       aria-expanded={discussionPickerOpen}
-                      className={`w-full justify-between font-normal ${inputClass} ${linkedDiscussionId ? '' : 'text-black/50'}`}
+                      className={`w-full justify-between font-normal ${inputClass} ${linkedDiscussionIds.length > 0 ? '' : 'text-black/50'}`}
                     >
                       <span className="truncate">
-                        {(() => {
-                          if (linkedDiscussionId === NEW_DISCUSSION) return 'New discussion';
-                          const linked = discussions.find((d) => d.id === linkedDiscussionId);
-                          if (!linked) return 'Search discussion episodes…';
-                          return `${linked.episodeNumber !== null ? `#${linked.episodeNumber} · ` : ''}${linked.title}`;
-                        })()}
+                        {linkedDiscussionIds.length === 0
+                          ? 'Search discussion episodes…'
+                          : `${linkedDiscussionIds.length} episode${linkedDiscussionIds.length === 1 ? '' : 's'} linked`}
                       </span>
                       <CaretUpDownIcon className="w-4 h-4 opacity-50 shrink-0" />
                     </Button>
@@ -1053,19 +1100,9 @@ export default function ContentManagement() {
                         <CommandEmpty>No discussions found.</CommandEmpty>
                         <CommandGroup>
                           <CommandItem
-                            value="__none__"
-                            onSelect={() => {
-                              setLinkedDiscussionId('');
-                              setDiscussionPickerOpen(false);
-                            }}
-                          >
-                            <CheckIcon className={`w-4 h-4 ${linkedDiscussionId === '' ? 'opacity-100' : 'opacity-0'}`} />
-                            None
-                          </CommandItem>
-                          <CommandItem
                             value="__create__ new discussion"
                             onSelect={() => {
-                              setLinkedDiscussionId(NEW_DISCUSSION);
+                              setAddingNewDiscussion(true);
                               setEpisodeError(null);
                               // Seed the title from the film — the usual case
                               setDiscussionDraft((prev) => ({
@@ -1078,38 +1115,89 @@ export default function ContentManagement() {
                             <PlusIcon className="w-4 h-4" />
                             Create new discussion
                           </CommandItem>
-                          {discussions.map((discussion) => (
-                            <CommandItem
-                              key={discussion.id}
-                              value={`${discussion.episodeNumber ?? ''} ${discussion.title}`}
-                              onSelect={() => {
-                                setLinkedDiscussionId(discussion.id);
-                                setDiscussionPickerOpen(false);
-                              }}
-                            >
-                              <CheckIcon className={`w-4 h-4 ${linkedDiscussionId === discussion.id ? 'opacity-100' : 'opacity-0'}`} />
-                              <span className="truncate">
-                                {discussion.episodeNumber !== null && `#${discussion.episodeNumber} · `}
-                                {discussion.title}
-                              </span>
-                            </CommandItem>
-                          ))}
+                          {discussions.map((discussion) => {
+                            const isLinked = linkedDiscussionIds.includes(discussion.id);
+                            return (
+                              <CommandItem
+                                key={discussion.id}
+                                value={`${discussion.episodeNumber ?? ''} ${discussion.title}`}
+                                // Stays open: picking several in a row is the
+                                // whole point of the list being multi-select.
+                                onSelect={() =>
+                                  setLinkedDiscussionIds((prev) =>
+                                    isLinked
+                                      ? prev.filter((id) => id !== discussion.id)
+                                      : [...prev, discussion.id],
+                                  )
+                                }
+                              >
+                                <CheckIcon className={`w-4 h-4 ${isLinked ? 'opacity-100' : 'opacity-0'}`} />
+                                <span className="truncate">
+                                  {episodeLabel(discussion.episodeNumber, discussion.title)}
+                                </span>
+                              </CommandItem>
+                            );
+                          })}
                         </CommandGroup>
                       </CommandList>
                     </Command>
                   </PopoverContent>
                 </Popover>
-                <p className="text-xs font-light text-black/60 mt-1">
-                  {linkedDiscussionId === NEW_DISCUSSION
-                    ? 'The discussion will be created and linked to this content when you save.'
-                    : 'The selected discussion will be linked to this content when you save.'}
+
+                {linkedDiscussionIds.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {linkedDiscussionIds.map((id) => {
+                      const linked = discussions.find((d) => d.id === id);
+                      if (!linked) return null;
+                      return (
+                        <Badge
+                          key={id}
+                          className="bg-black text-white rounded-sm text-xs font-normal gap-1 pr-1"
+                        >
+                          {episodeLabel(linked.episodeNumber, linked.title)}
+                          <button
+                            type="button"
+                            aria-label={`Unlink ${linked.title}`}
+                            onClick={() =>
+                              setLinkedDiscussionIds((prev) => prev.filter((x) => x !== id))
+                            }
+                            className="hover:opacity-60 cursor-pointer"
+                          >
+                            <XIcon className="w-3 h-3" />
+                          </button>
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <p className="text-xs font-light text-black/60">
+                  A film can be discussed more than once. The lowest episode number
+                  linked here becomes its catalogue number.
                 </p>
               </div>
 
-              {linkedDiscussionId === NEW_DISCUSSION && (
+              {addingNewDiscussion && (
                 <div className="flex flex-col gap-4 border border-black/20 rounded-sm p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium">New discussion</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      title="Discard this new discussion"
+                      className="text-black/60 hover:text-black hover:bg-black/10"
+                      onClick={() => {
+                        setAddingNewDiscussion(false);
+                        setDiscussionDraft(emptyDiscussionDraft);
+                        setEpisodeError(null);
+                      }}
+                    >
+                      <XIcon className="w-4 h-4" />
+                    </Button>
+                  </div>
                   <div className="grid grid-cols-[7rem_1fr] gap-4">
-                    <div>
+                    <div className={fieldClass}>
                       <Label htmlFor="episodeNumber">Episode #</Label>
                       <Input
                         id="episodeNumber"
@@ -1124,7 +1212,7 @@ export default function ContentManagement() {
                         aria-invalid={Boolean(episodeError)}
                       />
                     </div>
-                    <div>
+                    <div className={fieldClass}>
                       <Label htmlFor="discussionTitle">Discussion Title</Label>
                       <Input
                         id="discussionTitle"
@@ -1139,7 +1227,7 @@ export default function ContentManagement() {
                     <p className="text-xs text-red-700 -mt-2">{episodeError}</p>
                   )}
 
-                  <div>
+                  <div className={fieldClass}>
                     <Label htmlFor="spaceUrl">Space URL</Label>
                     <Input
                       id="spaceUrl"
@@ -1150,7 +1238,7 @@ export default function ContentManagement() {
                     />
                   </div>
 
-                  <div>
+                  <div className={fieldClass}>
                     <Label htmlFor="discussionDate">Discussion Date</Label>
                     <Input
                       id="discussionDate"
@@ -1161,7 +1249,7 @@ export default function ContentManagement() {
                     />
                   </div>
 
-                  <div>
+                  <div className={fieldClass}>
                     <Label htmlFor="podcastLinks">Podcast Links</Label>
                     <Textarea
                       id="podcastLinks"
@@ -1171,7 +1259,7 @@ export default function ContentManagement() {
                       onChange={(e) => setDiscussionDraft({ ...discussionDraft, podcastLinks: e.target.value })}
                       placeholder="One per line, or comma separated"
                     />
-                    <p className="text-xs font-light text-black/60 mt-1">
+                    <p className="text-xs font-light text-black/60">
                       Adding a podcast link lets people rate the film straight away, instead of waiting 24 hours.
                     </p>
                   </div>

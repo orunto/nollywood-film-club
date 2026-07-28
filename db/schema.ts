@@ -118,6 +118,10 @@ export const discussions = pgTable(
     uniqueIndex("discussions_episode_number_unique")
       .on(table.episodeNumber)
       .where(sql`${table.episodeNumber} IS NOT NULL`),
+    // Deliberately NOT unique: a film can be discussed more than once (a
+    // rewatch, a sequel week). Every film page now looks its episodes up by
+    // this column and expects several rows back.
+    index("discussions_content_id_idx").on(table.contentId),
   ],
 );
 

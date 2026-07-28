@@ -130,6 +130,60 @@ export const VIEWING_CATEGORIES = [
 
 export type ViewingCategory = (typeof VIEWING_CATEGORIES)[number]["value"];
 
+// Which service a watch link points at, so pasting a URL into the admin form
+// can fill the platform in rather than making somebody pick it twice. Keys
+// match the streamingPlatform values the admin select offers and the labels in
+// lib/browse.ts. Matching is on the parsed hostname, never a substring of the
+// whole URL — otherwise a "?ref=netflix.com" tracking param would win.
+const STREAMING_HOSTS: Record<string, string> = {
+  "netflix.com": "netflix",
+  "primevideo.com": "prime_video",
+  "amazon.com": "prime_video",
+  "amazon.co.uk": "prime_video",
+  "youtube.com": "youtube",
+  "youtu.be": "youtube",
+  "disneyplus.com": "disney_plus",
+  "hulu.com": "hulu",
+  "max.com": "hbo_max",
+  "hbomax.com": "hbo_max",
+  "apple.com": "apple_tv", // tv.apple.com
+  "paramountplus.com": "paramount_plus",
+  "peacocktv.com": "peacock",
+};
+
+// "#83 · Anikulapo" for a discussion, but most episode titles are already
+// stored with their own number on the front ("#83 Anikulapo: Rise Of The
+// Spectre"), so prefixing blindly gives "#83 · #83 Anikulapo…".
+export function episodeLabel(
+  episodeNumber: number | null,
+  title: string,
+): string {
+  const trimmed = title.trim();
+  if (episodeNumber === null) return trimmed;
+  const alreadyNumbered = new RegExp(`^#${episodeNumber}\\b`).test(trimmed);
+  return alreadyNumbered ? trimmed : `#${episodeNumber} · ${trimmed}`;
+}
+
+// Returns null when nothing matches, so an unrecognised link leaves the admin's
+// own choice alone instead of guessing "other".
+export function detectStreamingPlatform(url: string): string | null {
+  let hostname: string;
+  try {
+    hostname = new URL(url.trim()).hostname.toLowerCase();
+  } catch {
+    return null;
+  }
+  hostname = hostname.replace(/^www\./, "");
+
+  // Walk the domain down (tv.apple.com -> apple.com) so subdomains still match
+  const parts = hostname.split(".");
+  for (let i = 0; i < parts.length - 1; i++) {
+    const candidate = parts.slice(i).join(".");
+    if (STREAMING_HOSTS[candidate]) return STREAMING_HOSTS[candidate];
+  }
+  return null;
+}
+
 export function viewingCategoryLabel(category: ViewingCategory): string {
   return VIEWING_CATEGORIES.find((c) => c.value === category)!.label;
 }

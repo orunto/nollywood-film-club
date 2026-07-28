@@ -388,24 +388,61 @@ export async function getDiscussions(): Promise<Discussion[]> {
   }
 }
 
-export async function getDiscussionForContent(
+// Every episode that discussed this film, earliest first. A film can be covered
+// more than once — a rewatch, or a sequel week that revisits the original — and
+// the earliest is the canonical one: it is the same episode that sets
+// content.catalog_number via MIN(episode_number) in lib/catalog-sync.ts.
+export async function getDiscussionsForContent(
   contentId: string,
-): Promise<Discussion | null> {
+): Promise<Discussion[]> {
   try {
     const rows = await db
       .select()
       .from(discussions)
       .leftJoin(content, eq(discussions.contentId, content.id))
       .where(eq(discussions.contentId, contentId))
-      .orderBy(desc(discussions.createdAt))
-      .limit(1);
+      .orderBy(
+        sql`${discussions.episodeNumber} ASC NULLS LAST`,
+        sql`${discussions.discussionDate} ASC NULLS LAST`,
+        asc(discussions.createdAt),
+      );
 
-    const row = rows[0];
-    return row ? mapDiscussion(row.discussions, row.content) : null;
+    return rows.map((row) => mapDiscussion(row.discussions, row.content));
   } catch (error) {
-    console.error("Error fetching discussion for content:", error);
-    return null;
+    console.error("Error fetching discussions for content:", error);
+    return [];
   }
+}
+
+// Flattens a film's episodes into the single set of values the hero and the
+// detail page take. Deliberately permissive, because a film discussed twice
+// should be at least as available as one discussed once:
+//   - the date is the earliest, i.e. when the club first covered it
+//   - podcast links are pooled, so any episode's link unlocks rating
+//     (isRatingOpen short-circuits on a link) and all of them are listenable
+//   - the Space is the earliest episode's, matching the date beside it
+export function mergeDiscussions(list: Discussion[]): {
+  spaceUrl: string | null;
+  podcastLinks: string[] | null;
+  discussionDate: string | null;
+} {
+  if (list.length === 0) {
+    return { spaceUrl: null, podcastLinks: null, discussionDate: null };
+  }
+
+  const podcastLinks = [
+    ...new Set(list.flatMap((discussion) => discussion.podcastLinks ?? [])),
+  ];
+  const dates = list
+    .map((discussion) => discussion.discussionDate)
+    .filter((date): date is string => Boolean(date))
+    .sort();
+
+  return {
+    spaceUrl: list.find((discussion) => discussion.spaceUrl)?.spaceUrl ?? null,
+    podcastLinks: podcastLinks.length > 0 ? podcastLinks : null,
+    discussionDate: dates[0] ?? null,
+  };
 }
 
 // Combined function to fetch all homepage data.
@@ -420,8 +457,10 @@ export async function getHomepageData() {
       getDiscussions(),
     ]);
 
+    // The hero only wants the flattened space/links/date, so merge here — the
+    // movie of the week can have been discussed more than once too.
     const movieOfTheWeekDiscussion = movieOfTheWeek
-      ? await getDiscussionForContent(movieOfTheWeek.id)
+      ? mergeDiscussions(await getDiscussionsForContent(movieOfTheWeek.id))
       : null;
 
     return {
@@ -524,22 +563,23 @@ export interface UserDisplay {
   profileImage?: string;
 }
 
-// The one place a reviewer's display name is decided. Onboarding only sets
+// The one place a reviewer's public byline is decided. Onboarding only sets
 // clientMetadata.username for accounts that pass through /auth/callback, so
 // plenty of members have none — those used to render as a slice of their Stack
-// UUID ("User 1b2h3f4a"), which is not a name anybody recognises. Fall through
-// the same order the nav uses (see UserMenu) before giving up on a label.
+// UUID ("User 1b2h3f4a"), which is not a name anybody recognises.
+//
+// The chain stops at displayName on purpose. The local part of an email address
+// would name far more people, but it is a fragment of something private that
+// they never chose to publish. It is used to *prefill* the editable fields in
+// onboarding instead (see lib/username.ts), so it can only become a byline if
+// the member accepts it.
 export function resolveUsername(user: {
   clientMetadata?: unknown;
   displayName?: string | null;
-  primaryEmail?: string | null;
 }): string {
   const username = (user.clientMetadata as { username?: string } | null)?.username;
   if (username) return username;
   if (user.displayName?.trim()) return user.displayName.trim();
-  // Local part only — the full address is not ours to publish next to a review
-  const localPart = user.primaryEmail?.split("@")[0];
-  if (localPart) return localPart;
   return "Member";
 }
 

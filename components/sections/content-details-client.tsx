@@ -33,10 +33,11 @@ import MovieRatingSheet from "@/components/custom/movie-rating-sheet";
 import ReviewText from "@/components/custom/review-text";
 import CommentSheet from "@/components/custom/comment-sheet";
 import { STREAMING_PLATFORMS } from "@/components/sections/movie-hero";
-import { Content, Review, UserRating } from "@/lib/server-queries";
+import { Content, Discussion, Review, UserRating } from "@/lib/server-queries";
 import {
   cn,
   contentTypeLabel,
+  episodeLabel,
   getAverageRatingLabel,
   isRatingOpen,
   isStreamable,
@@ -56,6 +57,9 @@ interface ContentDetailsClientProps {
   spaceUrl?: string | null;
   podcastLinks?: string[] | null;
   discussionDate?: string | null;
+  // Every episode that covered this film. The hero already speaks for a single
+  // one (via the merged props above); this is so a rewatch is visible too.
+  episodes?: Discussion[];
 }
 
 const formatDate = (value: string | null) =>
@@ -118,6 +122,7 @@ export default function ContentDetailsClient({
   spaceUrl,
   podcastLinks,
   discussionDate,
+  episodes,
 }: ContentDetailsClientProps) {
   const router = useRouter();
   const [isPlaying, setIsPlaying] = useState(false);
@@ -601,6 +606,32 @@ export default function ContentDetailsClient({
                   <span className="font-light">{value}</span>
                 </div>
               ))}
+            {/* Only worth a row when the club came back to it — one episode is
+                already what the hero above is talking about. */}
+            {episodes && episodes.length > 1 && (
+              <div className="grid grid-cols-[8rem_1fr] lg:grid-cols-[12rem_1fr] gap-4 bg-black/5 rounded-sm px-5 py-4 text-sm">
+                <span className="font-semibold">Discussed on:</span>
+                <div className="flex flex-col gap-1 font-light">
+                  {episodes.map((episode) => {
+                    const href = episode.spaceUrl ?? episode.podcastLinks?.[0] ?? null;
+                    const label = episodeLabel(episode.episodeNumber, episode.title);
+                    return href ? (
+                      <a
+                        key={episode.id}
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-fit underline underline-offset-2 hover:text-black/60"
+                      >
+                        {label}
+                      </a>
+                    ) : (
+                      <span key={episode.id}>{label}</span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             {movie.genre && movie.genre.length > 0 && (
               <div className="grid grid-cols-[8rem_1fr] lg:grid-cols-[12rem_1fr] gap-4 bg-black/5 rounded-sm px-5 py-4 text-sm items-center">
                 <span className="font-semibold">Genres:</span>

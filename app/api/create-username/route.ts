@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stackServerApp } from '@/stack';
 import { isAdminUser } from '@/lib/roles';
+import { USERNAME_RE } from '@/lib/username';
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,8 +22,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if username is valid (alphanumeric, underscores, hyphens, 3-20 chars)
-    const usernameRegex = /^[a-zA-Z0-9_-]{3,20}$/;
-    if (!usernameRegex.test(username)) {
+    if (!USERNAME_RE.test(username)) {
       return NextResponse.json(
         { error: 'Username must be 3-20 characters long and contain only letters, numbers, underscores, and hyphens' },
         { status: 400 }

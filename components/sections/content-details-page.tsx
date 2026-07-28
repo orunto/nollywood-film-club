@@ -1,9 +1,10 @@
 import { requireContentAt } from "@/lib/content-route";
 import {
-  getDiscussionForContent,
+  getDiscussionsForContent,
   getRelatedContent,
   getReviewsForContent,
   getUserRatingsForContent,
+  mergeDiscussions,
 } from "@/lib/server-queries";
 import ContentDetailsClient from "@/components/sections/content-details-client";
 import { Footer } from "@/components/custom";
@@ -20,24 +21,29 @@ export default async function ContentDetailsPage({
 }: ContentDetailsPageProps) {
   const item = await requireContentAt(rawParam, basePath);
 
-  const [userRatings, discussion, criticReviews, related] = await Promise.all([
+  const [userRatings, episodes, criticReviews, related] = await Promise.all([
     getUserRatingsForContent(item.id),
-    getDiscussionForContent(item.id),
+    getDiscussionsForContent(item.id),
     getReviewsForContent(item.id),
     getRelatedContent(item),
   ]);
+
+  // Flattened here rather than in the client component, so the hero and the
+  // detail page keep taking the same three scalars they always have.
+  const { spaceUrl, podcastLinks, discussionDate } = mergeDiscussions(episodes);
 
   return (
     <>
       <main className="min-h-screen">
         <ContentDetailsClient
-          movie={item} 
+          movie={item}
           userRatings={userRatings}
           criticReviews={criticReviews}
           related={related}
-          spaceUrl={discussion?.spaceUrl}
-          podcastLinks={discussion?.podcastLinks}
-          discussionDate={discussion?.discussionDate}
+          spaceUrl={spaceUrl}
+          podcastLinks={podcastLinks}
+          discussionDate={discussionDate}
+          episodes={episodes}
         />
       </main>
       <Footer />
