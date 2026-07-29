@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db/client';
-import { pushbacks } from '@/db/schema';
+import { comments } from '@/db/schema';
 import { and, eq } from 'drizzle-orm';
 import { authenticateUser } from '@/lib/user-auth';
 
-// Deletes your own pushback. Replies hanging off it go too, via the
-// ON DELETE CASCADE on pushbacks.parent_id.
+// Deletes your own comment. Replies hanging off it go too, via the
+// ON DELETE CASCADE on comments.parent_id.
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -18,11 +18,11 @@ export async function DELETE(
     }
 
     const deleted = await db
-      .delete(pushbacks)
+      .delete(comments)
       .where(
         and(
-          eq(pushbacks.id, id),
-          eq(pushbacks.userId, authResult.user.id)
+          eq(comments.id, id),
+          eq(comments.userId, authResult.user.id)
         )
       )
       .returning();
@@ -30,16 +30,16 @@ export async function DELETE(
     if (deleted.length === 0) {
       return NextResponse.json({
         success: false,
-        error: 'Pushback not found or access denied',
+        error: 'Comment not found or access denied',
       }, { status: 404 });
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Pushback deleted',
+      message: 'Comment deleted',
     });
   } catch (error) {
-    console.error('Error deleting pushback:', error);
+    console.error('Error deleting comment:', error);
     return NextResponse.json({
       success: false,
       error: 'Something went wrong. Please try again.',

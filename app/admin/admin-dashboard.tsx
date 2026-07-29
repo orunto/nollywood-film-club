@@ -1,13 +1,14 @@
 'use client';
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FilmSlateIcon, FileTextIcon, FlagIcon, UsersIcon, ChatsCircleIcon, SirenIcon } from "@phosphor-icons/react";
+import { FilmSlateIcon, FileTextIcon, FlagIcon, UsersIcon, ChatsCircleIcon, SirenIcon, EnvelopeIcon } from "@phosphor-icons/react";
 import ContentManagement from './content-management';
 import DiscussionsManagement from './discussions-management';
 import BlogPostsManagement from './blog-posts-management';
 import ReviewsManagement from './reviews-management';
 import UserReviewsManagement from './user-reviews-management';
 import ReportsManagement from './reports-management';
+import ContactManagement from './contact-management';
 import UsersManagement from './users-management';
 
 const tabTriggerClass = "rounded-none border-0 border-b-2 border-transparent data-[state=active]:border-black data-[state=active]:bg-transparent data-[state=active]:shadow-none text-black/60 data-[state=active]:text-black font-light data-[state=active]:font-medium gap-2 py-3";
@@ -28,7 +29,7 @@ export default function AdminDashboard() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="w-full grid grid-cols-7 bg-transparent border-b border-black/10 rounded-none p-0 h-auto">
+          <TabsList className="w-full grid grid-cols-8 bg-transparent border-b border-black/10 rounded-none p-0 h-auto">
             <TabsTrigger value="content" className={tabTriggerClass}>
               <FilmSlateIcon className="w-4 h-4" />
               Content
@@ -48,6 +49,10 @@ export default function AdminDashboard() {
             <TabsTrigger value="reports" className={tabTriggerClass}>
               <SirenIcon className="w-4 h-4" />
               Reports
+            </TabsTrigger>
+            <TabsTrigger value="contact" className={tabTriggerClass}>
+              <EnvelopeIcon className="w-4 h-4" />
+              Contact
             </TabsTrigger>
             <TabsTrigger value="blog" className={tabTriggerClass}>
               <FileTextIcon className="w-4 h-4" />
@@ -77,6 +82,10 @@ export default function AdminDashboard() {
 
           <TabsContent value="reports" className="space-y-6">
             <ReportsManagement />
+          </TabsContent>
+
+          <TabsContent value="contact" className="space-y-6">
+            <ContactManagement />
           </TabsContent>
 
           <TabsContent value="blog" className="space-y-6">

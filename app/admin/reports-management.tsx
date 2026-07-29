@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { CheckIcon, EyeIcon, EyeSlashIcon, XIcon, ArrowSquareOutIcon } from "@phosphor-icons/react";
 import { EmptyListIllustration } from '@/components/graphics';
 import { AdminReport } from '@/lib/server-queries';
-import { REPORT_REASONS } from '@/lib/pushback';
+import { REPORT_REASONS } from '@/lib/comments';
 import { toast } from 'sonner';
 import { SortableHead, useTableSort, SortAccessors } from './table-sort';
 
@@ -80,7 +80,7 @@ export default function ReportsManagement() {
   // Restricting hides the reported post itself; resolving the report is
   // separate, so an admin can hide something and still leave the report open.
   const toggleRestrict = async (report: AdminReport) => {
-    const path = report.targetType === 'review' ? 'user-ratings' : 'pushbacks';
+    const path = report.targetType === 'review' ? 'user-ratings' : 'comments';
     try {
       const response = await fetch(`/api/admin/${path}/${report.targetId}/restrict`, {
         method: 'PATCH',
@@ -119,7 +119,7 @@ export default function ReportsManagement() {
       <div>
         <h2 className="text-2xl font-semibold">Reports</h2>
         <p className="text-sm font-light text-black/60">
-          Reviews and pushback reported by members. Reporting flags a post but never hides it —
+          Reviews and comments reported by members. Reporting flags a post but never hides it —
           restricting is yours to decide.
         </p>
       </div>
@@ -187,7 +187,7 @@ export default function ReportsManagement() {
                 <TableRow key={report.id} className="border-black/10 hover:bg-black/5 group">
                   <TableCell>
                     <Badge className="text-xs bg-transparent border border-black text-black rounded-sm">
-                      {report.targetType === 'review' ? 'Review' : 'Pushback'}
+                      {report.targetType === 'review' ? 'Review' : 'Comment'}
                     </Badge>
                   </TableCell>
                   <TableCell className="font-medium whitespace-normal">

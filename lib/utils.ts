@@ -87,6 +87,17 @@ export function toSpotifyEmbedUrl(rawUrl: string): string | null {
   }
 }
 
+// The NFC score is stored and averaged on the 0-10 scale the ratings use, but
+// it is *displayed* as a percentage everywhere: "86%" reads as a share of the
+// room that liked it, which is what the average of a like/okay/dislike vote
+// actually measures. Only the presentation changes — every threshold below,
+// every filter band, and the SQL AVG() all still speak 0-10.
+export function nfcPercent(userRating: number | string | null): number | null {
+  if (userRating === null) return null;
+  const score = Number(userRating);
+  return Number.isNaN(score) ? null : Math.round(score * 10);
+}
+
 // NFC score badge color for a content item's userRating (0-10, or null if unrated)
 export function scoreBadgeClass(userRating: number | string | null): string {
   if (userRating === null) return "bg-gray-400";

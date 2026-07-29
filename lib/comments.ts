@@ -1,22 +1,22 @@
-// Shared between the pushback API and the UI that posts to it.
+// Shared between the comments API and the UI that posts to it.
 
 // How deep a thread may nest. Past this, replies are refused rather than
 // silently flattened, so the tree in the database always matches what renders.
-export const MAX_PUSHBACK_DEPTH = 5;
+export const MAX_COMMENT_DEPTH = 5;
 
-// Pushback is a reply, not an essay — the review is where the long take goes.
+// A comment is a reply, not an essay — the review is where the long take goes.
 // This is the visible-character limit shown in the editor.
-export const MAX_PUSHBACK_LENGTH = 1000;
+export const MAX_COMMENT_LENGTH = 1000;
 
-// Pushbacks are Markdown too, so the stored string can run a little past the
+// Comments are Markdown too, so the stored string can run a little past the
 // visible limit because of formatting syntax (**, *, "- "). The write route
 // caps the raw body here so a formatted, at-limit reply isn't rejected.
-export const MAX_PUSHBACK_LENGTH_STORED = MAX_PUSHBACK_LENGTH + 200;
+export const MAX_COMMENT_LENGTH_STORED = MAX_COMMENT_LENGTH + 200;
 
 // Past this depth the UI stops indenting and renders replies flush, the way X
 // does. The thread keeps nesting in the data; it just stops marching off the
 // right edge of a phone.
-export const MAX_PUSHBACK_INDENT = 3;
+export const MAX_COMMENT_INDENT = 3;
 
 export const REPORT_REASONS = [
   { value: "spoiler", label: "Spoilers, unmarked" },
@@ -27,4 +27,4 @@ export const REPORT_REASONS = [
 ] as const;
 
 export type ReportReason = (typeof REPORT_REASONS)[number]["value"];
-export type ReportTarget = "review" | "pushback";
+export type ReportTarget = "review" | "comment";

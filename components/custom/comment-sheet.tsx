@@ -16,12 +16,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import PushbackThread from "./pushback-thread";
-import ScoreBox from "./score-box";
+import CommentThread from "./comment-thread";
+import RatingFace from "./rating-face";
 import ReviewText from "./review-text";
-import type { PushbackNode } from "@/lib/server-queries";
+import type { CommentNode } from "@/lib/server-queries";
 
-interface PushbackSheetProps {
+interface CommentSheetProps {
   reviewId: string;
   // Optional starting count for the trigger label (feed cards have it; the
   // film page does not).
@@ -34,12 +34,12 @@ interface PushbackSheetProps {
   };
 }
 
-// Opens a review's pushback thread in a popup (centered Dialog on desktop,
+// Opens a review's comment thread in a popup (centered Dialog on desktop,
 // bottom Sheet on mobile) — same responsive pattern as the rating sheet — with
 // the full Markdown composer, instead of navigating to the review's page.
-export default function PushbackSheet({ reviewId, count, review }: PushbackSheetProps) {
+export default function CommentSheet({ reviewId, count, review }: CommentSheetProps) {
   const [open, setOpen] = useState(false);
-  const [thread, setThread] = useState<PushbackNode[]>([]);
+  const [thread, setThread] = useState<CommentNode[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
   const isDesktop = useIsDesktop();
@@ -47,11 +47,11 @@ export default function PushbackSheet({ reviewId, count, review }: PushbackSheet
   const refetch = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/user/pushbacks?reviewId=${reviewId}`);
+      const res = await fetch(`/api/user/comments?reviewId=${reviewId}`);
       const data = await res.json();
       if (data.success) setThread(data.data);
     } catch (error) {
-      console.error("Error loading pushback thread:", error);
+      console.error("Error loading comment thread:", error);
     } finally {
       setLoading(false);
       setLoaded(true);
@@ -63,7 +63,7 @@ export default function PushbackSheet({ reviewId, count, review }: PushbackSheet
     if (next) refetch();
   };
 
-  const label = count && count > 0 ? `${count} pushback${count === 1 ? "" : "s"}` : "Push back";
+  const label = count && count > 0 ? `${count} comment${count === 1 ? "" : "s"}` : "Comment";
 
   const trigger = (
     <button
@@ -75,11 +75,11 @@ export default function PushbackSheet({ reviewId, count, review }: PushbackSheet
     </button>
   );
 
-  // The review being pushed back on, pinned above the thread for context.
+  // The review being commented on, pinned above the thread for context.
   const reviewContext = review && (
     <div className="flex flex-col gap-2 rounded-sm border border-black/10 p-4">
       <div className="flex items-center gap-2">
-        <ScoreBox score={review.rating} className="h-8 w-8 shrink-0 rounded-full text-sm" />
+        <RatingFace rating={review.rating} className="h-6 w-6" />
         <span className="text-sm font-semibold">{review.username}</span>
       </div>
       {review.body && (
@@ -96,10 +96,10 @@ export default function PushbackSheet({ reviewId, count, review }: PushbackSheet
       {loading && !loaded ? (
         <div className="flex items-center justify-center gap-2 py-10 text-sm text-black/50">
           <CircleNotchIcon className="h-4 w-4 animate-spin" />
-          Loading pushback…
+          Loading comments…
         </div>
       ) : (
-        <PushbackThread reviewId={reviewId} thread={thread} onPosted={refetch} showHeading={false} />
+        <CommentThread reviewId={reviewId} thread={thread} onPosted={refetch} showHeading={false} />
       )}
     </div>
   );
@@ -110,7 +110,7 @@ export default function PushbackSheet({ reviewId, count, review }: PushbackSheet
         <DialogTrigger asChild>{trigger}</DialogTrigger>
         <DialogContent className="max-h-[85vh] overflow-y-auto rounded-sm sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle>Pushback</DialogTitle>
+            <DialogTitle>Comments</DialogTitle>
           </DialogHeader>
           {body}
         </DialogContent>
@@ -123,7 +123,7 @@ export default function PushbackSheet({ reviewId, count, review }: PushbackSheet
       <SheetTrigger asChild>{trigger}</SheetTrigger>
       <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>Pushback</SheetTitle>
+          <SheetTitle>Comments</SheetTitle>
         </SheetHeader>
         <div className="p-4">{body}</div>
       </SheetContent>

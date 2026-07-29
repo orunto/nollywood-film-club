@@ -12,12 +12,12 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
-  MAX_PUSHBACK_DEPTH,
-  MAX_PUSHBACK_INDENT,
-  MAX_PUSHBACK_LENGTH,
-  MAX_PUSHBACK_LENGTH_STORED,
-} from "@/lib/pushback";
-import type { PushbackNode } from "@/lib/server-queries";
+  MAX_COMMENT_DEPTH,
+  MAX_COMMENT_INDENT,
+  MAX_COMMENT_LENGTH,
+  MAX_COMMENT_LENGTH_STORED,
+} from "@/lib/comments";
+import type { CommentNode } from "@/lib/server-queries";
 import ReportDialog from "./report-dialog";
 import MarkdownEditor from "./markdown-editor";
 import ReviewText from "./review-text";
@@ -31,8 +31,8 @@ const formatWhen = (value: string) =>
       })
     : "";
 
-// Shared composer: posts pushback on the review, or a reply to another
-// pushback when parentId is set. Body is Markdown, with the same inline
+// Shared composer: posts a comment on the review, or a reply to another
+// comment when parentId is set. Body is Markdown, with the same inline
 // formatting as reviews.
 function Composer({
   reviewId,
@@ -58,7 +58,7 @@ function Composer({
     if (!text) return;
     setIsSending(true);
     try {
-      const response = await fetch("/api/user/pushbacks", {
+      const response = await fetch("/api/user/comments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reviewId, parentId: parentId ?? null, body: text }),
@@ -66,7 +66,7 @@ function Composer({
       const result = await response.json();
 
       if (response.status === 401) {
-        toast.error("Sign in to push back. Lurking is also valid.");
+        toast.error("Sign in to comment. Lurking is also valid.");
         router.push("/auth");
         return;
       }
@@ -77,19 +77,19 @@ function Composer({
 
       setBody("");
       onDone();
-      // The owner of the thread (permalink page or pushback sheet) decides how
+      // The owner of the thread (permalink page or comment sheet) decides how
       // to reflect the new reply — a server refetch or a client refetch.
       afterPost();
       toast.success(result.message);
     } catch (error) {
-      console.error("Error posting pushback:", error);
+      console.error("Error posting comment:", error);
       toast.error("Could not post that. Try again.");
     } finally {
       setIsSending(false);
     }
   };
 
-  const over = body.length > MAX_PUSHBACK_LENGTH_STORED;
+  const over = body.length > MAX_COMMENT_LENGTH_STORED;
 
   return (
     <div className="flex flex-col gap-2">
@@ -97,7 +97,7 @@ function Composer({
         value={body}
         onChange={setBody}
         disabled={isSending}
-        maxLength={MAX_PUSHBACK_LENGTH}
+        maxLength={MAX_COMMENT_LENGTH}
         placeholder={placeholder}
       />
       <div className="flex items-center justify-end gap-2">
@@ -117,19 +117,19 @@ function Composer({
           disabled={!body.trim() || over || isSending}
           className="rounded-sm bg-black text-white hover:bg-black/80"
         >
-          {isSending ? "Posting…" : "Push back"}
+          {isSending ? "Posting…" : "Post comment"}
         </Button>
       </div>
     </div>
   );
 }
 
-function PushbackItem({
+function CommentItem({
   node,
   reviewId,
   afterPost,
 }: {
-  node: PushbackNode;
+  node: CommentNode;
   reviewId: string;
   afterPost: () => void;
 }) {
@@ -138,8 +138,8 @@ function PushbackItem({
 
   // The data keeps nesting past this; the layout stops, so deep threads don't
   // squeeze into a column of single letters on a phone.
-  const indent = Math.min(node.depth, MAX_PUSHBACK_INDENT);
-  const canReply = node.depth < MAX_PUSHBACK_DEPTH;
+  const indent = Math.min(node.depth, MAX_COMMENT_INDENT);
+  const canReply = node.depth < MAX_COMMENT_DEPTH;
 
   return (
     <div
@@ -155,7 +155,7 @@ function PushbackItem({
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                aria-label="Pushback options"
+                aria-label="Comment options"
                 className="ml-auto text-black/40 hover:text-black cursor-pointer"
               >
                 <DotsThreeIcon className="h-5 w-5" weight="bold" />
@@ -182,7 +182,7 @@ function PushbackItem({
             className="flex w-fit items-center gap-1.5 text-xs text-black/50 hover:text-black cursor-pointer"
           >
             <ChatCircleIcon className="h-4 w-4" />
-            Push back
+            Reply
           </button>
         )}
 
@@ -191,7 +191,7 @@ function PushbackItem({
             <Composer
               reviewId={reviewId}
               parentId={node.id}
-              placeholder={`Push back on ${node.username}…`}
+              placeholder={`Reply to ${node.username}…`}
               onDone={() => setIsReplying(false)}
               onCancel={() => setIsReplying(false)}
               afterPost={afterPost}
@@ -203,13 +203,13 @@ function PushbackItem({
       {node.replies.length > 0 && (
         <div className="flex flex-col">
           {node.replies.map((reply) => (
-            <PushbackItem key={reply.id} node={reply} reviewId={reviewId} afterPost={afterPost} />
+            <CommentItem key={reply.id} node={reply} reviewId={reviewId} afterPost={afterPost} />
           ))}
         </div>
       )}
 
       <ReportDialog
-        targetType="pushback"
+        targetType="comment"
         targetId={node.id}
         open={isReporting}
         onOpenChange={setIsReporting}
@@ -218,14 +218,14 @@ function PushbackItem({
   );
 }
 
-export default function PushbackThread({
+export default function CommentThread({
   reviewId,
   thread,
   onPosted,
   showHeading = true,
 }: {
   reviewId: string;
-  thread: PushbackNode[];
+  thread: CommentNode[];
   // How to reflect a newly posted reply. Defaults to a server refetch
   // (router.refresh), which is what the permalink page relies on; the sheet
   // passes a client refetch instead.
@@ -243,13 +243,13 @@ export default function PushbackThread({
     <section className="flex flex-col gap-4">
       {showHeading && (
         <h2 className="border-b border-black pb-3 text-xl font-semibold">
-          Pushback {total > 0 && <span className="text-black/40">({total})</span>}
+          Comments {total > 0 && <span className="text-black/40">({total})</span>}
         </h2>
       )}
 
       <Composer
         reviewId={reviewId}
-        placeholder="Disagree with the whole thing. Politely, if you can manage it."
+        placeholder="Agree, disagree, or add the bit they missed."
         onDone={() => {}}
         afterPost={afterPost}
       />
@@ -257,12 +257,12 @@ export default function PushbackThread({
       {thread.length > 0 ? (
         <div className="flex flex-col divide-y divide-black/10">
           {thread.map((node) => (
-            <PushbackItem key={node.id} node={node} reviewId={reviewId} afterPost={afterPost} />
+            <CommentItem key={node.id} node={node} reviewId={reviewId} afterPost={afterPost} />
           ))}
         </div>
       ) : (
         <p className="py-6 text-sm text-black/50">
-          No pushback yet. Everybody agrees, which has never once happened here.
+          No comments yet. Everybody agrees, which has never once happened here.
         </p>
       )}
     </section>

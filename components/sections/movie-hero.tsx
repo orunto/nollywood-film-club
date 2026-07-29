@@ -18,8 +18,9 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Content } from "@/lib/server-queries";
-import { cn, scoreBadgeClass, toYoutubeEmbedUrl, contentPath, viewingCategoryLabel, isUpcomingSpace, isStreamable, spaceDateLabel, isRatingOpen } from "@/lib/utils";
+import { cn, toYoutubeEmbedUrl, contentPath, viewingCategoryLabel, isUpcomingSpace, isStreamable, spaceDateLabel, isRatingOpen } from "@/lib/utils";
 import MovieRatingSheet from "@/components/custom/movie-rating-sheet";
+import ScoreBox from "@/components/custom/score-box";
 
 export const STREAMING_PLATFORMS: Record<string, {
     label: string;
@@ -154,15 +155,10 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
               <div className="flex gap-4">
                     {
                       (!showRating) && (
-                        <Badge
-                            className={cn(
-                                "font-medium h-20 w-20 p-4",
-                                movie.userRating === null ? "text-sm" : "text-3xl",
-                                scoreBadgeClass(movie.userRating),
-                            )}
-                        >
-                          {movie.userRating ?? "N/A"}
-                        </Badge>
+                        <ScoreBox
+                            score={movie.userRating}
+                            className="h-20 w-20 shrink-0 text-2xl"
+                        />
                       )
                     }
                 

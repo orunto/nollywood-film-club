@@ -12,10 +12,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn, contentPath, contentTypeLabel, markdownToPlainText } from "@/lib/utils";
 import type { FeedReview } from "@/lib/server-queries";
-import ScoreBox from "./score-box";
+import RatingFace from "./rating-face";
 import ReportDialog from "./report-dialog";
 import ReviewText from "./review-text";
-import PushbackSheet from "./pushback-sheet";
+import CommentSheet from "./comment-sheet";
 
 const formatWhen = (value: string) =>
   value
@@ -79,7 +79,7 @@ export default function ReviewCard({ review, expanded, className }: ReviewCardPr
       )}
 
       <div className="flex items-center gap-3">
-        <ScoreBox score={review.rating} className="h-12 w-12 shrink-0 rounded-full text-lg" />
+        <RatingFace rating={review.rating} className="h-10 w-10" />
         <div className="flex flex-col">
           <span className="font-semibold">{review.username}</span>
           <span className="text-xs uppercase tracking-widest text-black/50">
@@ -120,9 +120,9 @@ export default function ReviewCard({ review, expanded, className }: ReviewCardPr
         ))}
 
       {!expanded && (
-        <PushbackSheet
+        <CommentSheet
           reviewId={review.id}
-          count={review.pushbackCount}
+          count={review.commentCount}
           review={{
             username: review.username ?? "Member",
             rating: review.rating,

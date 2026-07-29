@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
     BroadcastIcon,
+    BugIcon,
     CrownIcon,
     MicrophoneStageIcon,
     UsersIcon,
-    WaveformIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { Footer } from "@/components/custom";
 
@@ -46,28 +46,6 @@ const SEGMENTS = [
     },
 ];
 
-// Example scores use the same bands as the catalogue (see scoreBadgeClass)
-const SCORE_BANDS = [
-    {
-        score: "8.6",
-        className: "bg-green-900",
-        label: "We will not shut up about it",
-        blurb: "Watch it tonight. Then come and tell us we were right.",
-    },
-    {
-        score: "5.4",
-        className: "bg-amber-500",
-        label: "A civil and spirited debate was had",
-        blurb: "Somebody liked it. Somebody did not. Both of them are members here.",
-    },
-    {
-        score: "2.1",
-        className: "bg-red-700",
-        label: "The pushback section required prayer",
-        blurb: "We watched it so you don't have to. You're welcome. Please clap.",
-    },
-];
-
 const HOUSE_RULES = [
     {
         rule: "Every opinion is valid.",
@@ -75,19 +53,9 @@ const HOUSE_RULES = [
             "Filmmaker or Nollywood newbie, that is how you consume Nollywood, and nobody can take that from you.",
     },
     {
-        rule: "It is also fine to be wrong.",
+        rule: "No personal or unrelated insults.",
         detail:
-            "Your opinion might be different from Mr C's. That's allowed. Somebody has to be wrong every week.",
-    },
-    {
-        rule: "There will be sarcasm and jokes.",
-        detail:
-            "Try not to take it to heart. We're sure you're a lovely person who feeds orphans and cures cancer in your spare time.",
-    },
-    {
-        rule: "The sound may glitch.",
-        detail:
-            "Spaces can be buggy and networks have moods. It's a Nollywood podcast. You should feel at home.",
+            "Tone can be as harsh as the spirit leads, but personal unrelated insults will be removed. Drag the film all you like. Leave the person out of it.",
     },
     {
         rule: "Watch the film before Sunday.",
@@ -150,33 +118,18 @@ export default function AboutPage() {
                         </div>
                     </section>
 
-                    {/* The NFC score — the one place the site allows colour, because
-                        the catalogue's score badges already do (scoreBadgeClass) */}
+                    {/* The NFC score */}
                     <section className="w-full">
                         <h2 className="pb-3 border-b border-black text-2xl font-semibold">
                             The NFC score
                         </h2>
                         <p className="pt-6 text-sm font-light text-black/70 max-w-2xl">
-                            After the discussion, members rate the film out of 10 and the
-                            average becomes the NFC score. No weighting, no secret formula.
-                            Everybody&apos;s rating counts exactly the same. Equally worse than
-                            Mr C&apos;s, obviously, but it counts.
+                            After the discussion, members say whether they liked the film,
+                            thought it was okay, or did not like it. The average becomes the
+                            NFC score, and we show it as a percentage. No weighting, no secret
+                            formula. Everybody&apos;s rating counts exactly the same. Equally
+                            worse than Mr C&apos;s, obviously, but it counts.
                         </p>
-                        <div className="grid lg:grid-cols-3 grid-cols-1 gap-6 py-6">
-                            {SCORE_BANDS.map((band) => (
-                                <div key={band.score} className="rounded-sm border border-black/10 p-6 flex gap-5 items-start">
-                                    <span
-                                        className={`${band.className} text-white rounded-sm w-20 h-20 shrink-0 flex items-center justify-center text-3xl font-medium`}
-                                    >
-                                        {band.score}
-                                    </span>
-                                    <div className="flex flex-col gap-1">
-                                        <h3 className="text-base font-bold">{band.label}</h3>
-                                        <p className="text-sm font-light text-black/70">{band.blurb}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
                     </section>
 
                     {/* House rules */}
@@ -202,7 +155,7 @@ export default function AboutPage() {
                         <h2 className="pb-3 border-b border-black text-2xl font-semibold">
                             The people
                         </h2>
-                        <div className="grid lg:grid-cols-2 grid-cols-1 gap-6 py-6">
+                        <div className="grid lg:grid-cols-3 grid-cols-1 gap-6 py-6">
                             <div className="rounded-sm bg-black text-white p-6 flex flex-col gap-4">
                                 <div className="flex items-center justify-between">
                                     <div className="w-14 h-14 rounded-sm bg-white text-black flex items-center justify-center">
@@ -258,24 +211,6 @@ export default function AboutPage() {
                                     </p>
                                 </div>
                             </div>
-                            <div className="rounded-sm border border-black/10 p-6 flex flex-col gap-4">
-                                <div className="flex items-center justify-between">
-                                    <div className="w-14 h-14 rounded-sm bg-black text-white flex items-center justify-center">
-                                        <WaveformIcon className="w-6 h-6" />
-                                    </div>
-                                    <span className="text-xs border border-black rounded-sm px-2.5 py-1">
-                                        The adult
-                                    </span>
-                                </div>
-                                <div className="flex flex-col gap-2">
-                                    <h3 className="text-base font-bold">Cletus</h3>
-                                    <p className="text-sm font-light text-black/70">
-                                        The podcast editor. Finds the catchy intro music, cuts out
-                                        the parts where Spaces fell over, and plays the outro when
-                                        instructed. Every club needs one adult.
-                                    </p>
-                                </div>
-                            </div>
                         </div>
                     </section>
 
@@ -287,8 +222,7 @@ export default function AboutPage() {
                         <p className="pt-6 text-sm font-light text-black/70 max-w-2xl">
                             Come for the films. Stay because you&apos;ve formed opinions and now
                             you need witnesses. Join live on Sundays, or listen to the podcast
-                            after. Or don&apos;t, but share it. Five stars. We&apos;re still
-                            not sure what it does.
+                            after. Or don&apos;t.
                         </p>
                         <div className="flex flex-wrap gap-3 py-6">
                             <Link
@@ -316,6 +250,13 @@ export default function AboutPage() {
                                 <BroadcastIcon className="w-4 h-4" />
                                 Listen to the Podcast
                             </a>
+                            <Link
+                                href="/contact"
+                                className="inline-flex items-center gap-2 border border-black rounded-sm text-sm font-medium px-5 py-3 text-black hover:bg-black hover:text-white transition-colors"
+                            >
+                                <BugIcon className="w-4 h-4" />
+                                Found a bug?
+                            </Link>
                         </div>
                     </section>
                 </div>

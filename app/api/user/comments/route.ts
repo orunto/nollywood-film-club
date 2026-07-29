@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
-import { pushbacks, userRatings } from '@/db/schema';
+import { comments, userRatings } from '@/db/schema';
 import { and, eq } from 'drizzle-orm';
 import { authenticateUser } from '@/lib/user-auth';
 import { getReviewThread } from '@/lib/server-queries';
-import { MAX_PUSHBACK_DEPTH, MAX_PUSHBACK_LENGTH_STORED } from '@/lib/pushback';
+import { MAX_COMMENT_DEPTH, MAX_COMMENT_LENGTH_STORED } from '@/lib/comments';
 
-// Returns a review's pushback thread (public, same data the permalink renders).
-// Lets the pushback sheet load a thread client-side without a page navigation.
+// Returns a review's comment thread (public, same data the permalink renders).
+// Lets the comment sheet load a thread client-side without a page navigation.
 // Query: ?reviewId=
 export async function GET(request: NextRequest) {
   const reviewId = request.nextUrl.searchParams.get('reviewId');
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ success: true, data: thread });
 }
 
-// Posts pushback on a review, or a reply to existing pushback.
+// Posts a comment on a review, or a reply to an existing comment.
 // Body: { reviewId, parentId?, body }
 export async function POST(request: NextRequest) {
   try {
@@ -39,13 +39,13 @@ export async function POST(request: NextRequest) {
     if (!text) {
       return NextResponse.json({
         success: false,
-        error: 'Pushback cannot be empty',
+        error: 'Comment cannot be empty',
       }, { status: 400 });
     }
-    if (text.length > MAX_PUSHBACK_LENGTH_STORED) {
+    if (text.length > MAX_COMMENT_LENGTH_STORED) {
       return NextResponse.json({
         success: false,
-        error: 'Pushback is too long',
+        error: 'Comment is too long',
       }, { status: 400 });
     }
 
@@ -69,14 +69,14 @@ export async function POST(request: NextRequest) {
     if (parentId) {
       const [parent] = await db
         .select()
-        .from(pushbacks)
-        .where(eq(pushbacks.id, parentId))
+        .from(comments)
+        .where(eq(comments.id, parentId))
         .limit(1);
 
       if (!parent) {
         return NextResponse.json({
           success: false,
-          error: 'That pushback no longer exists',
+          error: 'That comment no longer exists',
         }, { status: 404 });
       }
       // Threads are keyed on reviewId, so a reply whose parent sits under a
@@ -85,18 +85,18 @@ export async function POST(request: NextRequest) {
       if (parent.reviewId !== reviewId) {
         return NextResponse.json({
           success: false,
-          error: 'That pushback belongs to a different review',
+          error: 'That comment belongs to a different review',
         }, { status: 400 });
       }
       if (parent.restricted) {
         return NextResponse.json({
           success: false,
-          error: 'That pushback is no longer available',
+          error: 'That comment is no longer available',
         }, { status: 400 });
       }
 
       depth = parent.depth + 1;
-      if (depth > MAX_PUSHBACK_DEPTH) {
+      if (depth > MAX_COMMENT_DEPTH) {
         return NextResponse.json({
           success: false,
           error: 'This thread has gone deep enough. Take it to the Space.',
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     }
 
     const [created] = await db
-      .insert(pushbacks)
+      .insert(comments)
       .values({
         reviewId,
         parentId: parentId ?? null,
@@ -118,10 +118,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: created,
-      message: 'Pushback posted',
+      message: 'Comment posted',
     });
   } catch (error) {
-    console.error('Error posting pushback:', error);
+    console.error('Error posting comment:', error);
     return NextResponse.json({
       success: false,
       error: 'Something went wrong. Please try again.',

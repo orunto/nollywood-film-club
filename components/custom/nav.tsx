@@ -49,6 +49,9 @@ export default function Nav({ user, isAdmin }: NavProps) {
                     <Link href="/about">About</Link>
                 </li>
                 <li>
+                    <Link href="/contact">Contact</Link>
+                </li>
+                <li>
                     {user ? (
                         <UserMenu user={user} isAdmin={isAdmin} />
                     ) : (

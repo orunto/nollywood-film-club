@@ -38,7 +38,7 @@ import {
 import { EmptyReviewsIllustration } from "@/components/graphics";
 import { Footer } from "@/components/custom";
 import RatingRadios from "@/components/custom/rating-radios";
-import ScoreBox from "@/components/custom/score-box";
+import RatingFace from "@/components/custom/rating-face";
 import MarkdownEditor from "@/components/custom/markdown-editor";
 import ReviewText from "@/components/custom/review-text";
 import { REVIEW_MAX } from "@/lib/reviews";
@@ -384,10 +384,7 @@ export default function UserDashboard({ user }: UserDashboardProps) {
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3">
-                          <ScoreBox
-                            score={rating.rating}
-                            className="h-12 w-12 shrink-0 rounded-full text-lg"
-                          />
+                          <RatingFace rating={rating.rating} className="h-10 w-10" />
                           <div>
                             {rating.content ? (
                               <Link

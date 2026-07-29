@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/client';
-import { pushbacks, reports, userRatings } from '@/db/schema';
+import { comments, reports, userRatings } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { authenticateUser } from '@/lib/user-auth';
-import { REPORT_REASONS, type ReportReason, type ReportTarget } from '@/lib/pushback';
+import { REPORT_REASONS, type ReportReason, type ReportTarget } from '@/lib/comments';
 
-const TARGET_TYPES: ReportTarget[] = ['review', 'pushback'];
+const TARGET_TYPES: ReportTarget[] = ['review', 'comment'];
 const REASONS = REPORT_REASONS.map((r) => r.value) as readonly string[];
 
-// Reports a review or a pushback to the admins.
+// Reports a review or a comment to the admins.
 // Body: { targetType, targetId, reason, note? }
 export async function POST(request: NextRequest) {
   try {
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
 
     // Confirm the target exists before recording anything against it — the
     // reports table is polymorphic and has no FK to lean on.
-    const table = targetType === 'review' ? userRatings : pushbacks;
+    const table = targetType === 'review' ? userRatings : comments;
     const [target] = await db
       .select({ id: table.id })
       .from(table)

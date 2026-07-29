@@ -29,10 +29,13 @@ export const SORT_OPTIONS = [
 
 export type SortValue = (typeof SORT_OPTIONS)[number]["value"];
 
+// Labels are percentages because that is how the score renders (see nfcPercent);
+// the values and scoreBand() below still work in the stored 0-10 scale, so old
+// ?score= links keep resolving.
 export const SCORE_BANDS = [
-  { value: "high", label: "Above 7" },
-  { value: "mid", label: "4 – 7" },
-  { value: "low", label: "4 & below" },
+  { value: "high", label: "Above 70%" },
+  { value: "mid", label: "40% – 70%" },
+  { value: "low", label: "40% & below" },
   { value: "unrated", label: "Unrated" },
 ] as const;
 
