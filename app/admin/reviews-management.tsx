@@ -32,6 +32,8 @@ import { toast } from 'sonner';
 import UploadImageButton from './upload-image-button';
 
 const inputClass = "border-black/20 rounded-sm focus-visible:ring-black/20 focus-visible:border-black shadow-none";
+// Field groups: a Label sitting flush on its input reads as one blob
+const fieldClass = "flex flex-col gap-2";
 
 export default function ReviewsManagement() {
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -274,7 +276,7 @@ export default function ReviewsManagement() {
           </SheetHeader>
           <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              <div>
+              <div className={fieldClass}>
                 <Label htmlFor="contentId">Movie/TV Show</Label>
                 <Select
                   value={formData.contentId}
@@ -293,7 +295,7 @@ export default function ReviewsManagement() {
                 </Select>
               </div>
 
-              <div>
+              <div className={fieldClass}>
                 <Label htmlFor="title">Review Title</Label>
                 <Input
                   id="title"
@@ -304,7 +306,7 @@ export default function ReviewsManagement() {
                 />
               </div>
 
-              <div>
+              <div className={fieldClass}>
                 <Label htmlFor="description">Review Description/Snippet</Label>
                 <Textarea
                   id="description"
@@ -317,7 +319,7 @@ export default function ReviewsManagement() {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                <div className={fieldClass}>
                   <Label htmlFor="score">Review Score</Label>
                   <Input
                     id="score"
@@ -331,7 +333,7 @@ export default function ReviewsManagement() {
                     placeholder="8.5"
                   />
                 </div>
-                <div>
+                <div className={fieldClass}>
                   <Label htmlFor="reviewer">Reviewer/Publication</Label>
                   <Input
                     id="reviewer"
@@ -344,7 +346,7 @@ export default function ReviewsManagement() {
                 </div>
               </div>
 
-              <div>
+              <div className={fieldClass}>
                 <Label htmlFor="externalUrl">External URL</Label>
                 <Input
                   id="externalUrl"
@@ -356,7 +358,7 @@ export default function ReviewsManagement() {
                 />
               </div>
 
-              <div>
+              <div className={fieldClass}>
                 <Label>Review Image</Label>
                 <div className="flex items-center gap-2">
                   <UploadImageButton
@@ -384,7 +386,7 @@ export default function ReviewsManagement() {
                 </div>
               </div>
 
-              <div>
+              <div className={fieldClass}>
                 <Label htmlFor="publishedAt">Published Date</Label>
                 <Input
                   id="publishedAt"

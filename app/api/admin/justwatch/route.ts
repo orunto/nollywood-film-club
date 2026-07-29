@@ -186,7 +186,10 @@ export async function GET(request: NextRequest) {
         variables: {
           country: COUNTRY,
           language: LANGUAGE,
-          first: 8,
+          // `first` is a required Int! on popularTitles, so there is no way to
+          // ask for everything — this is as close as is sensible. A vague title
+          // search was running out of room at 8; the results box already scrolls.
+          first: 30,
           filter: { searchQuery: query, objectTypes: ['MOVIE', 'SHOW'] },
         },
       }),

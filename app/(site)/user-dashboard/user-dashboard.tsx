@@ -42,6 +42,7 @@ import RatingFace from "@/components/custom/rating-face";
 import MarkdownEditor from "@/components/custom/markdown-editor";
 import ReviewText from "@/components/custom/review-text";
 import { REVIEW_MAX } from "@/lib/reviews";
+import { USERNAME_RE } from "@/lib/username";
 import { contentTypeLabel } from "@/lib/utils";
 import { useDebounce } from "@/hooks/use-debounce";
 
@@ -72,7 +73,6 @@ interface UserDashboardProps {
   user: User;
 }
 
-const USERNAME_RE = /^[a-zA-Z0-9_-]{3,20}$/;
 const CONTENT_BASE: Record<"movie" | "tv_show" | "short_film", string> = {
   movie: "/movie",
   tv_show: "/tv",

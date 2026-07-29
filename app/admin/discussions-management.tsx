@@ -34,6 +34,8 @@ import { toast } from 'sonner';
 import { SortableHead, useTableSort, SortAccessors } from './table-sort';
 
 const inputClass = "border-black/20 rounded-sm focus-visible:ring-black/20 focus-visible:border-black shadow-none";
+// Field groups: a Label sitting flush on its input reads as one blob
+const fieldClass = "flex flex-col gap-2";
 const badgeClass = "text-xs text-black bg-transparent border border-black rounded-sm";
 
 const NO_CONTENT = 'none';
@@ -344,7 +346,7 @@ export default function DiscussionsManagement() {
           </SheetHeader>
           <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              <div>
+              <div className={fieldClass}>
                 <Label htmlFor="title">Title</Label>
                 <Input
                   id="title"
@@ -355,7 +357,7 @@ export default function DiscussionsManagement() {
                 />
               </div>
 
-              <div>
+              <div className={fieldClass}>
                 <Label htmlFor="contentId">Movie/TV Show (optional)</Label>
                 <Select
                   value={formData.contentId}
@@ -376,7 +378,7 @@ export default function DiscussionsManagement() {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                <div className={fieldClass}>
                   <Label htmlFor="episodeNumber">S/N (Episode Number)</Label>
                   <Input
                     id="episodeNumber"
@@ -387,7 +389,7 @@ export default function DiscussionsManagement() {
                     placeholder="0 for intro"
                   />
                 </div>
-                <div>
+                <div className={fieldClass}>
                   <Label htmlFor="discussionDate">Discussion Date</Label>
                   <Input
                     id="discussionDate"
@@ -399,7 +401,7 @@ export default function DiscussionsManagement() {
                 </div>
               </div>
 
-              <div>
+              <div className={fieldClass}>
                 <Label htmlFor="description">Description</Label>
                 <Textarea
                   id="description"
@@ -410,7 +412,7 @@ export default function DiscussionsManagement() {
                 />
               </div>
 
-              <div>
+              <div className={fieldClass}>
                 <Label htmlFor="spaceUrl">Space URL (Twitter/X)</Label>
                 <Input
                   id="spaceUrl"
@@ -422,7 +424,7 @@ export default function DiscussionsManagement() {
                 />
               </div>
 
-              <div>
+              <div className={fieldClass}>
                 <Label htmlFor="podcastLinks">Podcast Links (one per line)</Label>
                 <Textarea
                   id="podcastLinks"

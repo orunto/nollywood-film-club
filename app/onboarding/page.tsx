@@ -1,93 +1,133 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { CheckCircleIcon, XCircleIcon, CircleNotchIcon, UserIcon } from "@phosphor-icons/react";
-import { useStackApp } from '@stackframe/stack';
+import { CheckCircleIcon, XCircleIcon, CircleNotchIcon } from "@phosphor-icons/react";
+import { useStackApp, type CurrentUser } from '@stackframe/stack';
 import { useDebounce } from '@/hooks/use-debounce';
+import { emailLocalPart, usernameSuggestions, USERNAME_RE } from '@/lib/username';
 
 interface UsernameCheck {
   available: boolean;
   message: string;
 }
 
+const fieldClass =
+  "rounded-sm border-black/40 shadow-none focus-visible:border-black focus-visible:ring-black/20";
+
 export default function OnboardingPage() {
+  const router = useRouter();
+  // useStackApp + an effect, not useUser(): useUser() suspends during SSR, which
+  // would leave this whole page blank until hydration. The form shell does not
+  // depend on the user, so it should render straight away.
+  const app = useStackApp();
+  const [user, setUser] = useState<CurrentUser | null>(null);
+
   const [username, setUsername] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [prefilled, setPrefilled] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isChecking, setIsChecking] = useState(false);
   const [usernameStatus, setUsernameStatus] = useState<UsernameCheck | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
-  const app = useStackApp();
 
   const debouncedUsername = useDebounce(username, 500);
 
-  // Check if user already has a username
+  // Prefill from whatever we already know: the OAuth display name if there is
+  // one, otherwise the local part of their email. Both are editable — the point
+  // is to save typing, not to name anybody without asking.
   useEffect(() => {
-    const checkExistingUsername = async () => {
-      const user = await app.getUser();
-      if (user) {
-        const usernameInMetadata = user.clientMetadata?.username;
-        if (usernameInMetadata && usernameInMetadata.trim() !== '') {
-          // User already has a username, redirect to home
-          router.push('/');
-        }
+    if (prefilled) return;
+    let cancelled = false;
+
+    (async () => {
+      const current = await app.getUser();
+      if (cancelled || !current) return;
+      setUser(current);
+      setPrefilled(true);
+
+      const fallbackName =
+        current.displayName?.trim() || emailLocalPart(current.primaryEmail);
+      setDisplayName(fallbackName);
+
+      const existing = (current.clientMetadata as { username?: string } | null)?.username;
+      if (existing?.trim()) {
+        router.push('/');
+        return;
       }
+
+      loadSuggestions(current.displayName, current.primaryEmail);
+    })();
+
+    return () => {
+      cancelled = true;
     };
-    checkExistingUsername();
-  }, [app, router]);
+  }, [app, prefilled, router]);
 
-  // Check username availability when debounced value changes
-  useEffect(() => {
-    if (debouncedUsername && debouncedUsername.length >= 3) {
-      checkUsernameAvailability(debouncedUsername);
-    } else {
-      setUsernameStatus(null);
-    }
-  }, [debouncedUsername]);
+  const loadSuggestions = (
+    displayNameSource: string | null,
+    email: string | null,
+  ) => {
+    const candidates = usernameSuggestions([displayNameSource, emailLocalPart(email)]);
+    if (candidates.length === 0) return;
 
-  const checkUsernameAvailability = async (usernameToCheck: string) => {
+    // One request answers the whole batch — the route scans every Stack user,
+    // so asking per candidate would be that scan three times over.
+    fetch('/api/check-username', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ usernames: candidates.slice(0, 6) }),
+    })
+      .then((response) => response.json())
+      .then((data: { results?: { username: string; available: boolean }[] }) => {
+        setSuggestions(
+          (data.results ?? [])
+            .filter((result) => result.available)
+            .map((result) => result.username)
+            .slice(0, 3),
+        );
+      })
+      .catch((err) => console.error('Could not load username suggestions:', err));
+  };
+
+  const checkUsernameAvailability = useCallback(async (candidate: string) => {
     setIsChecking(true);
     try {
       const response = await fetch('/api/check-username', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username: usernameToCheck }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: candidate }),
       });
-
       const data = await response.json();
-      
-      if (response.ok) {
-        setUsernameStatus(data);
-      } else {
-        setUsernameStatus({
-          available: false,
-          message: data.error || 'Error checking username'
-        });
-      }
+      setUsernameStatus(
+        response.ok
+          ? data
+          : { available: false, message: data.error || 'Could not check that one' },
+      );
     } catch (err) {
-      console.error(err)
-      setUsernameStatus({
-        available: false,
-        message: 'Error checking username'
-      });
+      console.error(err);
+      setUsernameStatus({ available: false, message: 'Could not check that one' });
     } finally {
       setIsChecking(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (USERNAME_RE.test(debouncedUsername)) {
+      checkUsernameAvailability(debouncedUsername);
+    } else {
+      setUsernameStatus(null);
+    }
+  }, [debouncedUsername, checkUsernameAvailability]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!usernameStatus?.available) {
-      setError('Please choose an available username');
+    if (!usernameStatus?.available || !user) {
+      setError('Pick a username that is still going spare.');
       return;
     }
 
@@ -95,145 +135,154 @@ export default function OnboardingPage() {
     setError(null);
 
     try {
-      // Get the current user from Stack
-      const user = await app.getUser();
-      if (!user) {
-        setError('You must be logged in to create a username');
-        return;
-      }
-      
       const response = await fetch('/api/create-username', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          username: username,
-          stackUserId: user.id
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, stackUserId: user.id }),
       });
 
-      if (response.ok) {
-        router.push('/');
-      } else {
+      if (!response.ok) {
         const data = await response.json();
-        setError(data.error || 'Failed to create username. Please try again.');
+        setError(data.error || 'Could not save that. Try again.');
+        return;
       }
+
+      // Display name lives on the Stack user, not in clientMetadata — same call
+      // the dashboard profile tab makes. Optional, so a blank one is fine.
+      const trimmedName = displayName.trim();
+      if (trimmedName !== (user.displayName ?? '')) {
+        try {
+          await user.update({ displayName: trimmedName });
+        } catch (err) {
+          // The username landed, which is the part that matters publicly
+          console.error('Could not save display name:', err);
+        }
+      }
+
+      router.push('/');
     } catch (err) {
-      console.error(err)
-      setError('Failed to create profile. Please try again.');
+      console.error(err);
+      setError('Could not save that. Try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const isValidUsername = (username: string) => {
-    const regex = /^[a-zA-Z0-9_-]{3,20}$/;
-    return regex.test(username);
-  };
+  const showFormatHint = username.length > 0 && !USERNAME_RE.test(username);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <div className="mx-auto h-12 w-12 bg-primary rounded-full flex items-center justify-center mb-4">
-            <UserIcon className="h-6 w-6 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900">Choose Your Username</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            This will be your unique identity in the Nollywood Film Club
+    <main className="min-h-screen w-full flex items-center justify-center px-6 py-16">
+      <div className="w-full max-w-md flex flex-col gap-8">
+        <div className="flex flex-col gap-3">
+          <span className="w-fit text-xs border border-black rounded-sm px-2.5 py-1">
+            Almost in
+          </span>
+          <h1 className="text-3xl lg:text-4xl font-bold leading-[1.05]">
+            What should we call you?
+          </h1>
+          <p className="text-sm font-light text-black/70">
+            Your username goes above every take you post, so pick one you can live
+            with. It can be changed later, in the unlikely event you regret it.
           </p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Create Your Profile</CardTitle>
-            <CardDescription>
-              Choose a username that represents you in the community
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {error && (
-              <Alert variant="destructive" className="mb-4">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="username" className="text-sm font-semibold">
+              Username
+            </Label>
+            <div className="relative">
+              <Input
+                id="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="irokocritic"
+                className={`pr-10 ${fieldClass}`}
+                disabled={isSubmitting}
+                autoComplete="off"
+                aria-invalid={usernameStatus?.available === false}
+              />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                {isChecking ? (
+                  <CircleNotchIcon className="h-4 w-4 animate-spin text-black/40" />
+                ) : usernameStatus?.available === true ? (
+                  <CheckCircleIcon className="h-4 w-4" weight="fill" />
+                ) : usernameStatus?.available === false ? (
+                  <XCircleIcon className="h-4 w-4 text-red-700" weight="fill" />
+                ) : null}
+              </div>
+            </div>
+
+            {showFormatHint ? (
+              <p className="text-xs font-light text-red-700">
+                3–20 characters. Letters, numbers, underscores and hyphens only.
+              </p>
+            ) : usernameStatus ? (
+              <p
+                className={`text-xs font-light ${usernameStatus.available ? 'text-black/60' : 'text-red-700'}`}
+              >
+                {usernameStatus.message}
+              </p>
+            ) : (
+              <p className="text-xs font-light text-black/60">
+                3–20 characters. Letters, numbers, underscores and hyphens only.
+              </p>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
-                <div className="relative">
-                  <Input
-                    id="username"
-                    type="text"
-                    placeholder="Enter your username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className={`pr-10 ${
-                      usernameStatus?.available === true
-                        ? 'border-green-500 focus:border-green-500'
-                        : usernameStatus?.available === false
-                        ? 'border-red-500 focus:border-red-500'
-                        : ''
-                    }`}
-                    disabled={isSubmitting}
-                  />
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    {isChecking ? (
-                      <CircleNotchIcon className="h-4 w-4 animate-spin text-gray-400" />
-                    ) : usernameStatus?.available === true ? (
-                      <CheckCircleIcon className="h-4 w-4 text-green-500" />
-                    ) : usernameStatus?.available === false ? (
-                      <XCircleIcon className="h-4 w-4 text-red-500" />
-                    ) : null}
-                  </div>
-                </div>
-
-                {/* Username validation feedback */}
-                {username && (
-                  <div className="text-sm">
-                    {!isValidUsername(username) && username.length > 0 && (
-                      <p className="text-red-500">
-                        Username must be 3-20 characters long and contain only letters, numbers, underscores, and hyphens
-                      </p>
-                    )}
-                    {isValidUsername(username) && usernameStatus && (
-                      <p className={usernameStatus.available ? 'text-green-500' : 'text-red-500'}>
-                        {usernameStatus.message}
-                      </p>
-                    )}
-                    {isValidUsername(username) && !usernameStatus && !isChecking && (
-                      <p className="text-gray-500">Checking availability...</p>
-                    )}
-                  </div>
-                )}
-
-                {/* Username requirements */}
-                <div className="text-xs text-gray-500 space-y-1">
-                  <p>• 3-20 characters long</p>
-                  <p>• Letters, numbers, underscores, and hyphens only</p>
-                  <p>• Must be unique</p>
-                </div>
+            {suggestions.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <span className="text-xs font-light text-black/50">Going spare:</span>
+                {suggestions.map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    onClick={() => setUsername(suggestion)}
+                    className="text-xs border border-black/40 rounded-sm px-2.5 py-1 hover:bg-black hover:text-white transition-colors cursor-pointer"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
               </div>
+            )}
+          </div>
 
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={!usernameStatus?.available || isSubmitting || isChecking}
-              >
-                {isSubmitting && <CircleNotchIcon className="mr-2 h-4 w-4 animate-spin" />}
-                Complete Setup
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="displayName" className="text-sm font-semibold">
+              Display name <span className="font-light text-black/50">(optional)</span>
+            </Label>
+            <Input
+              id="displayName"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder="The name your friends use"
+              className={fieldClass}
+              disabled={isSubmitting}
+            />
+            <p className="text-xs font-light text-black/60">
+              We have guessed from your account. Change it, or leave it.
+            </p>
+          </div>
 
-        <div className="text-center">
-          <p className="text-sm text-gray-600">
-            You can change your username later in your profile settings
-          </p>
-        </div>
+          {error && <p className="text-sm font-light text-red-700">{error}</p>}
+
+          <div className="flex items-center gap-3">
+            <Button
+              type="submit"
+              disabled={!usernameStatus?.available || isSubmitting || isChecking}
+              className="rounded-sm bg-black text-white hover:bg-black/80 px-5 py-3"
+            >
+              {isSubmitting ? 'Saving…' : 'Done'}
+            </Button>
+            <button
+              type="button"
+              onClick={() => router.push('/')}
+              className="text-sm font-light text-black/60 underline underline-offset-2 hover:text-black cursor-pointer"
+            >
+              Skip for now
+            </button>
+          </div>
+        </form>
       </div>
-    </div>
+    </main>
   );
 }

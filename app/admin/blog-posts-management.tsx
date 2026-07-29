@@ -30,6 +30,8 @@ import { EmptyListIllustration } from '@/components/graphics';
 import { toast } from 'sonner';
 
 const inputClass = "border-black/20 rounded-sm focus-visible:ring-black/20 focus-visible:border-black shadow-none";
+// Field groups: a Label sitting flush on its input reads as one blob
+const fieldClass = "flex flex-col gap-2";
 
 interface BlogPost {
   id: string;
@@ -309,7 +311,7 @@ export default function BlogPostsManagement() {
           </SheetHeader>
           <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              <div>
+              <div className={fieldClass}>
                 <Label htmlFor="title">Title</Label>
                 <Input
                   id="title"
@@ -320,7 +322,7 @@ export default function BlogPostsManagement() {
                 />
               </div>
 
-              <div>
+              <div className={fieldClass}>
                 <Label htmlFor="slug">Slug</Label>
                 <Input
                   id="slug"
@@ -331,7 +333,7 @@ export default function BlogPostsManagement() {
                 />
               </div>
 
-              <div>
+              <div className={fieldClass}>
                 <Label htmlFor="excerpt">Excerpt</Label>
                 <Textarea
                   id="excerpt"
@@ -343,7 +345,7 @@ export default function BlogPostsManagement() {
                 />
               </div>
 
-              <div>
+              <div className={fieldClass}>
                 <Label htmlFor="content">Content</Label>
                 <Textarea
                   id="content"
@@ -357,7 +359,7 @@ export default function BlogPostsManagement() {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                <div className={fieldClass}>
                   <Label htmlFor="publishedAt">Publish Date</Label>
                   <Input
                     id="publishedAt"
