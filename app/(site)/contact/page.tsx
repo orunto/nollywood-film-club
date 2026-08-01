@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
-import { BugIcon, LightbulbIcon } from "@phosphor-icons/react/dist/ssr";
+import {
+    BugIcon,
+    ChatCircleDotsIcon,
+    LightbulbIcon,
+} from "@phosphor-icons/react/dist/ssr";
 import { Footer } from "@/components/custom";
 import ContactForm from "./contact-form";
 
@@ -27,6 +31,12 @@ const WHAT_TO_SEND = [
         blurb:
             "A feature you keep reaching for and cannot find. No idea is too small. Some of them might even get built.",
     },
+    {
+        Icon: ChatCircleDotsIcon,
+        title: "Something else entirely",
+        blurb:
+            "Not a bug, not quite an idea, just something on your mind about the site. Tell us. We can't promise a fix, but we can promise it gets read.",
+    },
 ];
 
 export default function ContactPage() {
@@ -41,9 +51,10 @@ export default function ContactPage() {
                         Something broken? Something missing?
                     </h1>
                     <p className="text-base lg:text-lg font-light text-white/70 max-w-2xl">
-                        This form is for the site, not the films. Bugs, broken pages, and
-                        ideas for what should exist here go below. Opinions about the films
-                        go in the reviews, where everybody can argue with them properly.
+                        This form is for the site, not the films. Bugs, broken pages, ideas
+                        for what should exist here, or anything else on your mind, go below.
+                        Opinions about the films go in the reviews, where everybody can argue
+                        with them properly.
                     </p>
                 </section>
 
@@ -52,7 +63,7 @@ export default function ContactPage() {
                         <h2 className="pb-3 border-b border-black text-2xl font-semibold">
                             What to send
                         </h2>
-                        <div className="grid lg:grid-cols-2 grid-cols-1 gap-6 py-6">
+                        <div className="grid lg:grid-cols-3 md:grid-cols-2 grid-cols-1 gap-6 py-6">
                             {WHAT_TO_SEND.map((item) => (
                                 <div
                                     key={item.title}

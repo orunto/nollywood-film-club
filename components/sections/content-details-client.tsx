@@ -557,8 +557,8 @@ export default function ContentDetailsClient({
                     <div className="flex items-center gap-3">
                       <RatingFace rating={userRating.rating} className="h-10 w-10" />
                       <div className="flex items-center gap-1.5">
-                        {userRating.username && userRating.username !== "Deleted member" ? (
-                          <Link href={`/members/${userRating.username}`} className="text-lg font-semibold hover:underline">
+                        {userRating.profileUsername ? (
+                          <Link href={`/members/${userRating.profileUsername}`} className="text-lg font-semibold hover:underline">
                             {userRating.username}
                           </Link>
                         ) : (

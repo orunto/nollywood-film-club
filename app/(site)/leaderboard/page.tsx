@@ -4,7 +4,7 @@ import { getLeaderboard } from "@/lib/server-queries";
 import LeaderboardTable from "./leaderboard-table";
 
 export const metadata: Metadata = {
-  title: "Leaderboard | Nollywood Film Club",
+  title: "NFC Scoreboard | Nollywood Film Club",
   description: "Every movie, TV show, and short film the club has rated, ranked by NFC score.",
 };
 
@@ -17,7 +17,7 @@ export default async function LeaderboardPage() {
         <div className="flex min-h-screen w-full flex-col px-6 py-10 lg:px-10 lg:py-8">
           <section className="w-full">
             <div className="flex items-baseline justify-between gap-4 border-b border-black">
-              <h1 className="pb-3 text-2xl font-semibold">Leaderboard</h1>
+              <h1 className="pb-3 text-2xl font-semibold">NFC Scoreboard</h1>
               <span className="pb-3 text-sm text-black/60">
                 {ranked.length} {ranked.length === 1 ? "title" : "titles"} ranked
               </span>

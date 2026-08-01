@@ -56,16 +56,19 @@ export interface CastMember {
   characterName: string | null; // null for directors
 }
 
-// Local mirror of Stack Auth's id -> username. Stack itself has no notion of
-// username uniqueness (it lives in freeform clientMetadata), so this table is
-// the actual source of truth for the (case-insensitive) uniqueness guarantee
-// and for the indexed lookups /members/[username] needs. Not FK'd to
-// userRatings/comments.userId — those stay plain Stack ids, same as before.
+// Local mirror of every Stack Auth account, id -> username. Stack itself has
+// no notion of username uniqueness (it lives in freeform clientMetadata), so
+// this table is the actual source of truth for the (case-insensitive)
+// uniqueness guarantee and for the indexed lookups /members/[username] needs.
+// username is nullable — plenty of members never set one — and a row exists
+// for every account regardless (see scripts/backfill-usernames.ts), so a
+// missing username is a known "no profile link" state, not a missing row.
+// Not FK'd to userRatings/comments.userId — those stay plain Stack ids.
 export const users = pgTable(
   "users",
   {
     id: text("id").primaryKey(), // Stack Auth user id
-    username: text("username").notNull(),
+    username: text("username"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },

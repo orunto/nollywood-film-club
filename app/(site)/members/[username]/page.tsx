@@ -65,9 +65,12 @@ export default async function MemberProfilePage({
     offset: (page - 1) * PAGE_SIZE,
   });
 
-  const label = profile.displayName || profile.username;
-  const initial = profile.username.charAt(0).toUpperCase();
-  const basePath = `/members/${profile.username}`;
+  const label = profile.displayName || profile.username || "Member";
+  const initial = label.charAt(0).toUpperCase();
+  // Uses the route param, not profile.username: this page only resolves
+  // when the param matched a real username, so they're equivalent here, but
+  // the param is what the visitor actually navigated with.
+  const basePath = `/members/${username}`;
   const pageHref = (target: number) => (target <= 1 ? basePath : `${basePath}?page=${target}`);
 
   return (
@@ -86,7 +89,7 @@ export default async function MemberProfilePage({
                 <h1 className="text-2xl font-semibold">{label}</h1>
                 {profile.isRegular && <RegularBadge />}
               </div>
-              <p className="text-sm text-white/60">@{profile.username}</p>
+              {profile.username && <p className="text-sm text-white/60">@{profile.username}</p>}
             </div>
             <dl className="flex gap-6">
               {[
