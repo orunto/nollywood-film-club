@@ -8,6 +8,8 @@ import {
     UsersIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { Footer } from "@/components/custom";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getRegularUsers } from "@/lib/server-queries";
 
 export const metadata: Metadata = {
     title: "About | Nollywood Film Club",
@@ -64,7 +66,9 @@ const HOUSE_RULES = [
     },
 ];
 
-export default function AboutPage() {
+export default async function AboutPage() {
+    const regulars = await getRegularUsers();
+
     return (
         <>
             <main className="min-h-screen">
@@ -202,13 +206,40 @@ export default function AboutPage() {
                                     </span>
                                 </div>
                                 <div className="flex flex-col gap-2">
-                                    <h3 className="text-base font-bold">The regulars</h3>
+                                    <h3 className="text-base font-bold">NFC Miscreants</h3>
                                     <p className="text-sm font-light text-black/70">
                                         The members who show up week after week to share detailed,
                                         funny, occasionally devastating takes, lovingly described by
                                         Mr C as &quot;weapons fashioned against me.&quot; Some fought
                                         two VPNs just to watch the homework. That is commitment.
                                     </p>
+                                    {regulars.length > 0 ? (
+                                        <div className="flex flex-wrap gap-3 pt-2">
+                                            {regulars.map((user) => (
+                                                <Link
+                                                    key={user.id}
+                                                    href={`/members/${user.username}`}
+                                                    className="flex flex-col items-center gap-1.5 w-16 group"
+                                                >
+                                                    <Avatar className="size-10 border border-black/10">
+                                                        {user.profileImage && (
+                                                            <AvatarImage src={user.profileImage} alt={user.username} />
+                                                        )}
+                                                        <AvatarFallback className="bg-black text-sm font-medium text-white">
+                                                            {user.username.charAt(0).toUpperCase()}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                    <span className="text-xs text-black/70 truncate w-full text-center group-hover:underline">
+                                                        @{user.username}
+                                                    </span>
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="pt-2 text-xs font-light text-black/50">
+                                            No miscreants crowned yet — check back after Sunday.
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                         </div>
