@@ -16,6 +16,7 @@ import RatingFace from "./rating-face";
 import ReportDialog from "./report-dialog";
 import ReviewText from "./review-text";
 import CommentSheet from "./comment-sheet";
+import RegularBadge from "./regular-badge";
 
 const formatWhen = (value: string) =>
   value
@@ -80,8 +81,17 @@ export default function ReviewCard({ review, expanded, className }: ReviewCardPr
 
       <div className="flex items-center gap-3">
         <RatingFace rating={review.rating} className="h-10 w-10" />
-        <div className="flex flex-col">
-          <span className="font-semibold">{review.username}</span>
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-1.5">
+            {review.username && review.username !== "Deleted member" ? (
+              <Link href={`/members/${review.username}`} className="font-semibold hover:underline">
+                {review.username}
+              </Link>
+            ) : (
+              <span className="font-semibold">{review.username}</span>
+            )}
+            {review.isRegular && <RegularBadge />}
+          </div>
           <span className="text-xs uppercase tracking-widest text-black/50">
             {formatWhen(review.createdAt)}
             {review.edited && <span className="normal-case tracking-normal"> (edited)</span>}

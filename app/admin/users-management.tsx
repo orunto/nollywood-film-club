@@ -16,10 +16,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ShieldCheckIcon, ShieldSlashIcon } from "@phosphor-icons/react";
+import { ShieldCheckIcon, ShieldSlashIcon, SealCheckIcon, SealIcon } from "@phosphor-icons/react";
 import { EmptyListIllustration } from '@/components/graphics';
 import { toast } from 'sonner';
 import { SortableHead, useTableSort, SortAccessors } from './table-sort';
+import RegularBadge from '@/components/custom/regular-badge';
 
 const inputClass = "border-black/20 rounded-sm focus-visible:ring-black/20 focus-visible:border-black shadow-none";
 const badgeClass = "text-xs bg-black text-white rounded-sm";
@@ -31,6 +32,7 @@ interface AdminUser {
   profileImageUrl: string | null;
   signedUpAt: string;
   role: 'admin' | 'user';
+  regular: boolean;
   reviewCount: number;
 }
 
@@ -38,16 +40,21 @@ const sortAccessors: SortAccessors<AdminUser> = {
   user: (u) => u.displayName,
   email: (u) => u.primaryEmail,
   role: (u) => u.role,
+  regular: (u) => u.regular,
   reviews: (u) => u.reviewCount,
   joined: (u) => new Date(u.signedUpAt),
 };
+
+type PendingChange =
+  | { field: 'role'; user: AdminUser; next: boolean }
+  | { field: 'regular'; user: AdminUser; next: boolean };
 
 export default function UsersManagement() {
   const currentUser = useUser();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [pendingChange, setPendingChange] = useState<{ user: AdminUser; makeAdmin: boolean } | null>(null);
+  const [pendingChange, setPendingChange] = useState<PendingChange | null>(null);
 
   useEffect(() => {
     fetchUsers(true);
@@ -70,25 +77,27 @@ export default function UsersManagement() {
     }
   };
 
-  const confirmRoleChange = async () => {
+  const confirmChange = async () => {
     if (!pendingChange) return;
-    const { user, makeAdmin } = pendingChange;
+    const { field, user, next } = pendingChange;
+    const endpoint = field === 'role' ? 'admin-role' : 'regular-role';
+    const body = field === 'role' ? { isAdmin: next } : { regular: next };
     try {
-      const response = await fetch(`/api/admin/users/${user.id}/admin-role`, {
+      const response = await fetch(`/api/admin/users/${user.id}/${endpoint}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isAdmin: makeAdmin }),
+        body: JSON.stringify(body),
       });
       const result = await response.json();
       if (result.success) {
         await fetchUsers();
         toast.success(result.message);
       } else {
-        toast.error(result.error || 'Failed to update user role');
+        toast.error(result.error || 'Failed to update user');
       }
     } catch (error) {
-      console.error('Error updating user role:', error);
-      toast.error('Failed to update user role. Please try again.');
+      console.error('Error updating user:', error);
+      toast.error('Failed to update user. Please try again.');
     } finally {
       setPendingChange(null);
     }
@@ -144,6 +153,7 @@ export default function UsersManagement() {
                 <SortableHead label="User" sortKey="user" activeKey={sortKey} direction={direction} onSort={toggleSort} />
                 <SortableHead label="Email" sortKey="email" activeKey={sortKey} direction={direction} onSort={toggleSort} />
                 <SortableHead label="Role" sortKey="role" activeKey={sortKey} direction={direction} onSort={toggleSort} />
+                <SortableHead label="Regular" sortKey="regular" activeKey={sortKey} direction={direction} onSort={toggleSort} />
                 <SortableHead label="Reviews" sortKey="reviews" activeKey={sortKey} direction={direction} onSort={toggleSort} />
                 <SortableHead label="Joined" sortKey="joined" activeKey={sortKey} direction={direction} onSort={toggleSort} />
                 <TableHead className="text-black text-right">Actions</TableHead>
@@ -162,6 +172,9 @@ export default function UsersManagement() {
                     <TableCell>
                       {user.role === 'admin' && <Badge className={badgeClass}>Admin</Badge>}
                     </TableCell>
+                    <TableCell>
+                      {user.regular && <RegularBadge />}
+                    </TableCell>
                     <TableCell className="text-black/60">{user.reviewCount}</TableCell>
                     <TableCell className="text-black/60">
                       {new Date(user.signedUpAt).toLocaleDateString()}
@@ -173,10 +186,19 @@ export default function UsersManagement() {
                           size="icon"
                           className="text-black/60 hover:text-black hover:bg-black/10 disabled:opacity-30"
                           disabled={isSelf && user.role === 'admin'}
-                          onClick={() => setPendingChange({ user, makeAdmin: user.role !== 'admin' })}
+                          onClick={() => setPendingChange({ field: 'role', user, next: user.role !== 'admin' })}
                           title={user.role === 'admin' ? 'Remove admin access' : 'Grant admin access'}
                         >
                           {user.role === 'admin' ? <ShieldSlashIcon className="w-4 h-4" /> : <ShieldCheckIcon className="w-4 h-4" />}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-black/60 hover:text-black hover:bg-black/10"
+                          onClick={() => setPendingChange({ field: 'regular', user, next: !user.regular })}
+                          title={user.regular ? 'Remove regular status' : 'Mark as a regular'}
+                        >
+                          {user.regular ? <SealIcon className="w-4 h-4" /> : <SealCheckIcon className="w-4 h-4" />}
                         </Button>
                       </div>
                     </TableCell>
@@ -192,17 +214,23 @@ export default function UsersManagement() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {pendingChange?.makeAdmin ? 'Grant admin access?' : 'Remove admin access?'}
+              {pendingChange?.field === 'role'
+                ? (pendingChange.next ? 'Grant admin access?' : 'Remove admin access?')
+                : (pendingChange?.next ? 'Mark as a regular?' : 'Remove regular status?')}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {pendingChange?.makeAdmin
-                ? `"${pendingChange.user.displayName || pendingChange.user.primaryEmail}" will be able to manage all content, reviews, and users.`
-                : `"${pendingChange?.user.displayName || pendingChange?.user.primaryEmail}" will lose access to the admin dashboard.`}
+              {pendingChange?.field === 'role'
+                ? (pendingChange.next
+                    ? `"${pendingChange.user.displayName || pendingChange.user.primaryEmail}" will be able to manage all content, reviews, and users.`
+                    : `"${pendingChange.user.displayName || pendingChange.user.primaryEmail}" will lose access to the admin dashboard.`)
+                : (pendingChange?.next
+                    ? `"${pendingChange.user.displayName || pendingChange.user.primaryEmail}" will be highlighted as a regular on reviews and the About page.`
+                    : `"${pendingChange?.user.displayName || pendingChange?.user.primaryEmail}" will no longer be highlighted as a regular.`)}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmRoleChange} className="bg-black text-white hover:bg-black/80">
+            <AlertDialogAction onClick={confirmChange} className="bg-black text-white hover:bg-black/80">
               Confirm
             </AlertDialogAction>
           </AlertDialogFooter>
