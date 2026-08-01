@@ -107,6 +107,8 @@ export interface UserRating {
   username?: string;
   profileImage?: string;
   isRegular?: boolean;
+  // Real local username, or null — only link to a profile when this is set.
+  profileUsername?: string | null;
 }
 
 // Admin-only view of a user rating, with the related content's title joined in
@@ -625,12 +627,20 @@ export interface UserDisplay {
   username: string;
   profileImage?: string;
   isRegular: boolean;
+  // The real local `users.username` (nullable — plenty of members never set
+  // one), distinct from `username` above which always falls back to a
+  // displayable name. Only link to a profile when this is set; `username`
+  // alone is not a valid /members/[username] route segment (it might be a
+  // display name with spaces, or "Deleted member").
+  profileUsername: string | null;
 }
 
 // Shape shared by the About page's regulars roster and public profile pages.
+// `username` here IS the real local username (nullable) — unlike
+// UserDisplay.username, there is no display-name fallback baked in.
 export interface PublicProfile {
   id: string;
-  username: string;
+  username: string | null;
   displayName: string | null;
   profileImage?: string;
   isRegular: boolean;
@@ -678,17 +688,23 @@ const getUserDisplay = cache(async (userId: string): Promise<UserDisplay> => {
   try {
     const user = await stackServerApp.getUser(userId);
     if (user) {
+      const [localRow] = await db
+        .select({ username: users.username })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
       return {
         username: resolveUsername(user),
         profileImage: user.profileImageUrl || undefined,
         isRegular: isRegularUser(user),
+        profileUsername: localRow?.username ?? null,
       };
     }
   } catch (error) {
     console.error("Error fetching Stack user", userId, error);
   }
   // Deleted user, or Stack Auth is unreachable — never fail the whole page
-  return { username: "Deleted member", isRegular: false };
+  return { username: "Deleted member", isRegular: false, profileUsername: null };
 });
 
 // Resolve a batch of user IDs at once. Deduped and issued in parallel: this
@@ -710,16 +726,23 @@ export async function getUserDisplayMap(
 // accepts — the regulars list will always be a small subset of that.
 export async function getRegularUsers(): Promise<PublicProfile[]> {
   const allUsers = await stackServerApp.listUsers({ limit: 200 });
-  return allUsers
-    .filter(isRegularUser)
-    .map((user) => ({
-      id: user.id,
-      username: resolveUsername(user),
-      displayName: user.displayName ?? null,
-      profileImage: user.profileImageUrl || undefined,
-      isRegular: true,
-      joinedAt: user.signedUpAt.toISOString(),
-    }));
+  const regulars = allUsers.filter(isRegularUser);
+  if (regulars.length === 0) return [];
+
+  const localRows = await db
+    .select({ id: users.id, username: users.username })
+    .from(users)
+    .where(inArray(users.id, regulars.map((u) => u.id)));
+  const usernameMap = new Map(localRows.map((row) => [row.id, row.username]));
+
+  return regulars.map((user) => ({
+    id: user.id,
+    username: usernameMap.get(user.id) ?? null,
+    displayName: user.displayName ?? null,
+    profileImage: user.profileImageUrl || undefined,
+    isRegular: true,
+    joinedAt: user.signedUpAt.toISOString(),
+  }));
 }
 
 // Current request's user serialized to the nav's minimal shape, plus the admin
@@ -764,6 +787,7 @@ async function enrichRatingsWithUsernames(
     username: userMap.get(item.userId)?.username ?? "Deleted member",
     profileImage: userMap.get(item.userId)?.profileImage,
     isRegular: userMap.get(item.userId)?.isRegular ?? false,
+    profileUsername: userMap.get(item.userId)?.profileUsername ?? null,
   }));
 }
 
@@ -945,7 +969,9 @@ export async function getPublicProfile(username: string): Promise<PublicProfile 
 
     return {
       id: user.id,
-      username: resolveUsername(user),
+      // Storage is always lowercased (create-username, the backfill script),
+      // so the input already matches the canonical stored casing.
+      username: username.toLowerCase(),
       displayName: user.displayName ?? null,
       profileImage: user.profileImageUrl || undefined,
       isRegular: isRegularUser(user),

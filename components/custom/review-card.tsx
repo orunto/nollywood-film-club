@@ -83,8 +83,8 @@ export default function ReviewCard({ review, expanded, className }: ReviewCardPr
         <RatingFace rating={review.rating} className="h-10 w-10" />
         <div className="flex flex-col gap-0.5">
           <div className="flex items-center gap-1.5">
-            {review.username && review.username !== "Deleted member" ? (
-              <Link href={`/members/${review.username}`} className="font-semibold hover:underline">
+            {review.profileUsername ? (
+              <Link href={`/members/${review.profileUsername}`} className="font-semibold hover:underline">
                 {review.username}
               </Link>
             ) : (

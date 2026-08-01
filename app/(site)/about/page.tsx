@@ -215,25 +215,37 @@ export default async function AboutPage() {
                                     </p>
                                     {regulars.length > 0 ? (
                                         <div className="flex flex-wrap gap-3 pt-2">
-                                            {regulars.map((user) => (
-                                                <Link
-                                                    key={user.id}
-                                                    href={`/members/${user.username}`}
-                                                    className="flex flex-col items-center gap-1.5 w-16 group"
-                                                >
-                                                    <Avatar className="size-10 border border-black/10">
-                                                        {user.profileImage && (
-                                                            <AvatarImage src={user.profileImage} alt={user.username} />
-                                                        )}
-                                                        <AvatarFallback className="bg-black text-sm font-medium text-white">
-                                                            {user.username.charAt(0).toUpperCase()}
-                                                        </AvatarFallback>
-                                                    </Avatar>
-                                                    <span className="text-xs text-black/70 truncate w-full text-center group-hover:underline">
-                                                        @{user.username}
-                                                    </span>
-                                                </Link>
-                                            ))}
+                                            {regulars.map((user) => {
+                                                const label = user.displayName || user.username || "Member";
+                                                const chip = (
+                                                    <>
+                                                        <Avatar className="size-10 border border-black/10">
+                                                            {user.profileImage && (
+                                                                <AvatarImage src={user.profileImage} alt={label} />
+                                                            )}
+                                                            <AvatarFallback className="bg-black text-sm font-medium text-white">
+                                                                {label.charAt(0).toUpperCase()}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+                                                        <span className="text-xs text-black/70 truncate w-full text-center group-hover:underline">
+                                                            {user.username ? `@${user.username}` : label}
+                                                        </span>
+                                                    </>
+                                                );
+                                                return user.username ? (
+                                                    <Link
+                                                        key={user.id}
+                                                        href={`/members/${user.username}`}
+                                                        className="flex flex-col items-center gap-1.5 w-16 group"
+                                                    >
+                                                        {chip}
+                                                    </Link>
+                                                ) : (
+                                                    <div key={user.id} className="flex flex-col items-center gap-1.5 w-16">
+                                                        {chip}
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     ) : (
                                         <p className="pt-2 text-xs font-light text-black/50">
