@@ -12,9 +12,16 @@
 // protect anything.
 
 type WithRole = {
-  clientReadOnlyMetadata?: { role?: string } | null;
+  clientReadOnlyMetadata?: { role?: string; regular?: boolean } | null;
 };
 
 export function isAdminUser(user: WithRole | null | undefined): boolean {
   return user?.clientReadOnlyMetadata?.role === "admin";
+}
+
+// "Regular" is an editorial highlight, not a permission — a user can be both
+// admin and regular. Same field, same write path (setClientReadOnlyMetadata)
+// as role, just a second key so the two don't collide.
+export function isRegularUser(user: WithRole | null | undefined): boolean {
+  return user?.clientReadOnlyMetadata?.regular === true;
 }

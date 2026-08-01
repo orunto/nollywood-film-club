@@ -8,6 +8,7 @@ import {
   reports,
   reviews,
   userRatings,
+  users,
   type CastMember,
 } from "@/db/schema";
 import { eq, avg, asc, desc, sql, and, inArray, isNotNull, isNull, lte, ne, or } from "drizzle-orm";
@@ -583,8 +584,22 @@ export function resolveUsername(user: {
   return "Member";
 }
 
-// Display info for one reviewer, from Stack Auth (there is no local users
-// table). Wrapped in React cache() so a request that renders the same author
+// Indexed username -> Stack user id lookup, for public profile routing
+// (/members/[username]). Backed by the local `users` table (db/schema.ts),
+// which is the real source of truth for username uniqueness — Stack's
+// clientMetadata never enforced it.
+export async function resolveUserIdByUsername(username: string): Promise<string | null> {
+  const [row] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(sql`lower(${users.username}) = lower(${username})`)
+    .limit(1);
+  return row?.id ?? null;
+}
+
+// Display info for one reviewer, from Stack Auth (displayName/profileImage
+// aren't mirrored locally — only username is, see resolveUserIdByUsername
+// above). Wrapped in React cache() so a request that renders the same author
 // more than once — a feed and the threads under it — only looks them up once.
 const getUserDisplay = cache(async (userId: string): Promise<UserDisplay> => {
   try {
