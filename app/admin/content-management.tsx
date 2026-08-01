@@ -42,7 +42,7 @@ import { EmptyListIllustration } from '@/components/graphics';
 import { CastMember, Content } from '@/lib/server-queries';
 import { contentTypeLabel, detectStreamingPlatform, episodeLabel, viewingCategoryLabel, VIEWING_CATEGORIES, type ViewingCategory } from '@/lib/utils';
 import { toast } from 'sonner';
-import { SortableHead, useTableSort, SortAccessors } from './table-sort';
+import { SortableHead, useTableSort, SortAccessors } from '@/components/ui/table-sort';
 import { AdminDiscussion } from './discussions-management';
 import UploadImageButton from './upload-image-button';
 import ContentPreview from './content-preview';

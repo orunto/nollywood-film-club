@@ -1,42 +1,48 @@
-'use client';
-import { useMemo, useState } from 'react';
+"use client";
+import { useMemo, useState } from "react";
 import { ArrowDownIcon, ArrowUpIcon, CaretUpDownIcon } from "@phosphor-icons/react";
-import { TableHead } from '@/components/ui/table';
+import { cn } from "@/lib/utils";
+import { TableHead } from "@/components/ui/table";
 
 type SortValue = string | number | boolean | Date | null | undefined;
-type SortDirection = 'asc' | 'desc';
+type SortDirection = "asc" | "desc";
 export type SortAccessors<T> = Record<string, (item: T) => SortValue>;
 
 function isEmpty(value: SortValue): boolean {
-  return value === null || value === undefined || value === '';
+  return value === null || value === undefined || value === "";
 }
 
 function compareValues(a: SortValue, b: SortValue): number {
-  if (typeof a === 'string' && typeof b === 'string') {
-    return a.localeCompare(b, undefined, { sensitivity: 'base', numeric: true });
+  if (typeof a === "string" && typeof b === "string") {
+    return a.localeCompare(b, undefined, { sensitivity: "base", numeric: true });
   }
   const aNum = a instanceof Date ? a.getTime() : Number(a);
   const bNum = b instanceof Date ? b.getTime() : Number(b);
   return aNum - bNum;
 }
 
-export function useTableSort<T>(items: T[], accessors: SortAccessors<T>) {
-  const [sortKey, setSortKey] = useState<string | null>(null);
-  const [direction, setDirection] = useState<SortDirection>('asc');
+export function useTableSort<T>(
+  items: T[],
+  accessors: SortAccessors<T>,
+  initialSortKey: string | null = null,
+  initialDirection: SortDirection = "asc",
+) {
+  const [sortKey, setSortKey] = useState<string | null>(initialSortKey);
+  const [direction, setDirection] = useState<SortDirection>(initialDirection);
 
   const toggleSort = (key: string) => {
     if (sortKey === key) {
-      setDirection((d) => (d === 'asc' ? 'desc' : 'asc'));
+      setDirection((d) => (d === "asc" ? "desc" : "asc"));
     } else {
       setSortKey(key);
-      setDirection('asc');
+      setDirection("asc");
     }
   };
 
   const sorted = useMemo(() => {
     if (!sortKey || !accessors[sortKey]) return items;
     const accessor = accessors[sortKey];
-    const factor = direction === 'asc' ? 1 : -1;
+    const factor = direction === "asc" ? 1 : -1;
     return [...items].sort((a, b) => {
       const av = accessor(a);
       const bv = accessor(b);
@@ -58,21 +64,33 @@ interface SortableHeadProps {
   direction: SortDirection;
   onSort: (key: string) => void;
   className?: string;
+  buttonClassName?: string;
 }
 
-export function SortableHead({ label, sortKey, activeKey, direction, onSort, className }: SortableHeadProps) {
+export function SortableHead({
+  label,
+  sortKey,
+  activeKey,
+  direction,
+  onSort,
+  className,
+  buttonClassName,
+}: SortableHeadProps) {
   const isActive = activeKey === sortKey;
   return (
-    <TableHead className={`text-black p-0 ${className ?? ''}`}>
+    <TableHead className={cn("text-black p-0", className)}>
       <button
         type="button"
         onClick={() => onSort(sortKey)}
-        className="flex items-center gap-1 w-full h-10 px-2 font-medium whitespace-nowrap hover:bg-black/5 transition-colors select-none"
-        aria-sort={isActive ? (direction === 'asc' ? 'ascending' : 'descending') : undefined}
+        className={cn(
+          "flex items-center gap-1 w-full h-10 px-2 font-medium whitespace-nowrap hover:bg-black/5 transition-colors select-none",
+          buttonClassName,
+        )}
+        aria-sort={isActive ? (direction === "asc" ? "ascending" : "descending") : undefined}
       >
         {label}
         {isActive ? (
-          direction === 'asc' ? (
+          direction === "asc" ? (
             <ArrowUpIcon className="w-3.5 h-3.5 shrink-0" />
           ) : (
             <ArrowDownIcon className="w-3.5 h-3.5 shrink-0" />

@@ -19,7 +19,7 @@ import {
 import { ShieldCheckIcon, ShieldSlashIcon, SealCheckIcon, SealIcon } from "@phosphor-icons/react";
 import { EmptyListIllustration } from '@/components/graphics';
 import { toast } from 'sonner';
-import { SortableHead, useTableSort, SortAccessors } from './table-sort';
+import { SortableHead, useTableSort, SortAccessors } from '@/components/ui/table-sort';
 import RegularBadge from '@/components/custom/regular-badge';
 
 const inputClass = "border-black/20 rounded-sm focus-visible:ring-black/20 focus-visible:border-black shadow-none";

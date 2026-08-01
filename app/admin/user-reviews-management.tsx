@@ -10,7 +10,7 @@ import { FlagIcon, EyeIcon, EyeSlashIcon } from "@phosphor-icons/react";
 import { EmptyListIllustration } from '@/components/graphics';
 import { AdminUserRating } from '@/lib/server-queries';
 import { toast } from 'sonner';
-import { SortableHead, useTableSort, SortAccessors } from './table-sort';
+import { SortableHead, useTableSort, SortAccessors } from '@/components/ui/table-sort';
 
 const inputClass = "border-black/20 rounded-sm focus-visible:ring-black/20 focus-visible:border-black shadow-none";
 const badgeClass = "text-xs bg-black text-white rounded-sm";

@@ -31,7 +31,7 @@ import { EmptyListIllustration } from '@/components/graphics';
 import { Content } from '@/lib/server-queries';
 import { contentTypeLabel } from '@/lib/utils';
 import { toast } from 'sonner';
-import { SortableHead, useTableSort, SortAccessors } from './table-sort';
+import { SortableHead, useTableSort, SortAccessors } from '@/components/ui/table-sort';
 
 const inputClass = "border-black/20 rounded-sm focus-visible:ring-black/20 focus-visible:border-black shadow-none";
 // Field groups: a Label sitting flush on its input reads as one blob

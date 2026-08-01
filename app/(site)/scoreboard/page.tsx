@@ -5,7 +5,7 @@ import ScoreboardTable from "./scoreboard-table";
 
 export const metadata: Metadata = {
   title: "NFC Scoreboard | Nollywood Film Club",
-  description: "Every movie, TV show, and short film the club has rated, ranked by NFC score.",
+  description: "Every movie, TV show, and short film the club has rated, with its NFC score.",
 };
 
 export default async function ScoreboardPage() {
@@ -19,12 +19,13 @@ export default async function ScoreboardPage() {
             <div className="flex items-baseline justify-between gap-4 border-b border-black">
               <h1 className="pb-3 text-2xl font-semibold">NFC Scoreboard</h1>
               <span className="pb-3 text-sm text-black/60">
-                {ranked.length} {ranked.length === 1 ? "title" : "titles"} ranked
+                {ranked.length} {ranked.length === 1 ? "title" : "titles"} scored
               </span>
             </div>
             <p className="pt-4 text-sm font-light text-black/60">
-              Every title the club has actually rated, ranked by NFC score. Nothing with zero
-              votes makes the list.
+              Every title the club has actually rated, with its NFC score attached. This is a
+              scoreboard, not a leaderboard: nobody is competing for first place, we are just
+              keeping receipts.
             </p>
 
             {ranked.length > 0 ? (

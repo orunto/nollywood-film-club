@@ -11,7 +11,7 @@ import { EmptyListIllustration } from '@/components/graphics';
 import { AdminContactMessage } from '@/lib/server-queries';
 import { CONTACT_CATEGORIES } from '@/lib/contact';
 import { toast } from 'sonner';
-import { SortableHead, useTableSort, SortAccessors } from './table-sort';
+import { SortableHead, useTableSort, SortAccessors } from '@/components/ui/table-sort';
 
 const inputClass = "border-black/20 rounded-sm focus-visible:ring-black/20 focus-visible:border-black shadow-none";
 const badgeClass = "text-xs bg-black text-white rounded-sm";
