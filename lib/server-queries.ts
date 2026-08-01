@@ -251,17 +251,26 @@ export async function getAllContent(): Promise<Content[]> {
   }
 }
 
-// Content ranked by NFC score for the /leaderboard page. Unrated titles are
+// A scoreboard row: a title plus how many votes fed its NFC score. The count
+// includes legacy poll votes (userRatings rows seeded from the pre-site NFC
+// Data.xlsx import, userId formatted "legacy-poll:<slug>:<n>") — they're
+// ordinary userRatings rows, so counting the join picks them up same as any
+// member vote.
+export interface ScoreboardEntry extends Content {
+  ratingsCount: number;
+}
+
+// Content ranked by NFC score for the /scoreboard page. Unrated titles are
 // dropped entirely (an "N/A" row at the top of a ranking reads as broken),
 // and the aggregate itself — not one of the select aliases — drives the sort,
 // since a groupBy query can't order by its own select alias in Drizzle.
-export async function getLeaderboard({
+export async function getScoreboard({
   contentType,
   limit = 100,
 }: {
   contentType?: "movie" | "tv_show" | "short_film";
   limit?: number;
-} = {}): Promise<Content[]> {
+} = {}): Promise<ScoreboardEntry[]> {
   try {
     const ranked = await db
       .select({
@@ -286,6 +295,7 @@ export async function getLeaderboard({
         createdAt: content.createdAt,
         updatedAt: content.updatedAt,
         userRating: avg(userRatings.rating),
+        ratingsCount: sql<number>`count(${userRatings.id})::int`,
       })
       .from(content)
       .leftJoin(userRatings, eq(content.id, userRatings.contentId))
@@ -305,9 +315,10 @@ export async function getLeaderboard({
       updatedAt: item.updatedAt?.toISOString() || "",
       isMovieOfTheWeek: item.isMovieOfTheWeek ?? false,
       userRating: item.userRating ? parseFloat(item.userRating) : null,
+      ratingsCount: Number(item.ratingsCount ?? 0),
     }));
   } catch (error) {
-    console.error("Error fetching leaderboard:", error);
+    console.error("Error fetching scoreboard:", error);
     return [];
   }
 }

@@ -3,13 +3,13 @@ import Link from "next/link";
 import { CldImage } from "next-cloudinary";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn, contentPath, contentTypeLabel, nfcPercent, scoreBadgeClass } from "@/lib/utils";
-import type { Content } from "@/lib/server-queries";
+import type { ScoreboardEntry } from "@/lib/server-queries";
 
 // Every cell gets a right-hand border, matching Table's built-in bottom
 // border on rows, so the grid reads as a spreadsheet rather than a card list.
 const cellBorder = "border-r border-black/10 last:border-r-0";
 
-export default function LeaderboardTable({ ranked }: { ranked: Content[] }) {
+export default function ScoreboardTable({ ranked }: { ranked: ScoreboardEntry[] }) {
   return (
     <div className="mt-6 border border-black/10 rounded-sm">
       <Table className="table-fixed">
@@ -19,6 +19,7 @@ export default function LeaderboardTable({ ranked }: { ranked: Content[] }) {
             <TableHead className={cn("text-black/60 font-mono text-xs py-1.5", cellBorder)}>Title</TableHead>
             <TableHead className={cn("text-black/60 font-mono text-xs w-28 py-1.5", cellBorder)}>Type</TableHead>
             <TableHead className={cn("text-black/60 font-mono text-xs w-16 py-1.5", cellBorder)}>Year</TableHead>
+            <TableHead className={cn("text-black/60 font-mono text-xs w-20 py-1.5 text-right", cellBorder)}>Voted</TableHead>
             <TableHead className="text-black/60 font-mono text-xs w-20 py-1.5 text-right">Score</TableHead>
           </TableRow>
         </TableHeader>
@@ -58,6 +59,9 @@ export default function LeaderboardTable({ ranked }: { ranked: Content[] }) {
                 </TableCell>
                 <TableCell className={cn("py-1.5 font-mono text-xs text-black/60", cellBorder)}>
                   {year ?? "—"}
+                </TableCell>
+                <TableCell className={cn("py-1.5 font-mono text-xs text-black/60 text-right", cellBorder)}>
+                  {item.ratingsCount}
                 </TableCell>
                 <TableCell className="py-1.5 text-right">
                   <span
