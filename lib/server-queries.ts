@@ -870,6 +870,121 @@ export async function getFeedReviewById(id: string): Promise<FeedReview | null> 
   }
 }
 
+// Public profile for /members/[username]. Resolves the username through the
+// local `users` table (Stack has no indexed way to do this), then pulls
+// display fields from Stack itself. Returns null on no match so the page can
+// 404 — covers both "no such username" and "account since deleted".
+export async function getPublicProfile(username: string): Promise<PublicProfile | null> {
+  try {
+    const id = await resolveUserIdByUsername(username);
+    if (!id) return null;
+
+    const user = await stackServerApp.getUser(id);
+    if (!user) return null;
+
+    return {
+      id: user.id,
+      username: resolveUsername(user),
+      displayName: user.displayName ?? null,
+      profileImage: user.profileImageUrl || undefined,
+      isRegular: isRegularUser(user),
+      joinedAt: user.signedUpAt.toISOString(),
+    };
+  } catch (error) {
+    console.error("Error fetching public profile:", error);
+    return null;
+  }
+}
+
+// Like/okay/disliked counts for a member's profile header.
+export async function getUserRatingStats(
+  userId: string,
+): Promise<{ total: number; liked: number; okay: number; disliked: number }> {
+  try {
+    const rows = await db
+      .select({ rating: userRatings.rating, n: sql<number>`COUNT(*)::int` })
+      .from(userRatings)
+      .where(and(eq(userRatings.userId, userId), eq(userRatings.restricted, false)))
+      .groupBy(userRatings.rating);
+
+    const stats = { total: 0, liked: 0, okay: 0, disliked: 0 };
+    for (const row of rows) {
+      const n = Number(row.n);
+      stats.total += n;
+      if (row.rating === 10) stats.liked += n;
+      else if (row.rating === 5) stats.okay += n;
+      else if (row.rating === 0) stats.disliked += n;
+    }
+    return stats;
+  } catch (error) {
+    console.error("Error fetching user rating stats:", error);
+    return { total: 0, liked: 0, okay: 0, disliked: 0 };
+  }
+}
+
+// A member's ratings for their public profile page. Unlike the trending feed
+// this deliberately does NOT require review text — a profile should show
+// every title a member rated, including score-only ratings.
+export async function getRatingsByUser(
+  userId: string,
+  { limit = 12, offset = 0 }: { limit?: number; offset?: number } = {},
+): Promise<FeedReview[]> {
+  try {
+    const rows = await db
+      .select({
+        rating: userRatings,
+        title: content.title,
+        contentType: content.contentType,
+        releaseDate: content.releaseDate,
+        posterImage: content.posterImage,
+        commentCount: sql<number>`COUNT(${comments.id})::int`,
+      })
+      .from(userRatings)
+      .leftJoin(content, eq(userRatings.contentId, content.id))
+      .leftJoin(
+        comments,
+        and(eq(comments.reviewId, userRatings.id), eq(comments.restricted, false)),
+      )
+      .where(and(eq(userRatings.userId, userId), eq(userRatings.restricted, false)))
+      .groupBy(userRatings.id, content.id)
+      .orderBy(desc(userRatings.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    const enriched = await enrichRatingsWithUsernames(rows.map((r) => r.rating));
+
+    return enriched.map((rating, i) => ({
+      ...rating,
+      commentCount: Number(rows[i].commentCount ?? 0),
+      film: rows[i].title
+        ? {
+            title: rows[i].title as string,
+            contentType: rows[i].contentType as "movie" | "tv_show" | "short_film",
+            releaseDate: rows[i].releaseDate?.toISOString() ?? null,
+            posterImage: rows[i].posterImage,
+          }
+        : null,
+    }));
+  } catch (error) {
+    console.error("Error fetching ratings by user:", error);
+    return [];
+  }
+}
+
+// Total for a member's profile, for pagination.
+export async function countRatingsByUser(userId: string): Promise<number> {
+  try {
+    const [row] = await db
+      .select({ total: sql<number>`COUNT(*)::int` })
+      .from(userRatings)
+      .where(and(eq(userRatings.userId, userId), eq(userRatings.restricted, false)));
+    return Number(row?.total ?? 0);
+  } catch (error) {
+    console.error("Error counting ratings by user:", error);
+    return 0;
+  }
+}
+
 export interface CommentNode {
   id: string;
   reviewId: string;
