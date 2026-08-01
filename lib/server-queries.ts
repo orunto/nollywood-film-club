@@ -13,7 +13,7 @@ import {
 } from "@/db/schema";
 import { eq, avg, asc, desc, sql, and, inArray, isNotNull, isNull, lte, ne, or } from "drizzle-orm";
 import { stackServerApp } from "@/stack";
-import { isAdminUser } from "@/lib/roles";
+import { isAdminUser, isRegularUser } from "@/lib/roles";
 import { contentSlug, type ViewingCategory } from "@/lib/utils";
 import type { NavUser } from "@/components/custom/nav";
 
@@ -106,6 +106,7 @@ export interface UserRating {
   // Added username and profileImage fields to store the user info from Stack Auth
   username?: string;
   profileImage?: string;
+  isRegular?: boolean;
 }
 
 // Admin-only view of a user rating, with the related content's title joined in
@@ -562,6 +563,17 @@ export async function getContentBySlug(slug: string): Promise<Content | null> {
 export interface UserDisplay {
   username: string;
   profileImage?: string;
+  isRegular: boolean;
+}
+
+// Shape shared by the About page's regulars roster and public profile pages.
+export interface PublicProfile {
+  id: string;
+  username: string;
+  displayName: string | null;
+  profileImage?: string;
+  isRegular: boolean;
+  joinedAt: string | null;
 }
 
 // The one place a reviewer's public byline is decided. Onboarding only sets
@@ -608,13 +620,14 @@ const getUserDisplay = cache(async (userId: string): Promise<UserDisplay> => {
       return {
         username: resolveUsername(user),
         profileImage: user.profileImageUrl || undefined,
+        isRegular: isRegularUser(user),
       };
     }
   } catch (error) {
     console.error("Error fetching Stack user", userId, error);
   }
   // Deleted user, or Stack Auth is unreachable — never fail the whole page
-  return { username: "Deleted member" };
+  return { username: "Deleted member", isRegular: false };
 });
 
 // Resolve a batch of user IDs at once. Deduped and issued in parallel: this
@@ -629,6 +642,23 @@ export async function getUserDisplayMap(
     unique.map(async (id) => [id, await getUserDisplay(id)] as const),
   );
   return new Map(entries);
+}
+
+// Members an admin has flagged as "regulars" (see lib/roles.ts), for the
+// About page roster. Same 200-account cap the admin users list already
+// accepts — the regulars list will always be a small subset of that.
+export async function getRegularUsers(): Promise<PublicProfile[]> {
+  const allUsers = await stackServerApp.listUsers({ limit: 200 });
+  return allUsers
+    .filter(isRegularUser)
+    .map((user) => ({
+      id: user.id,
+      username: resolveUsername(user),
+      displayName: user.displayName ?? null,
+      profileImage: user.profileImageUrl || undefined,
+      isRegular: true,
+      joinedAt: user.signedUpAt.toISOString(),
+    }));
 }
 
 // Current request's user serialized to the nav's minimal shape, plus the admin
@@ -672,6 +702,7 @@ async function enrichRatingsWithUsernames(
     updatedAt: item.updatedAt?.toISOString() || "",
     username: userMap.get(item.userId)?.username ?? "Deleted member",
     profileImage: userMap.get(item.userId)?.profileImage,
+    isRegular: userMap.get(item.userId)?.isRegular ?? false,
   }));
 }
 

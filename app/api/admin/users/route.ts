@@ -27,6 +27,7 @@ export async function GET() {
       profileImageUrl: u.profileImageUrl,
       signedUpAt: u.signedUpAt,
       role: (u.clientReadOnlyMetadata as { role?: string } | null)?.role === 'admin' ? 'admin' : 'user',
+      regular: (u.clientReadOnlyMetadata as { regular?: boolean } | null)?.regular === true,
       reviewCount: reviewCountMap.get(u.id) ?? 0,
     }));
 
