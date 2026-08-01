@@ -11,8 +11,8 @@ export default function Footer() {
 
             <div className="flex flex-col gap-3 text-sm lg:text-right text-left lg:items-end items-start lg:w-max w-full">
                 <Link href='/movies-and-tv'>Movies &amp; TV</Link>
-                <Link href='/#discussions'>Discussions</Link>
-                <Link href='/#reviews'>Reviews</Link>
+                <Link href='/discussions'>Discussions</Link>
+                <Link href='/reviews'>Reviews</Link>
                 <Link href='/about'>About</Link>
                 <Link href='/contact'>Contact</Link>
                 <Link href='/auth'>Join the Club</Link>

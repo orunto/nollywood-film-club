@@ -5,7 +5,8 @@ import { Badge } from "../ui/badge";
 import { Discussion } from "@/lib/server-queries";
 import { useCardScroller } from "@/lib/hooks/use-card-scroller";
 import { contentTypeLabel } from "@/lib/utils";
-import { CalendarBlankIcon, MicrophoneStageIcon, BroadcastIcon, YoutubeLogoIcon, ArrowSquareOutIcon, CaretLeftIcon, CaretRightIcon } from "@phosphor-icons/react";
+import Link from "next/link";
+import { CalendarBlankIcon, MicrophoneStageIcon, BroadcastIcon, YoutubeLogoIcon, ArrowSquareOutIcon, ArrowRightIcon, CaretLeftIcon, CaretRightIcon } from "@phosphor-icons/react";
 import {
     AlertDialog,
     AlertDialogCancel,
@@ -34,7 +35,14 @@ export default function Discussions({ discussions }: DiscussionsProps) {
         <div className="flex items-end justify-between pb-3 border-b border-black">
             <h1 className="text-2xl font-semibold">Discussions</h1>
             {discussions && discussions.length > 0 && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-4">
+                    <Link
+                        href="/discussions"
+                        className="flex items-center gap-1.5 text-sm text-black/60 hover:text-black"
+                    >
+                        All of it
+                        <ArrowRightIcon className="h-4 w-4" />
+                    </Link>
                     <button
                         aria-label="Scroll discussions back"
                         onClick={() => scrollByPage(-1)}

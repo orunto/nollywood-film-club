@@ -464,6 +464,55 @@ export async function getDiscussions(): Promise<Discussion[]> {
   }
 }
 
+// A scheduled-but-not-yet-held space has nothing to listen to — same rule
+// getDiscussions uses, shared here so the full archive and the homepage strip
+// agree on what counts as "out."
+const DISCUSSION_VISIBLE = or(
+  isNull(discussions.discussionDate),
+  lte(discussions.discussionDate, new Date()),
+);
+const DISCUSSION_ORDER = [
+  sql`${discussions.episodeNumber} DESC NULLS LAST`,
+  sql`${discussions.discussionDate} DESC NULLS LAST`,
+  desc(discussions.createdAt),
+];
+
+// The full, paginated episode archive for /discussions — newest first.
+export async function getAllDiscussions({
+  limit = 20,
+  offset = 0,
+}: { limit?: number; offset?: number } = {}): Promise<Discussion[]> {
+  try {
+    const rows = await db
+      .select()
+      .from(discussions)
+      .leftJoin(content, eq(discussions.contentId, content.id))
+      .where(DISCUSSION_VISIBLE)
+      .orderBy(...DISCUSSION_ORDER)
+      .limit(limit)
+      .offset(offset);
+
+    return rows.map((row) => mapDiscussion(row.discussions, row.content));
+  } catch (error) {
+    console.error("Error fetching all discussions:", error);
+    return [];
+  }
+}
+
+// Total archive size, for pagination.
+export async function countDiscussions(): Promise<number> {
+  try {
+    const [row] = await db
+      .select({ total: sql<number>`COUNT(*)::int` })
+      .from(discussions)
+      .where(DISCUSSION_VISIBLE);
+    return Number(row?.total ?? 0);
+  } catch (error) {
+    console.error("Error counting discussions:", error);
+    return 0;
+  }
+}
+
 // Every episode that discussed this film, earliest first. A film can be covered
 // more than once — a rewatch, or a sequel week that revisits the original — and
 // the earliest is the canonical one: it is the same episode that sets

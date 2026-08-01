@@ -43,10 +43,10 @@ export default function Nav({ user, isAdmin }: NavProps) {
                     <Link href="/scoreboard">NFC Scoreboard</Link>
                 </li>
                 <li>
-                    <Link href="/#reviews">Reviews</Link>
+                    <Link href="/reviews">Reviews</Link>
                 </li>
                 <li>
-                    <Link href="/#discussions">Discussions</Link>
+                    <Link href="/discussions">Discussions</Link>
                 </li>
                 <li>
                     <Link href="/about">About</Link>

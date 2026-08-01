@@ -142,7 +142,7 @@ export default function Hero({ latestEpisode, posters = [] }: HeroProps) {
                         <div className="py-10 text-center">
                             <h3 className="text-xl font-semibold mb-2 text-black">Coming soon...</h3>
                             <p className="text-gray-600 text-sm">
-                                The next episode lands here once Cletus finds
+                                The next episode lands here once we find
                                 whatever catchy intro music you&apos;re about to hear.
                             </p>
                         </div>
@@ -151,7 +151,7 @@ export default function Hero({ latestEpisode, posters = [] }: HeroProps) {
                     {/* Jump to the full discussion archive */}
                     <div className="flex justify-end">
                         <Link
-                            href="/#discussions"
+                            href="/discussions"
                             className="flex items-center gap-2 px-3 py-2 bg-black text-white rounded-sm text-xs hover:bg-black/80 transition-colors"
                         >
                             See more
