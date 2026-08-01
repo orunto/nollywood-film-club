@@ -32,6 +32,7 @@ import RatingFace from "@/components/custom/rating-face";
 import MovieRatingSheet from "@/components/custom/movie-rating-sheet";
 import ReviewText from "@/components/custom/review-text";
 import CommentSheet from "@/components/custom/comment-sheet";
+import RegularBadge from "@/components/custom/regular-badge";
 import { STREAMING_PLATFORMS } from "@/components/sections/movie-hero";
 import { Content, Discussion, Review, UserRating } from "@/lib/server-queries";
 import {
@@ -555,9 +556,16 @@ export default function ContentDetailsClient({
                     </span>
                     <div className="flex items-center gap-3">
                       <RatingFace rating={userRating.rating} className="h-10 w-10" />
-                      <span className="text-lg font-semibold">
-                        {userRating.username}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        {userRating.username && userRating.username !== "Deleted member" ? (
+                          <Link href={`/members/${userRating.username}`} className="text-lg font-semibold hover:underline">
+                            {userRating.username}
+                          </Link>
+                        ) : (
+                          <span className="text-lg font-semibold">{userRating.username}</span>
+                        )}
+                        {userRating.isRegular && <RegularBadge />}
+                      </div>
                     </div>
                     {userRating.review && <ReviewText source={userRating.review} />}
                     <CommentSheet
