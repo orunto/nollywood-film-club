@@ -691,11 +691,20 @@ export async function resolveUserIdByUsername(username: string): Promise<string 
   return row?.id ?? null;
 }
 
+// Legacy poll rows (imported from NFC Data.xlsx) carry a synthetic userId —
+// "legacy-poll:<slug>:<n>" — with no matching Stack Auth account. Recognized
+// up front so getUserDisplay can skip straight to a fallback instead of
+// issuing a Stack Auth lookup that is guaranteed to 400 (non-UUID user_id).
+const LEGACY_POLL_PREFIX = "legacy-poll:";
+
 // Display info for one reviewer, from Stack Auth (displayName/profileImage
 // aren't mirrored locally — only username is, see resolveUserIdByUsername
 // above). Wrapped in React cache() so a request that renders the same author
 // more than once — a feed and the threads under it — only looks them up once.
 const getUserDisplay = cache(async (userId: string): Promise<UserDisplay> => {
+  if (userId.startsWith(LEGACY_POLL_PREFIX)) {
+    return { username: "Legacy Member", isRegular: false, profileUsername: null };
+  }
   try {
     const user = await stackServerApp.getUser(userId);
     if (user) {
@@ -802,18 +811,22 @@ async function enrichRatingsWithUsernames(
   }));
 }
 
-// New function to get user ratings for a specific content with usernames from Stack Auth
+// New function to get user ratings for a specific content with usernames from Stack Auth.
+// Deliberately NOT filtered by `restricted` here — the NFC score average above
+// it never filters on `restricted` either, and every legacy-poll row (imported
+// from NFC Data.xlsx, userId "legacy-poll:<slug>:<n>") was written with
+// restricted=true, so a restricted=false filter here would silently drop them
+// from the count/distribution while the score still counted them. Callers that
+// render individual review cards must filter `!restricted` themselves — see
+// `ratingsWithReview` in content-details-client.tsx.
 export async function getUserRatingsForContent(
   contentId: string,
 ): Promise<UserRating[]> {
   try {
-    // Restricted reviews are hidden from public display
     const ratings = await db
       .select()
       .from(userRatings)
-      .where(
-        and(eq(userRatings.contentId, contentId), eq(userRatings.restricted, false)),
-      )
+      .where(eq(userRatings.contentId, contentId))
       .orderBy(userRatings.createdAt);
 
     return await enrichRatingsWithUsernames(ratings);
