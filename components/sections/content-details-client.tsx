@@ -157,7 +157,10 @@ export default function ContentDetailsClient({
   // out, or 24h have passed since the space (discussion_date).
   const isRatingEnabled = isRatingOpen(discussionDate, hasPodcastLink);
 
-  const ratingsWithReview = userRatings.filter((r) => r.review);
+  // Restricted reviews (moderator-hidden, or legacy-poll rows with no author to
+  // show) stay out of the rendered card list even though they still count
+  // toward the tally above — see getUserRatingsForContent.
+  const ratingsWithReview = userRatings.filter((r) => r.review && !r.restricted);
   const visibleUserReviews =
     reviewFilter === "all"
       ? ratingsWithReview

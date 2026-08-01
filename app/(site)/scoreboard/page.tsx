@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
 import { Footer } from "@/components/custom";
-import { getLeaderboard } from "@/lib/server-queries";
-import LeaderboardTable from "./leaderboard-table";
+import { getScoreboard } from "@/lib/server-queries";
+import ScoreboardTable from "./scoreboard-table";
 
 export const metadata: Metadata = {
   title: "NFC Scoreboard | Nollywood Film Club",
   description: "Every movie, TV show, and short film the club has rated, ranked by NFC score.",
 };
 
-export default async function LeaderboardPage() {
-  const ranked = await getLeaderboard();
+export default async function ScoreboardPage() {
+  const ranked = await getScoreboard();
 
   return (
     <>
@@ -28,7 +28,7 @@ export default async function LeaderboardPage() {
             </p>
 
             {ranked.length > 0 ? (
-              <LeaderboardTable ranked={ranked} />
+              <ScoreboardTable ranked={ranked} />
             ) : (
               <div className="flex flex-col items-center gap-4 py-20 text-center">
                 <h2 className="text-xl font-semibold">Nobody has rated anything yet</h2>
