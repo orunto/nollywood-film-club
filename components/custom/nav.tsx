@@ -40,6 +40,9 @@ export default function Nav({ user, isAdmin }: NavProps) {
                     <Link href="/movies-and-tv">Movies &amp; TV Series</Link>
                 </li>
                 <li>
+                    <Link href="/leaderboard">Leaderboard</Link>
+                </li>
+                <li>
                     <Link href="/#reviews">Reviews</Link>
                 </li>
                 <li>

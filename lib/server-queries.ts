@@ -249,6 +249,67 @@ export async function getAllContent(): Promise<Content[]> {
   }
 }
 
+// Content ranked by NFC score for the /leaderboard page. Unrated titles are
+// dropped entirely (an "N/A" row at the top of a ranking reads as broken),
+// and the aggregate itself — not one of the select aliases — drives the sort,
+// since a groupBy query can't order by its own select alias in Drizzle.
+export async function getLeaderboard({
+  contentType,
+  limit = 100,
+}: {
+  contentType?: "movie" | "tv_show" | "short_film";
+  limit?: number;
+} = {}): Promise<Content[]> {
+  try {
+    const ranked = await db
+      .select({
+        id: content.id,
+        title: content.title,
+        contentType: content.contentType,
+        runtime: content.runtime,
+        releaseDate: content.releaseDate,
+        rating: content.rating,
+        synopsis: content.synopsis,
+        genre: content.genre,
+        posterImage: content.posterImage,
+        posterVersion: content.posterVersion,
+        trailerUrl: content.trailerUrl,
+        streamingUrl: content.streamingUrl,
+        streamingPlatform: content.streamingPlatform,
+        otherPlatform: content.otherPlatform,
+        viewingCategory: content.viewingCategory,
+        castMembers: content.castMembers,
+        isMovieOfTheWeek: content.isMovieOfTheWeek,
+        catalogNumber: content.catalogNumber,
+        createdAt: content.createdAt,
+        updatedAt: content.updatedAt,
+        userRating: avg(userRatings.rating),
+      })
+      .from(content)
+      .leftJoin(userRatings, eq(content.id, userRatings.contentId))
+      .where(contentType ? eq(content.contentType, contentType) : undefined)
+      .groupBy(content.id)
+      .having(sql`avg(${userRatings.rating}) is not null`)
+      .orderBy(desc(sql`avg(${userRatings.rating})`))
+      .limit(limit);
+
+    return ranked.map((item) => ({
+      ...item,
+      id: item.id || "",
+      title: item.title || "",
+      contentType: item.contentType || "movie",
+      releaseDate: item.releaseDate?.toISOString() || null,
+      createdAt: item.createdAt?.toISOString() || "",
+      updatedAt: item.updatedAt?.toISOString() || "",
+      isMovieOfTheWeek: item.isMovieOfTheWeek ?? false,
+      userRating: item.userRating ? parseFloat(item.userRating) : null,
+    }));
+  } catch (error) {
+    console.error("Error fetching leaderboard:", error);
+    return [];
+  }
+}
+
 export async function getReviews(): Promise<Review[]> {
   try {
     const reviewsData = await db
