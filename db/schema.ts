@@ -56,6 +56,24 @@ export interface CastMember {
   characterName: string | null; // null for directors
 }
 
+// Local mirror of Stack Auth's id -> username. Stack itself has no notion of
+// username uniqueness (it lives in freeform clientMetadata), so this table is
+// the actual source of truth for the (case-insensitive) uniqueness guarantee
+// and for the indexed lookups /members/[username] needs. Not FK'd to
+// userRatings/comments.userId — those stay plain Stack ids, same as before.
+export const users = pgTable(
+  "users",
+  {
+    id: text("id").primaryKey(), // Stack Auth user id
+    username: text("username").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("users_username_lower_unique").on(sql`lower(${table.username})`),
+  ],
+);
+
 // Movies/TV Shows table
 export const content = pgTable(
   "content",

@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stackServerApp } from '@/stack';
 import { isAdminUser } from '@/lib/roles';
 import { USERNAME_RE } from '@/lib/username';
+import { db } from '@/db/client';
+import { users } from '@/db/schema';
+import { sql } from 'drizzle-orm';
+import { isDuplicateUsername } from '@/lib/db-errors';
 
 export async function POST(request: NextRequest) {
   try {
@@ -57,17 +61,41 @@ export async function POST(request: NextRequest) {
       const targetUser = isCurrentUser ? currentUser : await stackServerApp.getUser(stackUserId);
 
       if (targetUser) {
+        const lowerUsername = username.toLowerCase();
+
+        // Local `users` table is the real source of truth for uniqueness
+        // (a real DB constraint — Stack's clientMetadata never guaranteed
+        // it). Write there first; only touch Stack Auth if it lands, so a
+        // rejected username never ends up on the Stack side.
+        try {
+          await db
+            .insert(users)
+            .values({ id: targetUser.id, username: lowerUsername })
+            .onConflictDoUpdate({
+              target: users.id,
+              set: { username: lowerUsername, updatedAt: sql`now()` },
+            });
+        } catch (dbError) {
+          if (isDuplicateUsername(dbError)) {
+            return NextResponse.json(
+              { error: 'Username is already taken' },
+              { status: 409 }
+            );
+          }
+          throw dbError;
+        }
+
         // Merge, don't overwrite: a bare { username } would wipe any other
         // clientMetadata the user has.
         await targetUser.update({
           clientMetadata: {
             ...(targetUser.clientMetadata as object ?? {}),
-            username: username.toLowerCase(),
+            username: lowerUsername,
           },
         });
-        
+
         return NextResponse.json(
-          { success: true, username: username.toLowerCase() },
+          { success: true, username: lowerUsername },
           { status: 201 }
         );
       } else {

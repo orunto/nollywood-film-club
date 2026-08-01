@@ -22,3 +22,10 @@ export function isDuplicateEpisodeNumber(error: unknown): boolean {
     pg?.constraint === "discussions_episode_number_unique"
   );
 }
+
+// True when a write collided with users_username_lower_unique — i.e. the
+// username is already taken (case-insensitively).
+export function isDuplicateUsername(error: unknown): boolean {
+  const pg = pgError(error);
+  return pg?.code === UNIQUE_VIOLATION && pg?.constraint === "users_username_lower_unique";
+}
