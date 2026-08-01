@@ -56,7 +56,7 @@ export default async function ReviewPermalinkPage({
         </div>
 
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 py-10 lg:px-10">
-          <ReviewCard review={review} expanded />
+          <ReviewCard review={review} expanded className="border-b border-black/10 pb-8" />
           <CommentThread reviewId={review.id} thread={thread} />
         </div>
       </main>

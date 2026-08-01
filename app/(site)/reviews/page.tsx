@@ -45,7 +45,7 @@ export default async function ReviewsFeedPage({
     <>
       <main className="min-h-screen">
         <div className="flex min-h-screen w-full flex-col px-6 py-10 lg:px-10 lg:py-8">
-          <section className="w-full">
+          <section className="mx-auto w-full max-w-2xl">
             <div className="flex items-baseline justify-between gap-4 border-b border-black">
               <h1 className="pb-3 text-2xl font-semibold">Reviews</h1>
               <span className="pb-3 text-sm text-black/60">
@@ -59,14 +59,14 @@ export default async function ReviewsFeedPage({
 
             {reviews.length > 0 ? (
               <>
-                <div className="grid gap-6 py-6 lg:grid-cols-2">
+                <div className="flex flex-col divide-y divide-black/10 pt-4">
                   {reviews.map((review) => (
                     <ReviewCard key={review.id} review={review} />
                   ))}
                 </div>
 
                 {totalPages > 1 && (
-                  <Pagination className="pb-10">
+                  <Pagination className="pb-10 pt-6">
                     <PaginationContent>
                       <PaginationItem>
                         <PaginationPrevious

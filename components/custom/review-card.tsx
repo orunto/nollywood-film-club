@@ -50,96 +50,125 @@ export default function ReviewCard({ review, expanded, className }: ReviewCardPr
   return (
     <article
       className={cn(
-        "flex flex-col gap-4 rounded-sm bg-black/5 p-5",
+        "group flex gap-3 sm:gap-4",
+        // Feed rows get the site's list-row treatment (see episode-row.tsx):
+        // negative margin lets the hover fill bleed past the text padding.
+        !expanded && "-mx-3 rounded-sm px-3 py-5 transition-colors hover:bg-black/[0.03] sm:-mx-4 sm:px-4",
         className,
       )}
     >
-      {/* The feed spans the catalogue, so each take carries its film with it */}
-      {film && filmHref && (
-        <Link href={filmHref} className="flex items-center gap-3 group w-fit">
-          {film.posterImage && (
-            <CldImage
-              src={film.posterImage}
-              alt=""
-              width={64}
-              height={96}
-              className="h-16 w-11 shrink-0 rounded-sm object-cover"
-              sizes="44px"
-              loading="lazy"
-            />
-          )}
-          <div className="flex flex-col gap-1">
-            <span className="font-semibold leading-tight group-hover:underline">
-              {film.title} {year && <span className="text-black/40">({year})</span>}
-            </span>
-            <Badge className="w-fit border border-black bg-transparent text-xs text-black">
-              {contentTypeLabel(film.contentType)}
-            </Badge>
-          </div>
-        </Link>
-      )}
+      {/* No profile photos on this site — the verdict a member gave stands in
+          for their avatar, the same face shown everywhere else they rate. */}
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black/5 ring-1 ring-black/10 sm:h-12 sm:w-12">
+        <RatingFace rating={review.rating} className="h-6 w-6 sm:h-7 sm:w-7" />
+      </div>
 
-      <div className="flex items-center gap-3">
-        <RatingFace rating={review.rating} className="h-10 w-10" />
-        <div className="flex flex-col gap-0.5">
-          <div className="flex items-center gap-1.5">
+      <div className="flex min-w-0 flex-1 flex-col gap-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 pt-0.5">
             {review.profileUsername ? (
-              <Link href={`/members/${review.profileUsername}`} className="font-semibold hover:underline">
+              <Link
+                href={`/members/${review.profileUsername}`}
+                className="truncate font-semibold hover:underline"
+              >
                 {review.username}
               </Link>
             ) : (
-              <span className="font-semibold">{review.username}</span>
+              <span className="truncate font-semibold">{review.username}</span>
             )}
             {review.isRegular && <RegularBadge />}
+            <span aria-hidden className="text-black/30">
+              &middot;
+            </span>
+            {expanded ? (
+              <span className="text-xs text-black/50">
+                {formatWhen(review.createdAt)}
+                {review.edited && <span> (edited)</span>}
+              </span>
+            ) : (
+              // The timestamp is the permalink, the way a tweet's is.
+              <Link
+                href={`/reviews/${review.id}`}
+                className="text-xs text-black/50 hover:text-black hover:underline"
+              >
+                {formatWhen(review.createdAt)}
+                {review.edited && <span> (edited)</span>}
+              </Link>
+            )}
           </div>
-          <span className="text-xs uppercase tracking-widest text-black/50">
-            {formatWhen(review.createdAt)}
-            {review.edited && <span className="normal-case tracking-normal"> (edited)</span>}
-          </span>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label="Review options"
+                className="shrink-0 text-black/40 hover:text-black cursor-pointer"
+              >
+                <DotsThreeIcon className="h-5 w-5" weight="bold" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="rounded-sm">
+              <DropdownMenuItem onClick={() => setIsReporting(true)} className="cursor-pointer">
+                <FlagIcon className="mr-2 h-4 w-4" />
+                Report
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              aria-label="Review options"
-              className="ml-auto self-start text-black/40 hover:text-black cursor-pointer"
-            >
-              <DotsThreeIcon className="h-5 w-5" weight="bold" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="rounded-sm">
-            <DropdownMenuItem onClick={() => setIsReporting(true)} className="cursor-pointer">
-              <FlagIcon className="mr-2 h-4 w-4" />
-              Report
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {review.review &&
+          (expanded ? (
+            // Full Markdown on the permalink / detail view.
+            <ReviewText source={review.review} />
+          ) : (
+            // Collapsed feed card: clamp a plain-text excerpt so line-clamp stays
+            // clean across Markdown block elements.
+            <p className="text-sm font-light leading-relaxed line-clamp-4">
+              {markdownToPlainText(review.review)}
+            </p>
+          ))}
+
+        {/* The film rides along like a quoted link: what's being talked about,
+            not who's talking. */}
+        {film && filmHref && (
+          <Link
+            href={filmHref}
+            className="flex w-fit max-w-full items-center gap-3 rounded-sm border border-black/15 p-2.5 transition-colors hover:border-black hover:bg-black/[0.03]"
+          >
+            {film.posterImage && (
+              <CldImage
+                src={film.posterImage}
+                alt=""
+                width={64}
+                height={96}
+                className="h-14 w-10 shrink-0 rounded-sm object-cover"
+                sizes="40px"
+                loading="lazy"
+              />
+            )}
+            <div className="flex min-w-0 flex-col gap-1">
+              <span className="truncate text-sm font-medium leading-tight">
+                {film.title} {year && <span className="text-black/40">({year})</span>}
+              </span>
+              <Badge className="w-fit border border-black/20 bg-transparent text-[10px] text-black/70">
+                {contentTypeLabel(film.contentType)}
+              </Badge>
+            </div>
+          </Link>
+        )}
+
+        {!expanded && (
+          <CommentSheet
+            reviewId={review.id}
+            count={review.commentCount}
+            review={{
+              username: review.username ?? "Member",
+              rating: review.rating,
+              body: review.review,
+            }}
+          />
+        )}
       </div>
-
-      {review.review &&
-        (expanded ? (
-          // Full Markdown on the permalink / detail view.
-          <ReviewText source={review.review} />
-        ) : (
-          // Collapsed feed card: clamp a plain-text excerpt so line-clamp stays
-          // clean across Markdown block elements.
-          <p className="text-sm font-light leading-relaxed line-clamp-4">
-            {markdownToPlainText(review.review)}
-          </p>
-        ))}
-
-      {!expanded && (
-        <CommentSheet
-          reviewId={review.id}
-          count={review.commentCount}
-          review={{
-            username: review.username ?? "Member",
-            rating: review.rating,
-            body: review.review,
-          }}
-        />
-      )}
 
       <ReportDialog
         targetType="review"

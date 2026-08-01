@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/pagination";
 import { Footer } from "@/components/custom";
 import ReviewCard from "@/components/custom/review-card";
+import RatingTile from "@/components/custom/rating-tile";
 import RegularBadge from "@/components/custom/regular-badge";
 import { EmptyReviewsIllustration } from "@/components/graphics";
 import {
@@ -65,6 +66,11 @@ export default async function MemberProfilePage({
     offset: (page - 1) * PAGE_SIZE,
   });
 
+  // A score-only rating has no text to carry a review card, so it gets a
+  // lighter poster-tile treatment instead — split once, render separately.
+  const writtenReviews = reviews.filter((review) => review.review);
+  const bareRatings = reviews.filter((review) => !review.review);
+
   const label = profile.displayName || profile.username || "Member";
   const initial = label.charAt(0).toUpperCase();
   // Uses the route param, not profile.username: this page only resolves
@@ -110,11 +116,24 @@ export default async function MemberProfilePage({
         <div className="mx-auto max-w-5xl px-6 py-8 lg:px-10">
           {reviews.length > 0 ? (
             <>
-              <div className="grid gap-6 lg:grid-cols-2">
-                {reviews.map((review) => (
-                  <ReviewCard key={review.id} review={review} />
-                ))}
-              </div>
+              {writtenReviews.length > 0 && (
+                <div className="mx-auto flex w-full max-w-2xl flex-col divide-y divide-black/10">
+                  {writtenReviews.map((review) => (
+                    <ReviewCard key={review.id} review={review} />
+                  ))}
+                </div>
+              )}
+
+              {bareRatings.length > 0 && (
+                <div className={writtenReviews.length > 0 ? "pt-10" : undefined}>
+                  <h2 className="pb-4 text-lg font-semibold">Also rated</h2>
+                  <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
+                    {bareRatings.map((review) => (
+                      <RatingTile key={review.id} review={review} />
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {totalPages > 1 && (
                 <Pagination className="pt-10">

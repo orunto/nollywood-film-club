@@ -24,26 +24,22 @@ export default function Reviews({ reviews }: ReviewsProps) {
         </div>
 
         {reviews && reviews.length > 0 ? (
-            <div className="grid gap-6 py-6 lg:grid-cols-2 lg:py-10">
+            <div className="mx-auto flex w-full max-w-2xl flex-col divide-y divide-black/10 pt-2 lg:pt-4">
                 {reviews.map((review) => (
                     <ReviewCard key={review.id} review={review} />
                 ))}
             </div>
         ) : (
             <div className="lg:py-10 py-6">
-                <div className="grid gap-6 lg:grid-cols-2">
+                <div className="mx-auto flex w-full max-w-2xl flex-col divide-y divide-black/10">
                     {Array.from({ length: 2 }).map((_, index) => (
-                        <div key={index} className={`${index >= 1 ? 'hidden md:block' : ''}`}>
-                            <div className="flex flex-col gap-4 rounded-sm bg-black/5 p-5">
-                                <div className="flex items-center gap-3">
-                                    <div className="h-16 w-11 rounded-sm bg-gray-200" />
-                                    <div className="flex flex-col gap-2">
-                                        <div className="h-5 w-40 rounded bg-gray-200" />
-                                        <div className="h-4 w-16 rounded bg-gray-200" />
-                                    </div>
-                                </div>
-                                <div className="h-12 w-12 rounded-full bg-gray-200" />
-                                <div className="h-12 w-full rounded bg-gray-200" />
+                        <div key={index} className={`flex gap-4 py-5 ${index >= 1 ? 'hidden md:flex' : ''}`}>
+                            <div className="h-11 w-11 shrink-0 rounded-full bg-gray-200" />
+                            <div className="flex flex-1 flex-col gap-3">
+                                <div className="h-4 w-32 rounded bg-gray-200" />
+                                <div className="h-4 w-full rounded bg-gray-200" />
+                                <div className="h-4 w-2/3 rounded bg-gray-200" />
+                                <div className="h-14 w-40 rounded-sm bg-gray-200" />
                             </div>
                         </div>
                     ))}
