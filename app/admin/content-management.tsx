@@ -820,8 +820,11 @@ export default function ContentManagement() {
                       <SelectItem value="G">G</SelectItem>
                       <SelectItem value="PG">PG</SelectItem>
                       <SelectItem value="PG-13">PG-13</SelectItem>
+                      <SelectItem value="13">13 (NFVCB)</SelectItem>
                       <SelectItem value="R">R</SelectItem>
+                      <SelectItem value="16">16 (NFVCB)</SelectItem>
                       <SelectItem value="NC-17">NC-17</SelectItem>
+                      <SelectItem value="18+">18+ (NFVCB)</SelectItem>
                       <SelectItem value="TV-Y">TV-Y</SelectItem>
                       <SelectItem value="TV-Y7">TV-Y7</SelectItem>
                       <SelectItem value="TV-G">TV-G</SelectItem>

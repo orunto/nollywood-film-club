@@ -20,8 +20,11 @@ export const ratingEnum = pgEnum("rating", [
   "G",
   "PG",
   "PG-13",
+  "13", // NFVCB — sits next to its MPAA counterpart
   "R",
+  "16", // NFVCB
   "NC-17",
+  "18+", // NFVCB
   "TV-Y",
   "TV-Y7",
   "TV-G",
