@@ -16,6 +16,10 @@ export default function Footer() {
                 <Link href='/about'>About</Link>
                 <Link href='/contact'>Contact</Link>
                 <Link href='/auth'>Join the Club</Link>
+                <div className="flex gap-4 pt-2 text-xs text-white/60">
+                    <Link href='/terms' className="hover:text-white">Terms</Link>
+                    <Link href='/privacy' className="hover:text-white">Privacy</Link>
+                </div>
             </div>
         </div>
     </footer>

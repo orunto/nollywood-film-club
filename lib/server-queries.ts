@@ -103,7 +103,7 @@ export interface UserRating {
   restricted: boolean;
   createdAt: string;
   updatedAt: string;
-  // Added username and profileImage fields to store the user info from Stack Auth
+  // Added username and profileImage fields to store the user info from Hexclave
   username?: string;
   profileImage?: string;
   isRegular?: boolean;
@@ -727,9 +727,9 @@ export function resolveUsername(user: {
   return "Member";
 }
 
-// Indexed username -> Stack user id lookup, for public profile routing
+// Indexed username -> Hexclave user id lookup, for public profile routing
 // (/members/[username]). Backed by the local `users` table (db/schema.ts),
-// which is the real source of truth for username uniqueness — Stack's
+// which is the real source of truth for username uniqueness — Hexclave's
 // clientMetadata never enforced it.
 export async function resolveUserIdByUsername(username: string): Promise<string | null> {
   const [row] = await db
@@ -741,12 +741,12 @@ export async function resolveUserIdByUsername(username: string): Promise<string 
 }
 
 // Legacy poll rows (imported from NFC Data.xlsx) carry a synthetic userId —
-// "legacy-poll:<slug>:<n>" — with no matching Stack Auth account. Recognized
+// "legacy-poll:<slug>:<n>" — with no matching Hexclave account. Recognized
 // up front so getUserDisplay can skip straight to a fallback instead of
-// issuing a Stack Auth lookup that is guaranteed to 400 (non-UUID user_id).
+// issuing a Hexclave lookup that is guaranteed to 400 (non-UUID user_id).
 const LEGACY_POLL_PREFIX = "legacy-poll:";
 
-// Display info for one reviewer, from Stack Auth (displayName/profileImage
+// Display info for one reviewer, from Hexclave (displayName/profileImage
 // aren't mirrored locally — only username is, see resolveUserIdByUsername
 // above). Wrapped in React cache() so a request that renders the same author
 // more than once — a feed and the threads under it — only looks them up once.
@@ -770,14 +770,14 @@ const getUserDisplay = cache(async (userId: string): Promise<UserDisplay> => {
       };
     }
   } catch (error) {
-    console.error("Error fetching Stack user", userId, error);
+    console.error("Error fetching Hexclave user", userId, error);
   }
-  // Deleted user, or Stack Auth is unreachable — never fail the whole page
+  // Deleted user, or Hexclave is unreachable — never fail the whole page
   return { username: "Deleted member", isRegular: false, profileUsername: null };
 });
 
 // Resolve a batch of user IDs at once. Deduped and issued in parallel: this
-// previously awaited one Stack Auth round-trip per user *in sequence*, which is
+// previously awaited one Hexclave round-trip per user *in sequence*, which is
 // tolerable for a single film's reviews but not for a cross-catalogue feed
 // where nearly every row is a different author.
 export async function getUserDisplayMap(
@@ -836,7 +836,7 @@ export const getNavUser = cache(
 );
 
 // Shared helper: given raw userRatings rows, look up each reviewer's
-// username/profileImage from Stack Auth and map to the public UserRating shape.
+// username/profileImage from Hexclave and map to the public UserRating shape.
 async function enrichRatingsWithUsernames(
   ratings: (typeof userRatings.$inferSelect)[],
 ): Promise<UserRating[]> {
@@ -860,7 +860,7 @@ async function enrichRatingsWithUsernames(
   }));
 }
 
-// New function to get user ratings for a specific content with usernames from Stack Auth.
+// New function to get user ratings for a specific content with usernames from Hexclave.
 // Deliberately NOT filtered by `restricted` here — the NFC score average above
 // it never filters on `restricted` either, and every legacy-poll row (imported
 // from NFC Data.xlsx, userId "legacy-poll:<slug>:<n>") was written with
@@ -1029,8 +1029,8 @@ export async function getFeedReviewById(id: string): Promise<FeedReview | null> 
 }
 
 // Public profile for /members/[username]. Resolves the username through the
-// local `users` table (Stack has no indexed way to do this), then pulls
-// display fields from Stack itself. Returns null on no match so the page can
+// local `users` table (Hexclave has no indexed way to do this), then pulls
+// display fields from Hexclave itself. Returns null on no match so the page can
 // 404 — covers both "no such username" and "account since deleted".
 export async function getPublicProfile(username: string): Promise<PublicProfile | null> {
   try {
@@ -1362,7 +1362,7 @@ export interface AdminContactMessage {
 }
 
 // Admin-only: the Contact page inbox, newest first. Senders are resolved
-// through the same Stack Auth lookup reviewers get, so an admin sees a name
+// through the same Hexclave lookup reviewers get, so an admin sees a name
 // rather than a user id — when there is a sender at all.
 export async function getContactMessagesForAdmin(): Promise<AdminContactMessage[]> {
   try {

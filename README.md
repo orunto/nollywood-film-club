@@ -22,7 +22,7 @@ The app is a [Next.js 16](https://nextjs.org) App Router project written in Type
 | UI | React 19, Tailwind CSS 4, shadcn/ui (Radix primitives), Lucide icons |
 | State/data fetching | Redux Toolkit, TanStack Query, React Hook Form + Zod |
 | Database | Neon serverless Postgres via Drizzle ORM |
-| Auth | [Stack Auth](https://stack-auth.com) (`@stackframe/stack`) with cookie-based sessions |
+| Auth | [Hexclave](https://www.hexclave.com) (`@stackframe/stack`) with cookie-based sessions |
 | Images | Cloudinary via `next-cloudinary` (`CldImage`) |
 | Analytics | Vercel Analytics |
 
@@ -30,11 +30,11 @@ Key places in the codebase:
 
 - `app/` — routes: homepage, `movies/[id]`, `onboarding`, `user-dashboard`, `admin`, and `app/api/` route handlers (public read endpoints plus admin CRUD under `app/api/admin/`).
 - `db/schema.ts` — Drizzle schema: `content` (movies/TV shows), `user_ratings`, `reviews` (external reviews), and `blog_posts`.
-- `stack.tsx` — Stack Auth server app; `lib/admin-auth.ts` gates admin routes by checking the `role: "admin"` flag in a user's client metadata.
+- `stack.tsx` — Hexclave server app; `lib/admin-auth.ts` gates admin routes by checking the `role: "admin"` flag in a user's client metadata.
 - `components/sections/` — homepage sections (movie hero, movie of the week, discussions, reviews); `components/ui/` — shadcn/ui primitives.
 - `lib/server-queries.ts` and `lib/queries.ts` — server- and client-side data access.
 
-Authentication flows through Stack's handler at `app/handler/[...stack]`; after sign-in users are routed through `/auth/callback` and, if they have no username yet, into `/onboarding`. Ratings and reviews are written through the API routes, which validate the session server-side.
+Authentication flows through Hexclave's handler at `app/handler/[...stack]`; after sign-in users are routed through `/auth/callback` and, if they have no username yet, into `/onboarding`. Ratings and reviews are written through the API routes, which validate the session server-side.
 
 ## Getting started
 
@@ -47,7 +47,7 @@ Authentication flows through Stack's handler at `app/handler/[...stack]`; after 
 2. **Configure environment** — copy `.env.example` to `.env.local` and fill in:
 
    - `DATABASE_URL` — Neon Postgres connection string
-   - `NEXT_PUBLIC_STACK_PROJECT_ID`, `NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY`, `STACK_SECRET_SERVER_KEY` — from your Stack Auth project
+   - `NEXT_PUBLIC_STACK_PROJECT_ID`, `NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY`, `STACK_SECRET_SERVER_KEY` — legacy SDK keys from your Hexclave project
    - `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` — your Cloudinary cloud
 
 3. **Push the database schema**
@@ -64,7 +64,7 @@ Authentication flows through Stack's handler at `app/handler/[...stack]`; after 
 
    Open [http://localhost:3000](http://localhost:3000).
 
-To access the admin dashboard, set `{ "role": "admin" }` in your user's client metadata in the Stack Auth dashboard.
+To access the admin dashboard, set `{ "role": "admin" }` in your user's client metadata in the Hexclave dashboard.
 
 ## Contributing
 
@@ -77,5 +77,5 @@ Schema changes go in `db/schema.ts` and are applied with `drizzle-kit push` (con
 
 ## Deployment
 
-The app is designed for [Vercel](https://vercel.com): connect the repo, set the environment variables above in project settings, and deploy. Neon, Stack Auth, and Cloudinary are all serverless-friendly, so no additional infrastructure is needed.
+The app is designed for [Vercel](https://vercel.com): connect the repo, set the environment variables above in project settings, and deploy. Neon, Hexclave, and Cloudinary are all serverless-friendly, so no additional infrastructure is needed.
 

@@ -75,7 +75,7 @@ export default function OnboardingPage() {
     const candidates = usernameSuggestions([displayNameSource, emailLocalPart(email)]);
     if (candidates.length === 0) return;
 
-    // One request answers the whole batch — the route scans every Stack user,
+    // One request answers the whole batch — the route scans every Hexclave user,
     // so asking per candidate would be that scan three times over.
     fetch('/api/check-username', {
       method: 'POST',
@@ -147,7 +147,7 @@ export default function OnboardingPage() {
         return;
       }
 
-      // Display name lives on the Stack user, not in clientMetadata — same call
+      // Display name lives on the Hexclave user, not in clientMetadata — same call
       // the dashboard profile tab makes. Optional, so a blank one is fine.
       const trimmedName = displayName.trim();
       if (trimmedName !== (user.displayName ?? '')) {

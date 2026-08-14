@@ -503,18 +503,19 @@ export default function AuthPage() {
           </TabsContent>
         </Tabs>
 
-        {/* <div className="text-center">
-                    <p className="text-sm text-gray-600">
-                        By signing up, you agree to our{' '}
-                        <Link href="/terms" className="text-primary hover:underline">
-                            Terms of Service
-                        </Link>{' '}
-                        and{' '}
-                        <Link href="/privacy" className="text-primary hover:underline">
-                            Privacy Policy
-                        </Link>
-                    </p>
-                </div> */}
+        <div className="text-center">
+          <p className="text-xs leading-5 text-gray-500">
+            By creating an account, you agree to our{" "}
+            <Link href="/terms" className="text-black underline underline-offset-2">
+              Terms of Service
+            </Link>{" "}
+            and acknowledge our{" "}
+            <Link href="/privacy" className="text-black underline underline-offset-2">
+              Privacy Policy
+            </Link>
+            .
+          </p>
+        </div>
       </div>
     </div>
   );

@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
 
     if (!stackUserId || typeof stackUserId !== 'string') {
       return NextResponse.json(
-        { error: 'Stack user ID is required' },
+        { error: 'Hexclave user ID is required' },
         { status: 400 }
       );
     }
@@ -64,9 +64,9 @@ export async function POST(request: NextRequest) {
         const lowerUsername = username.toLowerCase();
 
         // Local `users` table is the real source of truth for uniqueness
-        // (a real DB constraint — Stack's clientMetadata never guaranteed
-        // it). Write there first; only touch Stack Auth if it lands, so a
-        // rejected username never ends up on the Stack side.
+        // (a real DB constraint — Hexclave's clientMetadata never guaranteed
+        // it). Write there first; only touch Hexclave if it lands, so a
+        // rejected username never ends up on the Hexclave side.
         try {
           await db
             .insert(users)

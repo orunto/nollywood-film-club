@@ -9,7 +9,7 @@ import { getNavUser } from "@/lib/server-queries";
 // outside this group. Route groups don't affect URLs.
 export default async function SiteLayout({ children }: { children: ReactNode }) {
   // getNavUser is React cache()d and NavServer calls it too, so this is the
-  // same request-scoped lookup rather than a second trip to Stack Auth.
+  // same request-scoped lookup rather than a second trip to Hexclave.
   const { user } = await getNavUser();
 
   return (

@@ -59,18 +59,18 @@ export interface CastMember {
   characterName: string | null; // null for directors
 }
 
-// Local mirror of every Stack Auth account, id -> username. Stack itself has
+// Local mirror of every Hexclave account, id -> username. Hexclave itself has
 // no notion of username uniqueness (it lives in freeform clientMetadata), so
 // this table is the actual source of truth for the (case-insensitive)
 // uniqueness guarantee and for the indexed lookups /members/[username] needs.
 // username is nullable — plenty of members never set one — and a row exists
 // for every account regardless (see scripts/backfill-usernames.ts), so a
 // missing username is a known "no profile link" state, not a missing row.
-// Not FK'd to userRatings/comments.userId — those stay plain Stack ids.
+// Not FK'd to userRatings/comments.userId — those stay plain Hexclave ids.
 export const users = pgTable(
   "users",
   {
-    id: text("id").primaryKey(), // Stack Auth user id
+    id: text("id").primaryKey(), // Hexclave user id
     username: text("username"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -157,7 +157,7 @@ export const userRatings = pgTable(
     contentId: uuid("content_id").references(() => content.id, {
       onDelete: "cascade",
     }),
-    userId: text("user_id").notNull(), // Stack user ID
+    userId: text("user_id").notNull(), // Hexclave user ID
     rating: integer("rating"), // 0 (didn't like), 5 (okay), or 10 (liked)
     review: text("review"),
     // True once the user re-submits their rating/review. Deliberately not
@@ -213,7 +213,7 @@ export const comments = pgTable(
     parentId: uuid("parent_id").references((): AnyPgColumn => comments.id, {
       onDelete: "cascade",
     }),
-    userId: text("user_id").notNull(), // Stack user ID — no FK, there is no local users table
+    userId: text("user_id").notNull(), // Hexclave user ID — no FK, there is no local users table
     body: text("body").notNull(),
     depth: integer("depth").notNull().default(0), // 0 = direct reply; capped at MAX_COMMENT_DEPTH
     flagged: boolean("flagged").default(false), // marked for admin attention, still publicly visible
@@ -247,11 +247,11 @@ export const reports = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     targetType: reportTargetEnum("target_type").notNull(),
     targetId: uuid("target_id").notNull(),
-    reporterId: text("reporter_id").notNull(), // Stack user ID
+    reporterId: text("reporter_id").notNull(), // Hexclave user ID
     reason: reportReasonEnum("reason").notNull(),
     note: text("note"), // optional free text from the reporter
     status: reportStatusEnum("status").notNull().default("open"),
-    resolvedBy: text("resolved_by"), // Stack user ID of the admin who closed it
+    resolvedBy: text("resolved_by"), // Hexclave user ID of the admin who closed it
     resolvedAt: timestamp("resolved_at"),
     createdAt: timestamp("created_at").defaultNow(),
   },
@@ -287,9 +287,9 @@ export const contactMessages = pgTable(
     category: contactCategoryEnum("category").notNull(),
     message: text("message").notNull(),
     email: text("email"), // optional reply-to
-    userId: text("user_id"), // Stack user ID when signed in, else null
+    userId: text("user_id"), // Hexclave user ID when signed in, else null
     status: contactStatusEnum("status").notNull().default("open"),
-    resolvedBy: text("resolved_by"), // Stack user ID of the admin who closed it
+    resolvedBy: text("resolved_by"), // Hexclave user ID of the admin who closed it
     resolvedAt: timestamp("resolved_at"),
     createdAt: timestamp("created_at").defaultNow(),
   },

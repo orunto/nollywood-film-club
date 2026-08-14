@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
           .filter((name): name is string => Boolean(name)),
       );
     } catch (error) {
-      // Stack unreachable. Say available rather than blocking onboarding —
+      // Hexclave unreachable. Say available rather than blocking onboarding —
       // create-username is the write path and gets the last word.
       console.error("Error listing users for a username check:", error);
       taken = new Set();

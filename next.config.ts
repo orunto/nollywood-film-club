@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
        ],
   },
   // Baseline hardening headers applied to every response. Kept conservative so
-  // they don't fight the Stack Auth handler or the Cloudinary/Spotify embeds:
+  // they don't fight the Hexclave handler or the Cloudinary/Spotify embeds:
   // no blanket CSP here (a wrong CSP silently breaks third-party frames), just
   // the low-risk, high-value headers.
   async headers() {
