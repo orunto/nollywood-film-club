@@ -1,3 +1,6 @@
+import { drizzle } from "drizzle-orm/d1";
+import * as schema from "../db/schema";
+import { PublicReadRepository } from "../repositories/public-read";
 import type {
   AppServices,
   Database,
@@ -10,7 +13,13 @@ import {
 } from "./pending";
 
 class D1Database implements Database {
-  constructor(private readonly binding: globalThis.D1Database) {}
+  readonly publicReads: PublicReadRepository;
+
+  constructor(private readonly binding: globalThis.D1Database) {
+    this.publicReads = new PublicReadRepository(
+      drizzle(this.binding, { schema }),
+    );
+  }
 
   async check() {
     await this.binding.prepare("SELECT 1 AS ok").first();

@@ -1,9 +1,12 @@
+import type { PublicReadRepository } from "../repositories/public-read";
+
 export interface AuthSession {
   userId: string;
 }
 
 export interface Database {
   check(): Promise<void>;
+  publicReads: PublicReadRepository;
 }
 
 export interface AuthService {

@@ -18,6 +18,7 @@
     "src/app/**/*",
     "src/db/**/*",
     "src/runtime/**/*",
+    "src/repositories/**/*",
     "src/services/contracts.ts",
     "src/services/pending.ts"
   ]

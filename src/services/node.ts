@@ -1,6 +1,9 @@
 import { access, mkdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import { DatabaseSync } from "node:sqlite";
+import { DatabaseSync, type SQLInputValue } from "node:sqlite";
+import { drizzle, type AsyncRemoteCallback } from "drizzle-orm/sqlite-proxy";
+import * as schema from "../db/schema";
+import { PublicReadRepository } from "../repositories/public-read";
 import type { AppServices, Database, ObjectStore } from "./contracts";
 import {
   PassthroughImageTransformer,
@@ -8,15 +11,43 @@ import {
   PendingMailService,
 } from "./pending";
 
-class NodeSqliteDatabase implements Database {
+export class NodeSqliteDatabase implements Database {
   private readonly database: DatabaseSync;
+  readonly publicReads: PublicReadRepository;
 
-  constructor(path: string) {
-    this.database = new DatabaseSync(path);
+  constructor(path: string, options: { readOnly?: boolean } = {}) {
+    this.database = new DatabaseSync(path, options);
+    const execute: AsyncRemoteCallback = async (query, params, method) => {
+      const statement = this.database.prepare(query);
+      const values = params as SQLInputValue[];
+      statement.setReturnArrays(true);
+
+      if (method === "run") {
+        const result = statement.run(...values);
+        return { rows: [result] };
+      }
+
+      if (method === "get") {
+        const row = statement.get(...values);
+        return { rows: row ? Object.values(row) : [] };
+      }
+
+      return {
+        rows: statement.all(...values).map((row) => Object.values(row)),
+      };
+    };
+
+    this.publicReads = new PublicReadRepository(
+      drizzle(execute, { schema }),
+    );
   }
 
   async check() {
     this.database.prepare("SELECT 1 AS ok").get();
+  }
+
+  close() {
+    this.database.close();
   }
 }
 

@@ -1,0 +1,90 @@
+import assert from "node:assert/strict";
+import { readdir } from "node:fs/promises";
+import { resolve } from "node:path";
+import { DatabaseSync } from "node:sqlite";
+import { NodeSqliteDatabase } from "../../src/services/node";
+
+const stateDirectory = resolve(
+  "data/local-d1-import/v3/d1/miniflare-D1DatabaseObject",
+);
+const databaseFiles = (await readdir(stateDirectory)).filter(
+  (name) => name.endsWith(".sqlite") && name !== "metadata.sqlite",
+);
+assert.equal(databaseFiles.length, 1, "Expected one local D1 database file");
+
+const databasePath = resolve(stateDirectory, databaseFiles[0]);
+const raw = new DatabaseSync(databasePath, { readOnly: true });
+const database = new NodeSqliteDatabase(databasePath, { readOnly: true });
+const now = new Date();
+
+try {
+  const [movieOfTheWeek, catalog, homepageCatalog, scoreboard, discussionRows] =
+    await Promise.all([
+      database.publicReads.getMovieOfTheWeek(),
+      database.publicReads.getAllContent(),
+      database.publicReads.getMoviesAndTVSeries(),
+      database.publicReads.getScoreboard(),
+      database.publicReads.getDiscussions({ now }),
+    ]);
+
+  const expectedMovie = raw
+    .prepare("SELECT id FROM content WHERE is_movie_of_the_week = 1 LIMIT 1")
+    .get() as { id: string } | undefined;
+  assert.equal(movieOfTheWeek?.id, expectedMovie?.id);
+
+  const contentCount = raw.prepare("SELECT count(*) AS count FROM content").get() as {
+    count: number;
+  };
+  assert.equal(catalog.length, contentCount.count);
+  assert.equal(homepageCatalog.length, Math.min(contentCount.count - 1, 20));
+  assert.ok(homepageCatalog.every((item) => !item.isMovieOfTheWeek));
+
+  const expectedScoreboard = raw
+    .prepare(`
+      SELECT content.id, avg(user_ratings.rating) AS average, count(user_ratings.id) AS count
+      FROM content
+      LEFT JOIN user_ratings ON content.id = user_ratings.content_id
+      GROUP BY content.id
+      HAVING avg(user_ratings.rating) IS NOT NULL
+      ORDER BY avg(user_ratings.rating) DESC
+      LIMIT 100
+    `)
+    .all() as Array<{ id: string; average: number; count: number }>;
+  assert.deepEqual(
+    scoreboard.map(({ id, userRating, ratingsCount }) => ({
+      id,
+      average: userRating,
+      count: ratingsCount,
+    })),
+    expectedScoreboard.map(({ id, average, count }) => ({ id, average, count })),
+  );
+
+  const visibleDiscussionCount = raw
+    .prepare(
+      "SELECT count(*) AS count FROM discussions WHERE discussion_date IS NULL OR discussion_date <= ?",
+    )
+    .get(now.getTime()) as { count: number };
+  assert.equal(
+    await database.publicReads.countDiscussions(now),
+    visibleDiscussionCount.count,
+  );
+  assert.equal(
+    discussionRows.length,
+    Math.min(visibleDiscussionCount.count, 20),
+  );
+
+  console.log(
+    JSON.stringify({
+      message: "Portable public-read repository validation complete",
+      content: catalog.length,
+      homepageContent: homepageCatalog.length,
+      scoreboard: scoreboard.length,
+      visibleDiscussions: visibleDiscussionCount.count,
+      homepageDiscussions: discussionRows.length,
+      movieOfTheWeek: movieOfTheWeek?.id ?? null,
+    }),
+  );
+} finally {
+  raw.close();
+  database.close();
+}
