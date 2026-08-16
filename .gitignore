@@ -10,6 +10,8 @@
 
 # testing
 /coverage
+/playwright-report
+/test-results
 
 # next.js
 /.next/
@@ -17,6 +19,10 @@
 
 # production
 /build
+/.wrangler
+
+# React Router
+/.react-router
 
 # misc
 .DS_Store

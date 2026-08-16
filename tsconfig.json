@@ -36,6 +36,13 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    ".react-router",
+    "server",
+    "src",
+    "workers",
+    "react-router.config.ts",
+    "vite.config.ts",
+    "worker-configuration.d.ts"
   ]
 }

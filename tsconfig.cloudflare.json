@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.react-router.json",
+  "compilerOptions": {
+    "types": ["vite/client"]
+  },
+  "include": [
+    ".react-router/types/**/*",
+    "src/app/**/*",
+    "src/db/**/*",
+    "src/runtime/**/*",
+    "src/services/contracts.ts",
+    "src/services/pending.ts",
+    "src/services/cloudflare.ts",
+    "workers/**/*",
+    "worker-configuration.d.ts"
+  ]
+}
