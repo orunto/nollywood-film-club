@@ -1,3 +1,4 @@
+import type { CommunityWriteRepository } from "../repositories/community-write";
 import type { PublicReadRepository } from "../repositories/public-read";
 
 export interface AuthSession {
@@ -19,6 +20,7 @@ export interface AtomicResult {
 export interface Database {
   check(): Promise<void>;
   publicReads: PublicReadRepository;
+  writes: CommunityWriteRepository;
   atomic(commands: AtomicCommand[]): Promise<AtomicResult[]>;
 }
 

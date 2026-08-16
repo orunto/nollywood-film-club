@@ -540,6 +540,19 @@ export class PublicReadRepository {
     });
   }
 
+  async targetExists(
+    targetType: "review" | "comment",
+    targetId: string,
+  ): Promise<boolean> {
+    const table = targetType === "review" ? userRatings : comments;
+    const [row] = await this.database
+      .select({ id: table.id })
+      .from(table)
+      .where(eq(table.id, targetId))
+      .limit(1);
+    return row !== undefined;
+  }
+
   async getUserRatingsForContent(contentId: string): Promise<UserRating[]> {
     const rows = await this.database
       .select({ rating: userRatings, user: users })

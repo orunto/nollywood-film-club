@@ -1,5 +1,6 @@
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "../db/schema";
+import { CommunityWriteRepository } from "../repositories/community-write";
 import { PublicReadRepository } from "../repositories/public-read";
 import type {
   AppServices,
@@ -16,11 +17,13 @@ import {
 
 class D1Database implements Database {
   readonly publicReads: PublicReadRepository;
+  readonly writes: CommunityWriteRepository;
 
   constructor(private readonly binding: globalThis.D1Database) {
     this.publicReads = new PublicReadRepository(
       drizzle(this.binding, { schema }),
     );
+    this.writes = new CommunityWriteRepository(this);
   }
 
   async check() {
