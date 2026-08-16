@@ -22,6 +22,7 @@
     "src/services/contracts.ts",
     "src/services/pending.ts",
     "src/services/homepage.ts",
-    "src/services/content-detail.ts"
+    "src/services/content-detail.ts",
+    "src/services/review-thread.ts"
   ]
 }

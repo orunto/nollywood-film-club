@@ -14,6 +14,11 @@ import {
   getContentDetailData,
   resolveContent,
 } from "../../src/services/content-detail";
+import {
+  getReviewPermalinkData,
+  getReviewThread,
+  getReviewsPage,
+} from "../../src/services/review-thread";
 
 test("public reads preserve catalog, aggregate, and discussion behavior", async () => {
   const directory = await mkdtemp(join(tmpdir(), "nfc-public-reads-"));
@@ -82,13 +87,17 @@ test("public reads preserve catalog, aggregate, and discussion behavior", async 
       UPDATE user_ratings
       SET user_id = 'deleted-member', review = 'A deleted member review', created_at = 18000000
       WHERE id = 'rating-zero';
+      UPDATE user_ratings
+      SET review = 'Restricted review', restricted = 1
+      WHERE id = 'rating-motw';
       INSERT INTO comments (
-        id, review_id, user_id, body, depth, flagged, restricted,
+        id, review_id, parent_id, user_id, body, depth, flagged, restricted,
         created_at, updated_at
       ) VALUES
-        ('comment-1', 'rating-top-2', 'member-1', 'First', 0, 0, 0, 1000, 1000),
-        ('comment-2', 'rating-top-2', 'member-1', 'Second', 0, 0, 0, 1000, 1000),
-        ('comment-hidden', 'rating-top-2', 'member-1', 'Hidden', 0, 0, 1, 1000, 1000);
+        ('comment-1', 'rating-top-2', NULL, 'member-1', 'First', 0, 0, 0, 1000, 1000),
+        ('comment-2', 'rating-top-2', 'comment-1', 'legacy-poll:top:2', 'Second', 1, 0, 0, 2000, 2000),
+        ('comment-hidden', 'rating-top-2', NULL, 'member-1', 'Hidden', 0, 0, 1, 3000, 3000),
+        ('comment-orphan', 'rating-top-2', 'comment-hidden', 'deleted-member', 'Orphan', 1, 0, 0, 4000, 4000);
     `);
 
     const discussionInsert = setup.prepare(`
@@ -198,7 +207,7 @@ test("public reads preserve catalog, aggregate, and discussion behavior", async 
           username: "Legacy Member",
           profileUsername: null,
           isRegular: false,
-          commentCount: 2,
+          commentCount: 3,
         },
         {
           id: "rating-zero",
@@ -246,6 +255,75 @@ test("public reads preserve catalog, aggregate, and discussion behavior", async 
     assert.deepEqual(
       detail?.related.map((item) => item.id),
       ["zero", "uncatalogued", "motw"],
+    );
+
+    const feedReview = await database.publicReads.getFeedReviewById(
+      "rating-top-2",
+    );
+    assert.equal(feedReview?.username, "Legacy Member");
+    assert.equal(feedReview?.commentCount, 3);
+    assert.equal(
+      await database.publicReads.getFeedReviewById("rating-motw"),
+      null,
+    );
+
+    const thread = await getReviewThread(
+      database.publicReads,
+      "rating-top-2",
+    );
+    assert.deepEqual(
+      thread.map(({ id, username, replies }) => ({
+        id,
+        username,
+        replies: replies.map((reply) => ({
+          id: reply.id,
+          username: reply.username,
+        })),
+      })),
+      [
+        {
+          id: "comment-1",
+          username: "Ada Member",
+          replies: [{ id: "comment-2", username: "Legacy Member" }],
+        },
+      ],
+    );
+    const permalink = await getReviewPermalinkData(
+      database.publicReads,
+      "rating-top-2",
+    );
+    assert.equal(permalink?.review.id, "rating-top-2");
+    assert.equal(permalink?.thread[0].replies[0].id, "comment-2");
+    assert.equal(
+      await getReviewPermalinkData(database.publicReads, "rating-motw"),
+      null,
+    );
+    const firstReviewsPage = await getReviewsPage(database.publicReads, "-2", {
+      pageSize: 2,
+      now,
+    });
+    assert.deepEqual(
+      {
+        ids: firstReviewsPage.reviews.map((review) => review.id),
+        total: firstReviewsPage.total,
+        totalPages: firstReviewsPage.totalPages,
+        page: firstReviewsPage.page,
+      },
+      {
+        ids: ["rating-top-1", "rating-top-2"],
+        total: 3,
+        totalPages: 2,
+        page: 1,
+      },
+    );
+    const lastReviewsPage = await getReviewsPage(database.publicReads, "99", {
+      pageSize: 2,
+      now,
+    });
+    assert.equal(lastReviewsPage.page, 2);
+    assert.deepEqual(
+      lastReviewsPage.reviews.map((review) => review.id),
+      ["rating-zero"],
     );
 
     const contentDiscussions =

@@ -8,6 +8,7 @@ import {
   contentSlug,
   getContentDetailData,
 } from "../../src/services/content-detail";
+import { getReviewPermalinkData } from "../../src/services/review-thread";
 
 const stateDirectory = resolve(
   "data/local-d1-import/v3/d1/miniflare-D1DatabaseObject",
@@ -134,6 +135,22 @@ try {
     detailById?.related.every((item) => item.id !== movieOfTheWeek.id),
   );
 
+  let permalinkComments = 0;
+  if (trendingReviews.length > 0) {
+    const permalink = await getReviewPermalinkData(
+      database.publicReads,
+      trendingReviews[0].id,
+    );
+    assert.equal(permalink?.review.id, trendingReviews[0].id);
+    const expectedComments = raw
+      .prepare(
+        "SELECT count(*) AS count FROM comments WHERE review_id = ? AND restricted = 0",
+      )
+      .get(trendingReviews[0].id) as { count: number };
+    assert.equal(permalink?.review.commentCount, expectedComments.count);
+    permalinkComments = expectedComments.count;
+  }
+
   console.log(
     JSON.stringify({
       message: "Portable public-read repository validation complete",
@@ -146,6 +163,7 @@ try {
       detailRatings: expectedDetailCounts.ratings,
       detailDiscussions: expectedDetailCounts.discussions,
       detailCriticReviews: expectedDetailCounts.reviews,
+      permalinkComments,
       movieOfTheWeek: movieOfTheWeek?.id ?? null,
     }),
   );

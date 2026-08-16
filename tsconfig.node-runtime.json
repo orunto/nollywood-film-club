@@ -13,6 +13,7 @@
     "src/services/pending.ts",
     "src/services/homepage.ts",
     "src/services/content-detail.ts",
+    "src/services/review-thread.ts",
     "src/services/node.ts",
     "server/**/*",
     "react-router.config.ts",
