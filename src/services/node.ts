@@ -4,7 +4,13 @@ import { DatabaseSync, type SQLInputValue } from "node:sqlite";
 import { drizzle, type AsyncRemoteCallback } from "drizzle-orm/sqlite-proxy";
 import * as schema from "../db/schema";
 import { PublicReadRepository } from "../repositories/public-read";
-import type { AppServices, Database, ObjectStore } from "./contracts";
+import type {
+  AppServices,
+  AtomicCommand,
+  AtomicResult,
+  Database,
+  ObjectStore,
+} from "./contracts";
 import {
   PassthroughImageTransformer,
   PendingAuthService,
@@ -44,6 +50,26 @@ export class NodeSqliteDatabase implements Database {
 
   async check() {
     this.database.prepare("SELECT 1 AS ok").get();
+  }
+
+  async atomic(commands: AtomicCommand[]): Promise<AtomicResult[]> {
+    this.database.exec("BEGIN IMMEDIATE");
+    try {
+      const results = commands.map(({ sql, params = [] }) => {
+        const result = this.database.prepare(sql).run(...params);
+        return {
+          changes: Number(result.changes),
+          lastRowId: Number(result.lastInsertRowid),
+        };
+      });
+      this.database.exec("COMMIT");
+      return results;
+    } catch (error) {
+      if (this.database.isTransaction) {
+        this.database.exec("ROLLBACK");
+      }
+      throw error;
+    }
   }
 
   close() {

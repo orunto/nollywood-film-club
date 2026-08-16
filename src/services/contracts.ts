@@ -4,9 +4,22 @@ export interface AuthSession {
   userId: string;
 }
 
+export type AtomicValue = string | number | bigint | null;
+
+export interface AtomicCommand {
+  sql: string;
+  params?: AtomicValue[];
+}
+
+export interface AtomicResult {
+  changes: number;
+  lastRowId: number;
+}
+
 export interface Database {
   check(): Promise<void>;
   publicReads: PublicReadRepository;
+  atomic(commands: AtomicCommand[]): Promise<AtomicResult[]>;
 }
 
 export interface AuthService {

@@ -3,6 +3,8 @@ import * as schema from "../db/schema";
 import { PublicReadRepository } from "../repositories/public-read";
 import type {
   AppServices,
+  AtomicCommand,
+  AtomicResult,
   Database,
   ImageTransformer,
   ObjectStore,
@@ -23,6 +25,28 @@ class D1Database implements Database {
 
   async check() {
     await this.binding.prepare("SELECT 1 AS ok").first();
+  }
+
+  async atomic(commands: AtomicCommand[]): Promise<AtomicResult[]> {
+    const results = await this.binding.batch(
+      commands.map(({ sql, params = [] }) =>
+        this.binding.prepare(sql).bind(...params),
+      ),
+    );
+
+    const failed = results.find(
+      (result) => (result as { success?: boolean }).success === false,
+    );
+    if (failed) {
+      throw new Error(
+        (failed as { error?: string }).error ?? "Atomic statement failed",
+      );
+    }
+
+    return results.map((result) => ({
+      changes: result.meta.changes,
+      lastRowId: result.meta.last_row_id,
+    }));
   }
 }
 
