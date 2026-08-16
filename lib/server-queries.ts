@@ -117,6 +117,21 @@ export interface AdminUserRating extends UserRating {
 }
 
 // Server-side data fetching functions
+
+// Cheap connectivity probe for the Neon database. Pages that depend on data
+// queries gate on this and render a "down for migration" notice when it
+// returns false, instead of silently showing empty states. Wrapped in React
+// cache() so the layout and page share one probe per request.
+export const isDatabaseAvailable = cache(async (): Promise<boolean> => {
+  try {
+    await db.execute(sql`SELECT 1`);
+    return true;
+  } catch (error) {
+    console.error("Database health check failed:", error);
+    return false;
+  }
+});
+
 export async function getMovieOfTheWeek(): Promise<Content | null> {
   try {
     const movieOfTheWeek = await db

@@ -3,9 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeftIcon } from "@phosphor-icons/react/dist/ssr";
 import { Footer } from "@/components/custom";
+import MigrationNotice from "@/components/custom/migration-notice";
 import ReviewCard from "@/components/custom/review-card";
 import CommentThread from "@/components/custom/comment-thread";
-import { getFeedReviewById, getReviewThread } from "@/lib/server-queries";
+import { getFeedReviewById, getReviewThread, isDatabaseAvailable } from "@/lib/server-queries";
 import { markdownToPlainText } from "@/lib/utils";
 
 export async function generateMetadata({
@@ -32,6 +33,8 @@ export default async function ReviewPermalinkPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+
+  if (!(await isDatabaseAvailable())) return <MigrationNotice />;
 
   // getFeedReviewById returns null for restricted reviews too, so a moderated
   // take 404s here rather than staying reachable by direct link.

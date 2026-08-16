@@ -10,6 +10,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Footer } from "@/components/custom";
+import MigrationNotice from "@/components/custom/migration-notice";
 import ReviewCard from "@/components/custom/review-card";
 import RegularBadge from "@/components/custom/regular-badge";
 import { EmptyReviewsIllustration } from "@/components/graphics";
@@ -18,6 +19,7 @@ import {
   getPublicProfile,
   getRatingsByUser,
   getUserRatingStats,
+  isDatabaseAvailable,
 } from "@/lib/server-queries";
 
 const PAGE_SIZE = 12;
@@ -46,6 +48,9 @@ export default async function MemberProfilePage({
   searchParams: Promise<{ page?: string }>;
 }) {
   const { username } = await params;
+
+  if (!(await isDatabaseAvailable())) return <MigrationNotice />;
+
   const profile = await getPublicProfile(username);
   if (!profile) notFound();
 

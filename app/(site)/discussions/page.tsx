@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { BroadcastIcon, PlayIcon, UsersIcon } from "@phosphor-icons/react/dist/ssr";
 import { Footer } from "@/components/custom";
+import MigrationNotice from "@/components/custom/migration-notice";
 import { Sparkle, Starburst, EmptyListIllustration } from "@/components/graphics";
 import SpotifyEmbed from "@/components/sections/spotify-embed";
 import EpisodeRow from "./episode-row";
@@ -13,7 +14,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { getAllDiscussions, countDiscussions } from "@/lib/server-queries";
+import { getAllDiscussions, countDiscussions, isDatabaseAvailable } from "@/lib/server-queries";
 import { episodeLabel, toSpotifyEmbedUrl } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -32,6 +33,8 @@ export default async function DiscussionsPage({
   const { page: rawPage } = await searchParams;
   const parsed = parseInt(rawPage ?? "", 10);
   const requested = Number.isNaN(parsed) ? 1 : Math.max(parsed, 1);
+
+  if (!(await isDatabaseAvailable())) return <MigrationNotice />;
 
   const total = await countDiscussions();
   const totalPages = Math.max(Math.ceil(total / PAGE_SIZE), 1);

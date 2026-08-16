@@ -4,10 +4,12 @@ import {
   getRelatedContent,
   getReviewsForContent,
   getUserRatingsForContent,
+  isDatabaseAvailable,
   mergeDiscussions,
 } from "@/lib/server-queries";
 import ContentDetailsClient from "@/components/sections/content-details-client";
 import { Footer } from "@/components/custom";
+import MigrationNotice from "@/components/custom/migration-notice";
 
 interface ContentDetailsPageProps {
   rawParam: string;
@@ -19,6 +21,8 @@ export default async function ContentDetailsPage({
   rawParam,
   basePath,
 }: ContentDetailsPageProps) {
+  if (!(await isDatabaseAvailable())) return <MigrationNotice />;
+
   const item = await requireContentAt(rawParam, basePath);
 
   const [userRatings, episodes, criticReviews, related] = await Promise.all([

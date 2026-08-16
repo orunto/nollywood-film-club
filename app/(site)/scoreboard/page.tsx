@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Footer } from "@/components/custom";
-import { getScoreboard } from "@/lib/server-queries";
+import MigrationNotice from "@/components/custom/migration-notice";
+import { getScoreboard, isDatabaseAvailable } from "@/lib/server-queries";
 import ScoreboardTable from "./scoreboard-table";
 
 export const metadata: Metadata = {
@@ -9,6 +10,8 @@ export const metadata: Metadata = {
 };
 
 export default async function ScoreboardPage() {
+  if (!(await isDatabaseAvailable())) return <MigrationNotice />;
+
   const ranked = await getScoreboard();
 
   return (

@@ -1,7 +1,8 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Footer } from "@/components/custom";
-import { getAllContent } from "@/lib/server-queries";
+import MigrationNotice from "@/components/custom/migration-notice";
+import { getAllContent, isDatabaseAvailable } from "@/lib/server-queries";
 import BrowseContent from "./browse-content";
 
 export const metadata: Metadata = {
@@ -11,6 +12,8 @@ export const metadata: Metadata = {
 };
 
 export default async function MoviesAndTVPage() {
+    if (!(await isDatabaseAvailable())) return <MigrationNotice />;
+
     const allContent = await getAllContent();
 
     return (

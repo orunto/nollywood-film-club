@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Footer } from "@/components/custom";
+import MigrationNotice from "@/components/custom/migration-notice";
 import ReviewCard from "@/components/custom/review-card";
 import { EmptyReviewsIllustration } from "@/components/graphics";
 import {
@@ -11,7 +12,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { countTrendingReviews, getTrendingReviews } from "@/lib/server-queries";
+import { countTrendingReviews, getTrendingReviews, isDatabaseAvailable } from "@/lib/server-queries";
 
 export const metadata: Metadata = {
   title: "Reviews | Nollywood Film Club",
@@ -29,6 +30,8 @@ export default async function ReviewsFeedPage({
   const { page: rawPage } = await searchParams;
   const parsed = parseInt(rawPage ?? "", 10);
   const requested = Number.isNaN(parsed) ? 1 : Math.max(parsed, 1);
+
+  if (!(await isDatabaseAvailable())) return <MigrationNotice />;
 
   const total = await countTrendingReviews();
   const totalPages = Math.max(Math.ceil(total / PAGE_SIZE), 1);

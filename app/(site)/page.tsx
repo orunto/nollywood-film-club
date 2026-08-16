@@ -1,9 +1,12 @@
 import { Footer } from "@/components/custom";
+import MigrationNotice from "@/components/custom/migration-notice";
 import { Hero, MovieOfTheWeek, MoviesAndTVSeries, Reviews, Discussions } from "@/components/sections";
-import { getHomepageData, getAllContent } from "@/lib/server-queries";
+import { getHomepageData, getAllContent, isDatabaseAvailable } from "@/lib/server-queries";
 import { posterPath } from "@/lib/utils";
 
 export default async function Home() {
+  if (!(await isDatabaseAvailable())) return <MigrationNotice />;
+
   const [{ movieOfTheWeek, movieOfTheWeekDiscussion, moviesAndTVSeries, reviews, discussions }, allContent] =
     await Promise.all([getHomepageData(), getAllContent()]);
 
