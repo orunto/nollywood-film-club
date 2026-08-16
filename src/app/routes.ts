@@ -1,7 +1,6 @@
-import { index, route, type RouteConfig } from "@react-router/dev/routes";
+import { index, layout, route, type RouteConfig } from "@react-router/dev/routes";
 
 export default [
-  index("routes/home.tsx"),
   route("health", "routes/health.ts"),
   route("auth", "routes/auth.tsx"),
   route("auth/callback", "routes/auth.callback.tsx"),
@@ -11,4 +10,11 @@ export default [
   route("api/auth/*", "routes/api.auth.ts"),
   route("api/check-username", "routes/api.check-username.ts"),
   route("api/create-username", "routes/api.create-username.ts"),
+  route("api/contact", "routes/api.contact.ts"),
+  layout("routes/site.tsx", [
+    index("routes/home.tsx"),
+    route("privacy", "routes/privacy.tsx"),
+    route("terms", "routes/terms.tsx"),
+    route("contact", "routes/contact.tsx"),
+  ]),
 ] satisfies RouteConfig;

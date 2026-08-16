@@ -1,5 +1,6 @@
 import type { CatalogWriteRepository } from "../repositories/catalog-write";
 import type { CommunityWriteRepository } from "../repositories/community-write";
+import type { ContactMessageRepository } from "../repositories/contact-message";
 import type { PublicReadRepository } from "../repositories/public-read";
 import type { UserProfileRepository } from "../repositories/user-profile";
 
@@ -30,6 +31,7 @@ export interface Database {
   writes: CommunityWriteRepository;
   catalog: CatalogWriteRepository;
   profiles: UserProfileRepository;
+  contacts: ContactMessageRepository;
   atomic(commands: AtomicCommand[]): Promise<AtomicResult[]>;
 }
 

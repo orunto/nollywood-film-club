@@ -1,19 +1,177 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Geist:wght@100..900&family=Lexend+Deca:wght@100..900&family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Red+Rose:wght@300..700&display=swap');
 @import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+    --color-prime-video: oklch(0.5324 0.1933 257.83);
+  --color-netflix: oklch(0.5814 0.2349 27.99);
+  --color-youtube: #FF0000;
+  --color-disney-plus: #113CCF;
+  --color-hulu: #1CE783;
+  --color-hbo-max: #5822B4;
+  --color-apple-tv: #000000;
+  --color-paramount-plus: #0064FF;
+  --color-peacock: #000000;
+}
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-lexend-deca);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --breakpoint-xl: 75rem;
+  --breakpoint-2xl: 88rem;
+}
 
 :root {
-  font-family: Arial, Helvetica, sans-serif;
-  color: #111;
-  background: #f5f0e8;
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.5847 0.1791 6.15);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.5847 0.1791 6.15);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.5847 0.1791 6.15);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.5847 0.1791 6.15);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.5847 0.1791 6.15);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+  /* Font family variables. The legacy app got these from next/font; the new
+     runtime loads the same Google Fonts via the @import above, so the
+     --font-* theme mapping below still resolves. Self-hosting these fonts is a
+     flagged follow-up, per the migration plan. */
+  --font-geist-sans: "Geist", sans-serif;
+  --font-geist-mono: "Geist Mono", monospace;
+  --font-lexend-deca: "Lexend Deca", sans-serif;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }
 
 * {
-  box-sizing: border-box;
+  font-family: "Lexend Deca", sans-serif;
+  font-optical-sizing: auto;
+  /*transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;*/
+  scroll-behavior: smooth;
+  scrollbar-width: none
 }
 
-body {
-  margin: 0;
+/* Hero poster-wall marquee: each column scrolls its (duplicated) posters so a
+   -50% translate loops seamlessly. Direction alternates per column. */
+@keyframes nfc-marquee-up {
+  from { transform: translateY(0); }
+  to { transform: translateY(-50%); }
+}
+@keyframes nfc-marquee-down {
+  from { transform: translateY(-50%); }
+  to { transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  [class*="nfc-marquee"] {
+    animation: none !important;
+  }
 }
 
+/* WYSIWYG review editor (Tiptap). Tailwind preflight strips list styling and
+   Placeholder needs a pseudo-element, so the editor content is styled here. */
+.review-editor:focus {
+  outline: none;
+}
+.review-editor p {
+  margin: 0 0 0.5rem;
+}
+.review-editor p:last-child {
+  margin-bottom: 0;
+}
+.review-editor ul,
+.review-editor ol {
+  margin: 0 0 0.5rem;
+  padding-left: 1.25rem;
+}
+.review-editor ul {
+  list-style: disc;
+}
+.review-editor ol {
+  list-style: decimal;
+}
+.review-editor strong {
+  font-weight: 600;
+}
+.review-editor em {
+  font-style: italic;
+}
+.review-editor p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: rgb(0 0 0 / 0.4);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Custom scrollbar styling */
+
+/* Temporary runtime placeholder styling (home shell + error boundary). These
+   `.shell` styles will be replaced as the real homepage lands. */
 .shell {
   min-height: 100vh;
   display: grid;

@@ -10,6 +10,7 @@ import * as schema from "../db/schema";
 import { createBetterAuthService } from "../auth/server";
 import { CatalogWriteRepository } from "../repositories/catalog-write";
 import { CommunityWriteRepository } from "../repositories/community-write";
+import { ContactMessageRepository } from "../repositories/contact-message";
 import { PublicReadRepository } from "../repositories/public-read";
 import { UserProfileRepository } from "../repositories/user-profile";
 import type {
@@ -31,6 +32,7 @@ export class NodeSqliteDatabase implements Database {
   readonly writes: CommunityWriteRepository;
   readonly catalog: CatalogWriteRepository;
   readonly profiles: UserProfileRepository;
+  readonly contacts: ContactMessageRepository;
 
   constructor(
     database: DatabaseSync,
@@ -42,6 +44,7 @@ export class NodeSqliteDatabase implements Database {
     this.writes = new CommunityWriteRepository(this);
     this.catalog = new CatalogWriteRepository(this);
     this.profiles = new UserProfileRepository(this);
+    this.contacts = new ContactMessageRepository(instance);
   }
 
   async check() {

@@ -7,6 +7,7 @@ import {
   ScrollRestoration,
 } from "react-router";
 import type { Route } from "./+types/root";
+import { Toaster } from "../components/ui/sonner";
 import "./styles.css";
 
 export const meta: Route.MetaFunction = () => [
@@ -23,11 +24,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="icon" href="/favicon.ico" />
         <Meta />
         <Links />
       </head>
-      <body>
+      <body className="min-h-screen antialiased">
         {children}
+        <Toaster />
         <ScrollRestoration />
         <Scripts />
       </body>
