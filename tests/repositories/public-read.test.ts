@@ -9,6 +9,11 @@ import {
   getHomepageData,
   mergeDiscussions,
 } from "../../src/services/homepage";
+import {
+  contentSlug,
+  getContentDetailData,
+  resolveContent,
+} from "../../src/services/content-detail";
 
 test("public reads preserve catalog, aggregate, and discussion behavior", async () => {
   const directory = await mkdtemp(join(tmpdir(), "nfc-public-reads-"));
@@ -39,6 +44,18 @@ test("public reads preserve catalog, aggregate, and discussion behavior", async 
       2000,
       2000,
     );
+    setup.exec(`
+      UPDATE content SET genre = '["Drama", "Comedy"]' WHERE id = 'top';
+      UPDATE content SET genre = '["drama"]' WHERE id = 'zero';
+      UPDATE content SET genre = '["Action"]' WHERE id = 'motw';
+      UPDATE content SET genre = '["Comedy"]' WHERE id = 'uncatalogued';
+      INSERT INTO reviews (
+        id, content_id, title, description, score_tenths, reviewer,
+        published_at, created_at, updated_at
+      ) VALUES
+        ('critic-published', 'top', 'Published review', 'Published first', 75, 'Critic A', 5000, 5000, 5000),
+        ('critic-undated', 'top', 'Undated review', 'Null date last', NULL, 'Critic B', NULL, 7000, 7000);
+    `);
 
     const ratingInsert = setup.prepare(`
       INSERT INTO user_ratings (
@@ -194,6 +211,42 @@ test("public reads preserve catalog, aggregate, and discussion behavior", async 
     );
     assert.equal(await database.publicReads.countTrendingReviews(), 3);
     assert.equal(trending[0].film?.title, "Top catalog title");
+
+    const contentById = await database.publicReads.getContentById("top");
+    assert.equal(contentById?.userRating, 5);
+    assert.equal(contentSlug("Àjàkájú", new Date("2024-01-01Z")), "ajakaju-2024");
+    assert.equal(
+      (await resolveContent(database.publicReads, "top-catalog-title"))?.id,
+      "top",
+    );
+    assert.equal(
+      await resolveContent(database.publicReads, "missing-title"),
+      null,
+    );
+
+    const detail = await getContentDetailData(
+      database.publicReads,
+      "top-catalog-title",
+    );
+    assert.equal(detail?.canonicalPath, "/movie/top-catalog-title");
+    assert.deepEqual(
+      detail?.userRatings.map(({ id, username }) => ({ id, username })),
+      [
+        { id: "rating-top-2", username: "Legacy Member" },
+        { id: "rating-top-1", username: "Ada Member" },
+      ],
+    );
+    assert.deepEqual(
+      detail?.criticReviews.map(({ id, score }) => ({ id, score })),
+      [
+        { id: "critic-published", score: 7.5 },
+        { id: "critic-undated", score: null },
+      ],
+    );
+    assert.deepEqual(
+      detail?.related.map((item) => item.id),
+      ["zero", "uncatalogued", "motw"],
+    );
 
     const contentDiscussions =
       await database.publicReads.getDiscussionsForContent("top");

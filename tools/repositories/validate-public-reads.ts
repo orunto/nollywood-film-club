@@ -4,6 +4,10 @@ import { resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { NodeSqliteDatabase } from "../../src/services/node";
 import { getHomepageData } from "../../src/services/homepage";
+import {
+  contentSlug,
+  getContentDetailData,
+} from "../../src/services/content-detail";
 
 const stateDirectory = resolve(
   "data/local-d1-import/v3/d1/miniflare-D1DatabaseObject",
@@ -98,6 +102,38 @@ try {
   assert.equal(homepage.reviews.length, Math.min(visibleReviewCount.count, 4));
   assert.equal(homepage.discussions.length, discussionRows.length);
 
+  assert.ok(movieOfTheWeek);
+  const detailById = await getContentDetailData(
+    database.publicReads,
+    movieOfTheWeek.id,
+  );
+  const detailBySlug = await getContentDetailData(
+    database.publicReads,
+    contentSlug(movieOfTheWeek.title, movieOfTheWeek.releaseDate),
+  );
+  assert.equal(detailById?.item.id, movieOfTheWeek.id);
+  assert.equal(detailBySlug?.item.id, movieOfTheWeek.id);
+  assert.equal(detailById?.canonicalPath, detailBySlug?.canonicalPath);
+
+  const expectedDetailCounts = raw
+    .prepare(`
+      SELECT
+        (SELECT count(*) FROM user_ratings WHERE content_id = ?) AS ratings,
+        (SELECT count(*) FROM discussions WHERE content_id = ?) AS discussions,
+        (SELECT count(*) FROM reviews WHERE content_id = ?) AS reviews
+    `)
+    .get(movieOfTheWeek.id, movieOfTheWeek.id, movieOfTheWeek.id) as {
+      ratings: number;
+      discussions: number;
+      reviews: number;
+    };
+  assert.equal(detailById?.userRatings.length, expectedDetailCounts.ratings);
+  assert.equal(detailById?.episodes.length, expectedDetailCounts.discussions);
+  assert.equal(detailById?.criticReviews.length, expectedDetailCounts.reviews);
+  assert.ok(
+    detailById?.related.every((item) => item.id !== movieOfTheWeek.id),
+  );
+
   console.log(
     JSON.stringify({
       message: "Portable public-read repository validation complete",
@@ -107,6 +143,9 @@ try {
       visibleDiscussions: visibleDiscussionCount.count,
       homepageDiscussions: discussionRows.length,
       trendingReviews: visibleReviewCount.count,
+      detailRatings: expectedDetailCounts.ratings,
+      detailDiscussions: expectedDetailCounts.discussions,
+      detailCriticReviews: expectedDetailCounts.reviews,
       movieOfTheWeek: movieOfTheWeek?.id ?? null,
     }),
   );

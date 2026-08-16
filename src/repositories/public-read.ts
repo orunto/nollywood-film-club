@@ -19,6 +19,7 @@ import {
   comments,
   content,
   discussions,
+  reviews,
   userRatings,
   users,
   type CastMember,
@@ -80,6 +81,26 @@ export interface FeedReview extends UserRating {
     releaseDate: string | null;
     posterImage: string | null;
   } | null;
+}
+
+export interface CriticReview {
+  id: string;
+  contentId: string;
+  title: string;
+  description: string;
+  score: number | null;
+  reviewer: string;
+  externalUrl: string | null;
+  reviewImage: string | null;
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ContentSlugEntry {
+  id: string;
+  title: string;
+  releaseDate: string | null;
 }
 
 export interface Discussion {
@@ -261,6 +282,25 @@ function getDisplayUser(
   };
 }
 
+function mapUserRating(
+  rating: typeof userRatings.$inferSelect,
+  user: typeof users.$inferSelect | null,
+): UserRating {
+  return {
+    id: rating.id,
+    contentId: rating.contentId,
+    userId: rating.userId,
+    rating: rating.rating,
+    review: rating.review,
+    edited: rating.edited,
+    flagged: rating.flagged,
+    restricted: rating.restricted,
+    createdAt: rating.createdAt.toISOString(),
+    updatedAt: rating.updatedAt.toISOString(),
+    ...getDisplayUser(rating.userId, user),
+  };
+}
+
 export class PublicReadRepository {
   constructor(private readonly database: AsyncSQLiteDatabase) {}
 
@@ -285,6 +325,36 @@ export class PublicReadRepository {
   async getAllContent(): Promise<Content[]> {
     const rows = await this.contentWithRatings();
     return rows.map(mapContent);
+  }
+
+  async getContentById(id: string): Promise<Content | null> {
+    const [row] = await this.database
+      .select({
+        ...contentSelection,
+        userRating: avg(userRatings.rating),
+      })
+      .from(content)
+      .leftJoin(userRatings, eq(content.id, userRatings.contentId))
+      .where(eq(content.id, id))
+      .groupBy(content.id)
+      .limit(1);
+
+    return row ? mapContent(row) : null;
+  }
+
+  async getContentSlugIndex(): Promise<ContentSlugEntry[]> {
+    const rows = await this.database
+      .select({
+        id: content.id,
+        title: content.title,
+        releaseDate: content.releaseDate,
+      })
+      .from(content);
+
+    return rows.map((row) => ({
+      ...row,
+      releaseDate: toIsoString(row.releaseDate),
+    }));
   }
 
   async getScoreboard({
@@ -394,6 +464,45 @@ export class PublicReadRepository {
       .where(visibleFeedReviews);
 
     return Number(row?.total ?? 0);
+  }
+
+  async getUserRatingsForContent(contentId: string): Promise<UserRating[]> {
+    const rows = await this.database
+      .select({ rating: userRatings, user: users })
+      .from(userRatings)
+      .leftJoin(users, eq(userRatings.userId, users.id))
+      .where(eq(userRatings.contentId, contentId))
+      .orderBy(asc(userRatings.createdAt));
+
+    return rows.map((row) => mapUserRating(row.rating, row.user));
+  }
+
+  async getCriticReviewsForContent(
+    contentId: string,
+  ): Promise<CriticReview[]> {
+    const rows = await this.database
+      .select()
+      .from(reviews)
+      .where(eq(reviews.contentId, contentId))
+      .orderBy(
+        sql`${reviews.publishedAt} IS NULL`,
+        desc(reviews.publishedAt),
+        desc(reviews.createdAt),
+      );
+
+    return rows.map((row) => ({
+      id: row.id,
+      contentId: row.contentId,
+      title: row.title,
+      description: row.description,
+      score: row.scoreTenths === null ? null : row.scoreTenths / 10,
+      reviewer: row.reviewer,
+      externalUrl: row.externalUrl,
+      reviewImage: row.legacyReviewImage,
+      publishedAt: toIsoString(row.publishedAt),
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+    }));
   }
 
   async getDiscussions(options: DiscussionPageOptions = {}) {
