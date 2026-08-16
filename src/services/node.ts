@@ -3,6 +3,7 @@ import { dirname, resolve } from "node:path";
 import { DatabaseSync, type SQLInputValue } from "node:sqlite";
 import { drizzle, type AsyncRemoteCallback } from "drizzle-orm/sqlite-proxy";
 import * as schema from "../db/schema";
+import { CatalogWriteRepository } from "../repositories/catalog-write";
 import { CommunityWriteRepository } from "../repositories/community-write";
 import { PublicReadRepository } from "../repositories/public-read";
 import type {
@@ -22,6 +23,7 @@ export class NodeSqliteDatabase implements Database {
   private readonly database: DatabaseSync;
   readonly publicReads: PublicReadRepository;
   readonly writes: CommunityWriteRepository;
+  readonly catalog: CatalogWriteRepository;
 
   constructor(path: string, options: { readOnly?: boolean } = {}) {
     this.database = new DatabaseSync(path, options);
@@ -49,6 +51,7 @@ export class NodeSqliteDatabase implements Database {
       drizzle(execute, { schema }),
     );
     this.writes = new CommunityWriteRepository(this);
+    this.catalog = new CatalogWriteRepository(this);
   }
 
   async check() {

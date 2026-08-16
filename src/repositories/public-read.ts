@@ -553,6 +553,15 @@ export class PublicReadRepository {
     return row !== undefined;
   }
 
+  async contentExists(id: string): Promise<boolean> {
+    const [row] = await this.database
+      .select({ id: content.id })
+      .from(content)
+      .where(eq(content.id, id))
+      .limit(1);
+    return row !== undefined;
+  }
+
   async getRatingId(
     contentId: string,
     userId: string,

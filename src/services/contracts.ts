@@ -1,3 +1,4 @@
+import type { CatalogWriteRepository } from "../repositories/catalog-write";
 import type { CommunityWriteRepository } from "../repositories/community-write";
 import type { PublicReadRepository } from "../repositories/public-read";
 
@@ -21,6 +22,7 @@ export interface Database {
   check(): Promise<void>;
   publicReads: PublicReadRepository;
   writes: CommunityWriteRepository;
+  catalog: CatalogWriteRepository;
   atomic(commands: AtomicCommand[]): Promise<AtomicResult[]>;
 }
 
