@@ -5,6 +5,13 @@ import type {
 } from "./contracts";
 
 export class PendingAuthService implements AuthService {
+  async handler(_request: Request) {
+    void _request;
+    return new Response("Authentication has not been configured", {
+      status: 501,
+    });
+  }
+
   async getSession(_request: Request) {
     void _request;
     return null;

@@ -1,5 +1,6 @@
-import { drizzle } from "drizzle-orm/d1";
+import { drizzle, type DrizzleD1Database } from "drizzle-orm/d1";
 import * as schema from "../db/schema";
+import { createBetterAuthService } from "../auth/server";
 import { CatalogWriteRepository } from "../repositories/catalog-write";
 import { CommunityWriteRepository } from "../repositories/community-write";
 import { PublicReadRepository } from "../repositories/public-read";
@@ -11,20 +12,18 @@ import type {
   ImageTransformer,
   ObjectStore,
 } from "./contracts";
-import {
-  PendingAuthService,
-  PendingMailService,
-} from "./pending";
+import { PendingMailService } from "./pending";
 
 class D1Database implements Database {
   readonly publicReads: PublicReadRepository;
   readonly writes: CommunityWriteRepository;
   readonly catalog: CatalogWriteRepository;
 
-  constructor(private readonly binding: globalThis.D1Database) {
-    this.publicReads = new PublicReadRepository(
-      drizzle(this.binding, { schema }),
-    );
+  constructor(
+    private readonly binding: globalThis.D1Database,
+    instance: DrizzleD1Database<typeof schema>,
+  ) {
+    this.publicReads = new PublicReadRepository(instance);
     this.writes = new CommunityWriteRepository(this);
     this.catalog = new CatalogWriteRepository(this);
   }
@@ -90,12 +89,42 @@ class CloudflareImageTransformer implements ImageTransformer {
 }
 
 export function createCloudflareServices(env: Env): AppServices {
+  const instance = drizzle(env.DB, { schema });
+  const authEnv = env as AuthEnv;
   return {
     runtime: "cloudflare",
-    db: new D1Database(env.DB),
-    auth: new PendingAuthService(),
+    db: new D1Database(env.DB, instance),
+    auth: createBetterAuthService(instance, {
+      baseURL: authEnv.AUTH_URL ?? "http://localhost:8787",
+      secret: authEnv.AUTH_SECRET ?? "dev-secret-change-me",
+      google:
+        authEnv.GOOGLE_CLIENT_ID && authEnv.GOOGLE_CLIENT_SECRET
+          ? {
+              clientId: authEnv.GOOGLE_CLIENT_ID,
+              clientSecret: authEnv.GOOGLE_CLIENT_SECRET,
+            }
+          : undefined,
+      twitter:
+        authEnv.X_CLIENT_ID && authEnv.X_CLIENT_SECRET
+          ? {
+              clientId: authEnv.X_CLIENT_ID,
+              clientSecret: authEnv.X_CLIENT_SECRET,
+            }
+          : undefined,
+    }),
     objects: new R2ObjectStore(env.OBJECTS),
     images: new CloudflareImageTransformer(env.IMAGES),
     mail: new PendingMailService(),
   };
+}
+
+// Wrangler types vars as their literal placeholder values; auth secrets are
+// set per environment via `wrangler secret put`, so widen to the real shape.
+interface AuthEnv {
+  AUTH_URL?: string;
+  AUTH_SECRET?: string;
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
+  X_CLIENT_ID?: string;
+  X_CLIENT_SECRET?: string;
 }

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { NodeSqliteDatabase } from "../../src/services/node";
+import { createNodeSqliteDatabase } from "../../src/services/node";
 import { getHomepageData } from "../../src/services/homepage";
 import {
   contentSlug,
@@ -20,7 +20,7 @@ assert.equal(databaseFiles.length, 1, "Expected one local D1 database file");
 
 const databasePath = resolve(stateDirectory, databaseFiles[0]);
 const raw = new DatabaseSync(databasePath, { readOnly: true });
-const database = new NodeSqliteDatabase(databasePath, { readOnly: true });
+const database = createNodeSqliteDatabase(databasePath, { readOnly: true });
 const now = new Date();
 
 try {

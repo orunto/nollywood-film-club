@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
-import { NodeSqliteDatabase } from "../../src/services/node";
+import { createNodeSqliteDatabase } from "../../src/services/node";
 
 const contentInsert = `
   INSERT INTO content (
@@ -27,7 +27,7 @@ async function createTestDatabase() {
   } finally {
     setup.close();
   }
-  return { database: new NodeSqliteDatabase(databasePath), directory };
+  return { database: createNodeSqliteDatabase(databasePath), directory };
 }
 
 test("atomic commits all statements and reports per-statement results", async () => {

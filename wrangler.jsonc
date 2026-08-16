@@ -32,6 +32,14 @@
   "images": {
     "binding": "IMAGES"
   },
+  "vars": {
+    "AUTH_URL": "http://localhost:8787",
+    "AUTH_SECRET": "dev-secret-change-me",
+    "GOOGLE_CLIENT_ID": "",
+    "GOOGLE_CLIENT_SECRET": "",
+    "X_CLIENT_ID": "",
+    "X_CLIENT_SECRET": ""
+  },
   "env": {
     "staging": {
       "d1_databases": [

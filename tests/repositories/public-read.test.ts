@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
-import { NodeSqliteDatabase } from "../../src/services/node";
+import { createNodeSqliteDatabase } from "../../src/services/node";
 import {
   getHomepageData,
   mergeDiscussions,
@@ -131,7 +131,7 @@ test("public reads preserve catalog, aggregate, and discussion behavior", async 
     setup.close();
   }
 
-  const database = new NodeSqliteDatabase(databasePath);
+  const database = createNodeSqliteDatabase(databasePath);
   try {
     const movieOfTheWeek = await database.publicReads.getMovieOfTheWeek();
     assert.equal(movieOfTheWeek?.id, "motw");

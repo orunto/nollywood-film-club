@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
-import { NodeSqliteDatabase } from "../../src/services/node";
+import { createNodeSqliteDatabase } from "../../src/services/node";
 
 async function createTestDatabase() {
   const directory = await mkdtemp(join(tmpdir(), "nfc-community-write-"));
@@ -42,7 +42,7 @@ async function createTestDatabase() {
   } finally {
     setup.close();
   }
-  return { database: new NodeSqliteDatabase(databasePath), directory, databasePath };
+  return { database: createNodeSqliteDatabase(databasePath), directory, databasePath };
 }
 
 function readOnlyRow(databasePath: string, sql: string, ...params: unknown[]) {

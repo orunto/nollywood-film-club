@@ -29,7 +29,7 @@
     "test:runtime": "bun run test:runtime:cloudflare && bun run test:runtime:node",
     "test:runtime:cloudflare": "cross-env RUNTIME_TARGET=cloudflare playwright test --config playwright.runtime.config.ts",
     "test:runtime:node": "bun run build:node && cross-env RUNTIME_TARGET=node playwright test --config playwright.runtime.config.ts",
-    "test:repositories": "tsx --test tests/repositories/**/*.test.ts",
+    "test:repositories": "tsx --test tests/repositories/**/*.test.ts tests/auth/**/*.test.ts",
     "validate:public-reads": "tsx tools/repositories/validate-public-reads.ts"
   },
   "dependencies": {

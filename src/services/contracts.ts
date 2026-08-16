@@ -27,6 +27,7 @@ export interface Database {
 }
 
 export interface AuthService {
+  handler(request: Request): Promise<Response>;
   getSession(request: Request): Promise<AuthSession | null>;
 }
 
