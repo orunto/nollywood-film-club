@@ -11,6 +11,7 @@ import { createBetterAuthService } from "../auth/server";
 import { CatalogWriteRepository } from "../repositories/catalog-write";
 import { CommunityWriteRepository } from "../repositories/community-write";
 import { PublicReadRepository } from "../repositories/public-read";
+import { UserProfileRepository } from "../repositories/user-profile";
 import type {
   AppServices,
   AtomicCommand,
@@ -29,6 +30,7 @@ export class NodeSqliteDatabase implements Database {
   readonly publicReads: PublicReadRepository;
   readonly writes: CommunityWriteRepository;
   readonly catalog: CatalogWriteRepository;
+  readonly profiles: UserProfileRepository;
 
   constructor(
     database: DatabaseSync,
@@ -39,6 +41,7 @@ export class NodeSqliteDatabase implements Database {
     this.publicReads = new PublicReadRepository(instance);
     this.writes = new CommunityWriteRepository(this);
     this.catalog = new CatalogWriteRepository(this);
+    this.profiles = new UserProfileRepository(this);
   }
 
   async check() {
@@ -133,22 +136,21 @@ async function createNodeServices(): Promise<AppServices> {
 
   const sqlite = createNodeSqliteDatabase(sqlitePath);
 
-  const authConfig = {
-    baseURL: process.env.AUTH_URL ?? "http://localhost:3000",
-    secret: process.env.AUTH_SECRET ?? "dev-secret-change-me",
-  } as const;
+  const mail = new PendingMailService();
 
   return {
     runtime: "node",
     db: sqlite,
     auth: createBetterAuthService(sqlite.instance, {
-      ...authConfig,
+      baseURL: process.env.AUTH_URL ?? "http://localhost:3000",
+      secret: process.env.AUTH_SECRET ?? "dev-secret-change-me",
+      mail,
       google: optionalProvider("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"),
       twitter: optionalProvider("X_CLIENT_ID", "X_CLIENT_SECRET"),
     }),
     objects: new FileSystemObjectStore(objectRoot),
     images: new PassthroughImageTransformer(),
-    mail: new PendingMailService(),
+    mail,
   };
 }
 

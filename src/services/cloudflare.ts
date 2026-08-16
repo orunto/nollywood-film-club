@@ -4,6 +4,7 @@ import { createBetterAuthService } from "../auth/server";
 import { CatalogWriteRepository } from "../repositories/catalog-write";
 import { CommunityWriteRepository } from "../repositories/community-write";
 import { PublicReadRepository } from "../repositories/public-read";
+import { UserProfileRepository } from "../repositories/user-profile";
 import type {
   AppServices,
   AtomicCommand,
@@ -18,6 +19,7 @@ class D1Database implements Database {
   readonly publicReads: PublicReadRepository;
   readonly writes: CommunityWriteRepository;
   readonly catalog: CatalogWriteRepository;
+  readonly profiles: UserProfileRepository;
 
   constructor(
     private readonly binding: globalThis.D1Database,
@@ -26,6 +28,7 @@ class D1Database implements Database {
     this.publicReads = new PublicReadRepository(instance);
     this.writes = new CommunityWriteRepository(this);
     this.catalog = new CatalogWriteRepository(this);
+    this.profiles = new UserProfileRepository(this);
   }
 
   async check() {
@@ -91,12 +94,14 @@ class CloudflareImageTransformer implements ImageTransformer {
 export function createCloudflareServices(env: Env): AppServices {
   const instance = drizzle(env.DB, { schema });
   const authEnv = env as AuthEnv;
+  const mail = new PendingMailService();
   return {
     runtime: "cloudflare",
     db: new D1Database(env.DB, instance),
     auth: createBetterAuthService(instance, {
       baseURL: authEnv.AUTH_URL ?? "http://localhost:8787",
       secret: authEnv.AUTH_SECRET ?? "dev-secret-change-me",
+      mail,
       google:
         authEnv.GOOGLE_CLIENT_ID && authEnv.GOOGLE_CLIENT_SECRET
           ? {
@@ -114,7 +119,7 @@ export function createCloudflareServices(env: Env): AppServices {
     }),
     objects: new R2ObjectStore(env.OBJECTS),
     images: new CloudflareImageTransformer(env.IMAGES),
-    mail: new PendingMailService(),
+    mail,
   };
 }
 

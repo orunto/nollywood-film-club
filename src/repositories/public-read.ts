@@ -562,6 +562,24 @@ export class PublicReadRepository {
     return row !== undefined;
   }
 
+  async userExists(id: string): Promise<boolean> {
+    const [row] = await this.database
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.id, id))
+      .limit(1);
+    return row !== undefined;
+  }
+
+  async getUsernameOwner(username: string): Promise<{ userId: string } | null> {
+    const [row] = await this.database
+      .select({ userId: users.id })
+      .from(users)
+      .where(sql`lower(${users.username}) = ${username.toLowerCase()}`)
+      .limit(1);
+    return row ? { userId: row.userId } : null;
+  }
+
   async getRatingId(
     contentId: string,
     userId: string,

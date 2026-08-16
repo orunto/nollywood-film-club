@@ -1,9 +1,15 @@
 import type { CatalogWriteRepository } from "../repositories/catalog-write";
 import type { CommunityWriteRepository } from "../repositories/community-write";
 import type { PublicReadRepository } from "../repositories/public-read";
+import type { UserProfileRepository } from "../repositories/user-profile";
 
 export interface AuthSession {
   userId: string;
+  email: string;
+  name: string;
+  username: string | null;
+  role: "user" | "admin";
+  regular: boolean;
 }
 
 export type AtomicValue = string | number | bigint | null;
@@ -23,6 +29,7 @@ export interface Database {
   publicReads: PublicReadRepository;
   writes: CommunityWriteRepository;
   catalog: CatalogWriteRepository;
+  profiles: UserProfileRepository;
   atomic(commands: AtomicCommand[]): Promise<AtomicResult[]>;
 }
 

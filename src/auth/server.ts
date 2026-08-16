@@ -3,7 +3,7 @@ import type { DrizzleD1Database } from "drizzle-orm/d1";
 import type { SqliteRemoteDatabase } from "drizzle-orm/sqlite-proxy";
 import { betterAuth } from "better-auth/minimal";
 import * as schema from "../db/schema";
-import type { AuthService } from "../services/contracts";
+import type { AuthService, MailService } from "../services/contracts";
 
 export interface BetterAuthProviderConfig {
   clientId: string;
@@ -13,6 +13,7 @@ export interface BetterAuthProviderConfig {
 export interface BetterAuthServiceOptions {
   baseURL: string;
   secret: string;
+  mail: MailService;
   google?: BetterAuthProviderConfig;
   twitter?: BetterAuthProviderConfig;
 }
@@ -38,6 +39,25 @@ export function createBetterAuthService(
     appName: "Nollywood Film Club",
     emailAndPassword: {
       enabled: true,
+      // A reset link is the only email the app currently sends, so it goes
+      // through the same portable MailService seam as everything else. The
+      // provider behind it (transactional email) is selected in a later phase.
+      sendResetPassword: async ({ user, url }) => {
+        await options.mail.send({
+          to: user.email,
+          subject: "Reset your Nollywood Film Club password",
+          text: [
+            "You asked to reset your Nollywood Film Club password.",
+            "",
+            url,
+            "",
+            "If you did not ask for this, you can safely ignore this email.",
+          ].join("\n"),
+        });
+      },
+      // A stolen session should not survive a password reset: the legitimate
+      // owner signs back in from the reset page.
+      revokeSessionsOnPasswordReset: true,
     },
     socialProviders: {
       google: options.google
@@ -62,6 +82,19 @@ export function createBetterAuthService(
         regular: { type: "boolean", input: false },
       },
     },
+    account: {
+      accountLinking: {
+        // Pre-migrated users keep their Hexclave user IDs, so an OAuth
+        // sign-in for an existing email must attach the provider account to
+        // that row rather than minting a duplicate user.
+        enabled: true,
+        // Only link a provider identity into a local row whose email is
+        // verified, and never from a provider's unverified email claim on its
+        // own. Anything ambiguous must go through an authenticated claim
+        // flow, per the migration plan.
+        requireLocalEmailVerified: true,
+      },
+    },
     advanced: {
       cookiePrefix: "nollywood",
     },
@@ -73,7 +106,17 @@ export function createBetterAuthService(
     },
     async getSession(request) {
       const result = await auth.api.getSession({ headers: request.headers });
-      return result?.user ? { userId: result.user.id } : null;
+      if (!result?.user) {
+        return null;
+      }
+      return {
+        userId: result.user.id,
+        email: result.user.email,
+        name: result.user.name,
+        username: result.user.username ?? null,
+        role: result.user.role === "admin" ? "admin" : "user",
+        regular: Boolean(result.user.regular),
+      };
     },
   };
 }

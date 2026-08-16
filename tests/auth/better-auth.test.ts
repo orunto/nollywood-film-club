@@ -6,10 +6,19 @@ import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import { createBetterAuthService } from "../../src/auth/server";
 import { createNodeSqliteDatabase } from "../../src/services/node";
+import type { MailMessage } from "../../src/services/contracts";
 
 const BASE_URL = "http://localhost:3000";
 
-async function createTestAuth() {
+interface TestAuth {
+  auth: ReturnType<typeof createBetterAuthService>;
+  database: ReturnType<typeof createNodeSqliteDatabase>;
+  messages: MailMessage[];
+  directory: string;
+  databasePath: string;
+}
+
+async function createTestAuth(): Promise<TestAuth> {
   const directory = await mkdtemp(join(tmpdir(), "nfc-auth-"));
   const databasePath = join(directory, "test.sqlite");
   const setup = new DatabaseSync(databasePath);
@@ -24,11 +33,13 @@ async function createTestAuth() {
     setup.close();
   }
   const database = createNodeSqliteDatabase(databasePath);
+  const messages: MailMessage[] = [];
   const auth = createBetterAuthService(database.instance, {
     baseURL: BASE_URL,
     secret: "test-secret-that-is-long-enough-32chars",
+    mail: { send: async (message) => messages.push(message) },
   });
-  return { auth, database, directory, databasePath };
+  return { auth, database, messages, directory, databasePath };
 }
 
 function post(path: string, body: unknown): Request {
@@ -56,22 +67,27 @@ function readOnlyRow(databasePath: string, sql: string, ...params: unknown[]) {
   }
 }
 
+async function signUp(
+  t: TestAuth,
+  email = "critic@example.com",
+  password = "correct-horse-battery",
+  name = "Iroko Critic",
+) {
+  return t.auth.handler(
+    post("/api/auth/sign-up/email", { email, password, name }),
+  );
+}
+
 test("email sign-up creates a user with server-owned defaults", async () => {
-  const { auth, database, directory, databasePath } = await createTestAuth();
+  const t = await createTestAuth();
   try {
-    const response = await auth.handler(
-      post("/api/auth/sign-up/email", {
-        email: "critic@example.com",
-        password: "correct-horse-battery",
-        name: "Iroko Critic",
-      }),
-    );
+    const response = await signUp(t);
     assert.equal(response.status, 200);
     const data = (await response.json()) as { user?: { id?: string } };
     assert.equal(typeof data.user?.id, "string");
 
     const user = readOnlyRow(
-      databasePath,
+      t.databasePath,
       "SELECT * FROM users WHERE id = ?",
       data.user?.id,
     ) as {
@@ -88,52 +104,45 @@ test("email sign-up creates a user with server-owned defaults", async () => {
     assert.equal(user.regular, 0);
 
     const accountCount = readOnlyRow(
-      databasePath,
+      t.databasePath,
       "SELECT count(*) AS count FROM accounts WHERE user_id = ?",
       data.user?.id,
     ) as { count: number };
     assert.equal(accountCount.count, 1);
   } finally {
-    database.close();
-    await rm(directory, { recursive: true, force: true });
+    t.database.close();
+    await rm(t.directory, { recursive: true, force: true });
   }
 });
 
 test("sign-up issues a session cookie that getSession recognizes", async () => {
-  const { auth, database, directory } = await createTestAuth();
+  const t = await createTestAuth();
   try {
-    const response = await auth.handler(
-      post("/api/auth/sign-up/email", {
-        email: "critic@example.com",
-        password: "correct-horse-battery",
-        name: "Iroko Critic",
-      }),
-    );
+    const response = await signUp(t);
     const cookies = cookieHeader(response);
     assert.notEqual(cookies, "");
 
-    const session = await auth.getSession(
+    const session = await t.auth.getSession(
       new Request(`${BASE_URL}/`, { headers: { Cookie: cookies } }),
     );
     assert.equal(typeof session?.userId, "string");
+    assert.equal(session?.email, "critic@example.com");
+    assert.equal(session?.name, "Iroko Critic");
+    assert.equal(session?.username, null);
+    assert.equal(session?.role, "user");
+    assert.equal(session?.regular, false);
   } finally {
-    database.close();
-    await rm(directory, { recursive: true, force: true });
+    t.database.close();
+    await rm(t.directory, { recursive: true, force: true });
   }
 });
 
 test("email sign-in with correct credentials yields a session", async () => {
-  const { auth, database, directory } = await createTestAuth();
+  const t = await createTestAuth();
   try {
-    await auth.handler(
-      post("/api/auth/sign-up/email", {
-        email: "critic@example.com",
-        password: "correct-horse-battery",
-        name: "Iroko Critic",
-      }),
-    );
+    await signUp(t);
 
-    const signIn = await auth.handler(
+    const signIn = await t.auth.handler(
       post("/api/auth/sign-in/email", {
         email: "critic@example.com",
         password: "correct-horse-battery",
@@ -141,30 +150,24 @@ test("email sign-in with correct credentials yields a session", async () => {
     );
     assert.equal(signIn.status, 200);
 
-    const session = await auth.getSession(
+    const session = await t.auth.getSession(
       new Request(`${BASE_URL}/`, {
         headers: { Cookie: cookieHeader(signIn) },
       }),
     );
     assert.equal(typeof session?.userId, "string");
   } finally {
-    database.close();
-    await rm(directory, { recursive: true, force: true });
+    t.database.close();
+    await rm(t.directory, { recursive: true, force: true });
   }
 });
 
 test("sign-in rejects a wrong password", async () => {
-  const { auth, database, directory } = await createTestAuth();
+  const t = await createTestAuth();
   try {
-    await auth.handler(
-      post("/api/auth/sign-up/email", {
-        email: "critic@example.com",
-        password: "correct-horse-battery",
-        name: "Iroko Critic",
-      }),
-    );
+    await signUp(t);
 
-    const signIn = await auth.handler(
+    const signIn = await t.auth.handler(
       post("/api/auth/sign-in/email", {
         email: "critic@example.com",
         password: "wrong-password",
@@ -172,18 +175,96 @@ test("sign-in rejects a wrong password", async () => {
     );
     assert.equal(signIn.status, 401);
   } finally {
-    database.close();
-    await rm(directory, { recursive: true, force: true });
+    t.database.close();
+    await rm(t.directory, { recursive: true, force: true });
   }
 });
 
 test("getSession returns null without a cookie", async () => {
-  const { auth, database, directory } = await createTestAuth();
+  const t = await createTestAuth();
   try {
-    const session = await auth.getSession(new Request(`${BASE_URL}/`));
+    const session = await t.auth.getSession(new Request(`${BASE_URL}/`));
     assert.equal(session, null);
   } finally {
-    database.close();
-    await rm(directory, { recursive: true, force: true });
+    t.database.close();
+    await rm(t.directory, { recursive: true, force: true });
+  }
+});
+
+test("password reset request emails a link and never confirms existence", async () => {
+  const t = await createTestAuth();
+  try {
+    const response = await t.auth.handler(
+      post("/api/auth/request-password-reset", { email: "critic@example.com" }),
+    );
+    // Anti-enumeration: the message is identical whether or not the account
+    // exists, and no email is sent for an unknown address.
+    assert.equal(response.status, 200);
+    assert.equal(t.messages.length, 0);
+
+    await signUp(t);
+
+    const knownResponse = await t.auth.handler(
+      post("/api/auth/request-password-reset", { email: "critic@example.com" }),
+    );
+    assert.equal(knownResponse.status, 200);
+    assert.equal(t.messages.length, 1);
+    assert.match(t.messages[0].subject, /reset/i);
+    assert.match(t.messages[0].text, /reset-password\//);
+  } finally {
+    t.database.close();
+    await rm(t.directory, { recursive: true, force: true });
+  }
+});
+
+test("a reset link works once, signs out old sessions, and lets the new password in", async () => {
+  const t = await createTestAuth();
+  try {
+    const signUpResponse = await signUp(t);
+    const oldCookie = cookieHeader(signUpResponse);
+
+    await t.auth.handler(
+      post("/api/auth/request-password-reset", { email: "critic@example.com" }),
+    );
+    assert.equal(t.messages.length, 1);
+    const resetUrl = t.messages[0].text.match(/http:\/\/[^\s]+\/reset-password\/([^\s?]+)/);
+    assert.ok(resetUrl, "expected a reset URL in the email");
+    const token = resetUrl[1];
+
+    const resetResponse = await t.auth.handler(
+      post("/api/auth/reset-password", { token, newPassword: "brand-new-pass-123" }),
+    );
+    assert.equal(resetResponse.status, 200);
+
+    // The old session was revoked as part of the reset.
+    const oldSession = await t.auth.getSession(
+      new Request(`${BASE_URL}/`, { headers: { Cookie: oldCookie } }),
+    );
+    assert.equal(oldSession, null);
+
+    const oldPasswordSignIn = await t.auth.handler(
+      post("/api/auth/sign-in/email", {
+        email: "critic@example.com",
+        password: "correct-horse-battery",
+      }),
+    );
+    assert.equal(oldPasswordSignIn.status, 401);
+
+    const newPasswordSignIn = await t.auth.handler(
+      post("/api/auth/sign-in/email", {
+        email: "critic@example.com",
+        password: "brand-new-pass-123",
+      }),
+    );
+    assert.equal(newPasswordSignIn.status, 200);
+
+    // The token is single-use.
+    const replay = await t.auth.handler(
+      post("/api/auth/reset-password", { token, newPassword: "again-123" }),
+    );
+    assert.notEqual(replay.status, 200);
+  } finally {
+    t.database.close();
+    await rm(t.directory, { recursive: true, force: true });
   }
 });
