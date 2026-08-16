@@ -553,6 +553,50 @@ export class PublicReadRepository {
     return row !== undefined;
   }
 
+  async getRatingId(
+    contentId: string,
+    userId: string,
+  ): Promise<string | null> {
+    const [row] = await this.database
+      .select({ id: userRatings.id })
+      .from(userRatings)
+      .where(
+        and(eq(userRatings.contentId, contentId), eq(userRatings.userId, userId)),
+      )
+      .limit(1);
+    return row?.id ?? null;
+  }
+
+  async getReviewForComment(
+    reviewId: string,
+  ): Promise<{ restricted: boolean } | null> {
+    const [row] = await this.database
+      .select({ restricted: userRatings.restricted })
+      .from(userRatings)
+      .where(eq(userRatings.id, reviewId))
+      .limit(1);
+    return row ? { restricted: row.restricted } : null;
+  }
+
+  async getCommentParent(
+    parentId: string,
+  ): Promise<{
+    reviewId: string;
+    depth: number;
+    restricted: boolean;
+  } | null> {
+    const [row] = await this.database
+      .select({
+        reviewId: comments.reviewId,
+        depth: comments.depth,
+        restricted: comments.restricted,
+      })
+      .from(comments)
+      .where(eq(comments.id, parentId))
+      .limit(1);
+    return row ?? null;
+  }
+
   async getUserRatingsForContent(contentId: string): Promise<UserRating[]> {
     const rows = await this.database
       .select({ rating: userRatings, user: users })
