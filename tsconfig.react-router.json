@@ -20,6 +20,7 @@
     "src/runtime/**/*",
     "src/repositories/**/*",
     "src/services/contracts.ts",
-    "src/services/pending.ts"
+    "src/services/pending.ts",
+    "src/services/homepage.ts"
   ]
 }

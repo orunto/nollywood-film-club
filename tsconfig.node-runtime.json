@@ -11,6 +11,7 @@
     "src/repositories/**/*",
     "src/services/contracts.ts",
     "src/services/pending.ts",
+    "src/services/homepage.ts",
     "src/services/node.ts",
     "server/**/*",
     "react-router.config.ts",

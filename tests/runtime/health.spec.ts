@@ -21,3 +21,12 @@ test("health proves the selected runtime services", async ({ request }) => {
     },
   });
 });
+
+test("homepage loader runs through the selected database adapter", async ({
+  request,
+}) => {
+  const response = await request.get("/");
+
+  expect(response.status()).toBe(200);
+  expect(await response.text()).toContain("Nollywood, one film at a time.");
+});

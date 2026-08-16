@@ -3,6 +3,7 @@ import { readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { NodeSqliteDatabase } from "../../src/services/node";
+import { getHomepageData } from "../../src/services/homepage";
 
 const stateDirectory = resolve(
   "data/local-d1-import/v3/d1/miniflare-D1DatabaseObject",
@@ -18,14 +19,23 @@ const database = new NodeSqliteDatabase(databasePath, { readOnly: true });
 const now = new Date();
 
 try {
-  const [movieOfTheWeek, catalog, homepageCatalog, scoreboard, discussionRows] =
-    await Promise.all([
-      database.publicReads.getMovieOfTheWeek(),
-      database.publicReads.getAllContent(),
-      database.publicReads.getMoviesAndTVSeries(),
-      database.publicReads.getScoreboard(),
-      database.publicReads.getDiscussions({ now }),
-    ]);
+  const [
+    movieOfTheWeek,
+    catalog,
+    homepageCatalog,
+    scoreboard,
+    discussionRows,
+    trendingReviews,
+    homepage,
+  ] = await Promise.all([
+    database.publicReads.getMovieOfTheWeek(),
+    database.publicReads.getAllContent(),
+    database.publicReads.getMoviesAndTVSeries(),
+    database.publicReads.getScoreboard(),
+    database.publicReads.getDiscussions({ now }),
+    database.publicReads.getTrendingReviews({ now }),
+    getHomepageData(database.publicReads, now),
+  ]);
 
   const expectedMovie = raw
     .prepare("SELECT id FROM content WHERE is_movie_of_the_week = 1 LIMIT 1")
@@ -73,6 +83,21 @@ try {
     Math.min(visibleDiscussionCount.count, 20),
   );
 
+  const visibleReviewCount = raw
+    .prepare(
+      "SELECT count(*) AS count FROM user_ratings WHERE restricted = 0 AND review IS NOT NULL AND review <> ''",
+    )
+    .get() as { count: number };
+  assert.equal(
+    await database.publicReads.countTrendingReviews(),
+    visibleReviewCount.count,
+  );
+  assert.equal(trendingReviews.length, Math.min(visibleReviewCount.count, 12));
+  assert.equal(homepage.movieOfTheWeek?.id, movieOfTheWeek?.id);
+  assert.equal(homepage.moviesAndTVSeries.length, homepageCatalog.length);
+  assert.equal(homepage.reviews.length, Math.min(visibleReviewCount.count, 4));
+  assert.equal(homepage.discussions.length, discussionRows.length);
+
   console.log(
     JSON.stringify({
       message: "Portable public-read repository validation complete",
@@ -81,6 +106,7 @@ try {
       scoreboard: scoreboard.length,
       visibleDiscussions: visibleDiscussionCount.count,
       homepageDiscussions: discussionRows.length,
+      trendingReviews: visibleReviewCount.count,
       movieOfTheWeek: movieOfTheWeek?.id ?? null,
     }),
   );

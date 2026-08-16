@@ -1,8 +1,15 @@
 import type { Route } from "./+types/home";
+import { appServicesContext } from "../context";
+import { getHomepageData } from "../../services/homepage";
 
 export const meta: Route.MetaFunction = () => [
   { title: "Nollywood Film Club" },
 ];
+
+export async function loader({ context }: Route.LoaderArgs) {
+  const services = context.get(appServicesContext);
+  return getHomepageData(services.db.publicReads);
+}
 
 export default function Home() {
   return (

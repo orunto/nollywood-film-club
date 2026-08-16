@@ -1,11 +1,14 @@
 import {
+  and,
   asc,
   avg,
   count,
   desc,
   eq,
   isNull,
+  isNotNull,
   lte,
+  ne,
   or,
   sql,
   type SQL,
@@ -13,9 +16,11 @@ import {
 import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 import {
   CONTENT_TYPES,
+  comments,
   content,
   discussions,
   userRatings,
+  users,
   type CastMember,
 } from "../db/schema";
 import * as schema from "../db/schema";
@@ -48,6 +53,33 @@ export interface Content {
 
 export interface ScoreboardEntry extends Content {
   ratingsCount: number;
+}
+
+export interface UserRating {
+  id: string;
+  contentId: string;
+  userId: string;
+  rating: number | null;
+  review: string | null;
+  edited: boolean;
+  flagged: boolean;
+  restricted: boolean;
+  createdAt: string;
+  updatedAt: string;
+  username?: string;
+  profileImage?: string;
+  isRegular?: boolean;
+  profileUsername?: string | null;
+}
+
+export interface FeedReview extends UserRating {
+  commentCount: number;
+  film: {
+    title: string;
+    contentType: ContentType;
+    releaseDate: string | null;
+    posterImage: string | null;
+  } | null;
 }
 
 export interface Discussion {
@@ -193,6 +225,42 @@ const newestDiscussionOrder = [
   desc(discussions.createdAt),
 ] as const;
 
+const visibleFeedReviews = and(
+  eq(userRatings.restricted, false),
+  isNotNull(userRatings.review),
+  ne(userRatings.review, ""),
+);
+
+function getDisplayUser(
+  userId: string,
+  user: typeof users.$inferSelect | null,
+) {
+  if (userId.startsWith("legacy-poll:")) {
+    return {
+      username: "Legacy Member",
+      profileImage: undefined,
+      isRegular: false,
+      profileUsername: null,
+    };
+  }
+
+  if (!user) {
+    return {
+      username: "Deleted member",
+      profileImage: undefined,
+      isRegular: false,
+      profileUsername: null,
+    };
+  }
+
+  return {
+    username: user.name,
+    profileImage: user.image ?? undefined,
+    isRegular: user.regular,
+    profileUsername: user.username,
+  };
+}
+
 export class PublicReadRepository {
   constructor(private readonly database: AsyncSQLiteDatabase) {}
 
@@ -244,6 +312,88 @@ export class PublicReadRepository {
       ...mapContent(row),
       ratingsCount: Number(row.ratingsCount),
     }));
+  }
+
+  async getTrendingReviews({
+    limit = 12,
+    offset = 0,
+    now = new Date(),
+  }: {
+    limit?: number;
+    offset?: number;
+    now?: Date;
+  } = {}): Promise<FeedReview[]> {
+    const rows = await this.database
+      .select({
+        rating: userRatings,
+        title: content.title,
+        contentType: content.contentType,
+        releaseDate: content.releaseDate,
+        posterImage: content.legacyPosterImage,
+        commentCount: count(comments.id),
+        user: users,
+      })
+      .from(userRatings)
+      .leftJoin(content, eq(userRatings.contentId, content.id))
+      .leftJoin(
+        comments,
+        and(
+          eq(comments.reviewId, userRatings.id),
+          eq(comments.restricted, false),
+        ),
+      )
+      .leftJoin(users, eq(userRatings.userId, users.id))
+      .where(visibleFeedReviews)
+      .groupBy(userRatings.id, content.id, users.id);
+
+    return rows
+      .map((row) => {
+        const display = getDisplayUser(row.rating.userId, row.user);
+        const commentCount = Number(row.commentCount);
+        const ageHours =
+          (now.getTime() - row.rating.createdAt.getTime()) / 3_600_000;
+        const hotScore =
+          (commentCount + 1) / Math.pow(ageHours + 2, 1.5);
+
+        return {
+          hotScore,
+          review: {
+            id: row.rating.id,
+            contentId: row.rating.contentId,
+            userId: row.rating.userId,
+            rating: row.rating.rating,
+            review: row.rating.review,
+            edited: row.rating.edited,
+            flagged: row.rating.flagged,
+            restricted: row.rating.restricted,
+            createdAt: row.rating.createdAt.toISOString(),
+            updatedAt: row.rating.updatedAt.toISOString(),
+            ...display,
+            commentCount,
+            film:
+              row.title === null || row.contentType === null
+                ? null
+                : {
+                    title: row.title,
+                    contentType: row.contentType,
+                    releaseDate: toIsoString(row.releaseDate),
+                    posterImage: row.posterImage,
+                  },
+          } satisfies FeedReview,
+        };
+      })
+      .sort((left, right) => right.hotScore - left.hotScore)
+      .slice(offset, offset + limit)
+      .map(({ review }) => review);
+  }
+
+  async countTrendingReviews(): Promise<number> {
+    const [row] = await this.database
+      .select({ total: count() })
+      .from(userRatings)
+      .where(visibleFeedReviews);
+
+    return Number(row?.total ?? 0);
   }
 
   async getDiscussions(options: DiscussionPageOptions = {}) {
