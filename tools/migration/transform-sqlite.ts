@@ -1,39 +1,174 @@
+import { fileURLToPath } from "node:url";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { checksum, writeJsonAtomic, writeTextAtomic } from "./io";
+import {
+  planHexclaveImport,
+  readHexclaveExport,
+  type ExistingUser,
+  type HexclaveExportUser,
+} from "./import-hexclave-users";
 
-type SourceRow = Record<string, unknown>;
-type HexclaveUser = {
-  id: string;
-  displayName: string | null;
-  primaryEmail: string | null;
-  primaryEmailVerified: boolean;
-  profileImageUrl: string | null;
-  signedUpAt: string;
-  clientMetadata: unknown;
-  clientReadOnlyMetadata: unknown;
-  hasPassword: boolean;
-  isAnonymous: boolean;
-  oauthProviders: string[];
-};
-type HexclaveExport = {
-  users: HexclaveUser[];
-};
+// Postgres-to-SQLite transformation for the new canonical schema. The neon
+// exports (data/migration/neon/*.json) and the Hexclave user export
+// (data/migration/hexclave/users.json) are normalized into the same SQLite
+// tables the runtime uses, and the result is rendered as a single
+// transactional SQL file that load-local-d1.ts applies to the target.
+//
+// User rows intentionally flow through planHexclaveImport so this command
+// cannot drift from import-hexclave-users.ts: emails collide fatally, usernames
+// are stored lowercased, and a case-insensitive username conflict drops the
+// incoming username instead of failing the whole run.
 
-const neonDirectory = resolve("data/migration/neon");
-const outputSqlPath = resolve("data/migration/sqlite-import.sql");
-const outputManifestPath = resolve("data/migration/sqlite-import-manifest.json");
-const claimsPath = resolve("data/migration/account-claims.json");
+export type NeonRow = Record<string, unknown>;
 
-async function readJson<T>(path: string) {
-  return JSON.parse(await readFile(path, "utf8")) as T;
+export interface TableDefinition {
+  table: string;
+  columns: string[];
+  rows: Record<string, unknown>[];
 }
 
-async function readNeonTable(table: string) {
-  return readJson<SourceRow[]>(resolve(neonDirectory, `${table}.json`));
+export interface SqliteImportInput {
+  userMirrors: ExistingUser[];
+  hexclaveUsers: HexclaveExportUser[];
+  content: NeonRow[];
+  discussions: NeonRow[];
+  ratings: NeonRow[];
+  reviews: NeonRow[];
+  comments: NeonRow[];
+  reports: NeonRow[];
+  contacts: NeonRow[];
+  blogPosts: NeonRow[];
 }
 
-function required(row: SourceRow, field: string) {
+export interface SqliteImportPlan {
+  definitions: TableDefinition[];
+  claims: Record<string, unknown>[];
+  usernameDropped: string[];
+  rowCounts: Record<string, number>;
+}
+
+const USER_COLUMNS = [
+  "id",
+  "name",
+  "email",
+  "email_verified",
+  "image",
+  "username",
+  "role",
+  "regular",
+  "created_at",
+  "updated_at",
+] as const;
+const CONTENT_COLUMNS = [
+  "id",
+  "title",
+  "content_type",
+  "runtime",
+  "release_date",
+  "rating",
+  "synopsis",
+  "genre",
+  "poster_media_id",
+  "poster_image",
+  "poster_version",
+  "trailer_url",
+  "streaming_url",
+  "streaming_platform",
+  "other_platform",
+  "viewing_category",
+  "cast_members",
+  "is_movie_of_the_week",
+  "catalog_number",
+  "created_at",
+  "updated_at",
+] as const;
+const DISCUSSION_COLUMNS = [
+  "id",
+  "title",
+  "description",
+  "content_id",
+  "space_url",
+  "podcast_links",
+  "episode_number",
+  "discussion_date",
+  "created_at",
+  "updated_at",
+] as const;
+const RATING_COLUMNS = [
+  "id",
+  "content_id",
+  "user_id",
+  "rating",
+  "review",
+  "edited",
+  "flagged",
+  "restricted",
+  "created_at",
+  "updated_at",
+] as const;
+const REVIEW_COLUMNS = [
+  "id",
+  "content_id",
+  "title",
+  "description",
+  "score_tenths",
+  "reviewer",
+  "external_url",
+  "review_media_id",
+  "review_image",
+  "published_at",
+  "created_at",
+  "updated_at",
+] as const;
+const COMMENT_COLUMNS = [
+  "id",
+  "review_id",
+  "parent_id",
+  "user_id",
+  "body",
+  "depth",
+  "flagged",
+  "restricted",
+  "created_at",
+  "updated_at",
+] as const;
+const REPORT_COLUMNS = [
+  "id",
+  "target_type",
+  "target_id",
+  "reporter_id",
+  "reason",
+  "note",
+  "status",
+  "resolved_by",
+  "resolved_at",
+  "created_at",
+] as const;
+const CONTACT_COLUMNS = [
+  "id",
+  "category",
+  "message",
+  "email",
+  "user_id",
+  "status",
+  "resolved_by",
+  "resolved_at",
+  "created_at",
+] as const;
+const BLOG_POST_COLUMNS = [
+  "id",
+  "title",
+  "content",
+  "excerpt",
+  "slug",
+  "published",
+  "published_at",
+  "created_at",
+  "updated_at",
+] as const;
+
+function required(row: NeonRow, field: string) {
   const value = row[field];
   if (value === null || value === undefined) {
     throw new Error(`Expected ${field} to be present`);
@@ -111,10 +246,255 @@ function scoreTenths(value: unknown) {
   return Number(whole) * 10 + Number(fraction);
 }
 
-function sqlValue(value: unknown): string {
+export function mapUserRow(
+  row: {
+    id: string;
+    name: string;
+    email: string;
+    emailVerified: boolean;
+    image: string | null;
+    username: string | null;
+    role: "user" | "admin";
+    regular: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  },
+): Record<string, unknown> {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    email_verified: row.emailVerified ? 1 : 0,
+    image: row.image,
+    username: row.username,
+    role: row.role,
+    regular: row.regular ? 1 : 0,
+    created_at: row.createdAt.getTime(),
+    updated_at: row.updatedAt.getTime(),
+  };
+}
+
+export function mapContentRow(row: NeonRow): Record<string, unknown> {
+  return {
+    id: stringValue(required(row, "id")),
+    title: stringValue(required(row, "title")),
+    content_type: stringValue(required(row, "content_type")),
+    runtime: nullableInteger(row.runtime),
+    release_date: nullableTimestamp(row.release_date),
+    rating: nullableString(row.rating),
+    synopsis: nullableString(row.synopsis),
+    genre: jsonText(row.genre, []),
+    poster_media_id: null,
+    poster_image: nullableString(row.poster_image),
+    poster_version: nullableInteger(row.poster_version),
+    trailer_url: nullableString(row.trailer_url),
+    streaming_url: nullableString(row.streaming_url),
+    streaming_platform: nullableString(row.streaming_platform),
+    other_platform: nullableString(row.other_platform),
+    viewing_category: nullableString(row.viewing_category),
+    cast_members: jsonText(row.cast_members),
+    is_movie_of_the_week: booleanInteger(row.is_movie_of_the_week),
+    catalog_number: nullableInteger(row.catalog_number),
+    created_at: timestampMilliseconds(required(row, "created_at")),
+    updated_at: timestampMilliseconds(required(row, "updated_at")),
+  };
+}
+
+export function mapDiscussionRow(row: NeonRow): Record<string, unknown> {
+  return {
+    id: stringValue(required(row, "id")),
+    title: stringValue(required(row, "title")),
+    description: nullableString(row.description),
+    content_id: nullableString(row.content_id),
+    space_url: nullableString(row.space_url),
+    podcast_links: jsonText(row.podcast_links, []),
+    episode_number: nullableInteger(row.episode_number),
+    discussion_date: nullableTimestamp(row.discussion_date),
+    created_at: timestampMilliseconds(required(row, "created_at")),
+    updated_at: timestampMilliseconds(required(row, "updated_at")),
+  };
+}
+
+export function mapRatingRow(row: NeonRow): Record<string, unknown> {
+  return {
+    id: stringValue(required(row, "id")),
+    content_id: stringValue(required(row, "content_id")),
+    user_id: stringValue(required(row, "user_id")),
+    rating: integerValue(required(row, "rating")),
+    review: nullableString(row.review),
+    edited: booleanInteger(row.edited),
+    flagged: booleanInteger(row.flagged),
+    restricted: booleanInteger(row.restricted),
+    created_at: timestampMilliseconds(required(row, "created_at")),
+    updated_at: timestampMilliseconds(required(row, "updated_at")),
+  };
+}
+
+export function mapReviewRow(row: NeonRow): Record<string, unknown> {
+  return {
+    id: stringValue(required(row, "id")),
+    content_id: stringValue(required(row, "content_id")),
+    title: stringValue(required(row, "title")),
+    description: stringValue(required(row, "description")),
+    score_tenths: scoreTenths(row.score),
+    reviewer: stringValue(required(row, "reviewer")),
+    external_url: nullableString(row.external_url),
+    review_media_id: null,
+    review_image: nullableString(row.review_image),
+    published_at: nullableTimestamp(row.published_at),
+    created_at: timestampMilliseconds(required(row, "created_at")),
+    updated_at: timestampMilliseconds(required(row, "updated_at")),
+  };
+}
+
+export function mapCommentRow(row: NeonRow): Record<string, unknown> {
+  return {
+    id: stringValue(required(row, "id")),
+    review_id: stringValue(required(row, "review_id")),
+    parent_id: nullableString(row.parent_id),
+    user_id: stringValue(required(row, "user_id")),
+    body: stringValue(required(row, "body")),
+    depth: integerValue(required(row, "depth")),
+    flagged: booleanInteger(row.flagged),
+    restricted: booleanInteger(row.restricted),
+    created_at: timestampMilliseconds(required(row, "created_at")),
+    updated_at: timestampMilliseconds(required(row, "updated_at")),
+  };
+}
+
+export function mapReportRow(row: NeonRow): Record<string, unknown> {
+  return {
+    id: stringValue(required(row, "id")),
+    target_type: stringValue(required(row, "target_type")),
+    target_id: stringValue(required(row, "target_id")),
+    reporter_id: stringValue(required(row, "reporter_id")),
+    reason: stringValue(required(row, "reason")),
+    note: nullableString(row.note),
+    status: stringValue(required(row, "status")),
+    resolved_by: nullableString(row.resolved_by),
+    resolved_at: nullableTimestamp(row.resolved_at),
+    created_at: timestampMilliseconds(required(row, "created_at")),
+  };
+}
+
+export function mapContactRow(row: NeonRow): Record<string, unknown> {
+  return {
+    id: stringValue(required(row, "id")),
+    category: stringValue(required(row, "category")),
+    message: stringValue(required(row, "message")),
+    email: nullableString(row.email),
+    user_id: nullableString(row.user_id),
+    status: stringValue(required(row, "status")),
+    resolved_by: nullableString(row.resolved_by),
+    resolved_at: nullableTimestamp(row.resolved_at),
+    created_at: timestampMilliseconds(required(row, "created_at")),
+  };
+}
+
+export function mapBlogPostRow(row: NeonRow): Record<string, unknown> {
+  return {
+    id: stringValue(required(row, "id")),
+    title: stringValue(required(row, "title")),
+    content: stringValue(required(row, "content")),
+    excerpt: nullableString(row.excerpt),
+    slug: stringValue(required(row, "slug")),
+    published: booleanInteger(row.published),
+    published_at: nullableTimestamp(row.published_at),
+    created_at: timestampMilliseconds(required(row, "created_at")),
+    updated_at: timestampMilliseconds(required(row, "updated_at")),
+  };
+}
+
+// Reconciles every Neon table and the Hexclave users into canonical SQLite
+// rows. User rows reuse planHexclaveImport; the Neon user mirror's username is
+// authoritative for each identity, so it is merged over the Hexclave metadata
+// before planning.
+export function planSqliteImport(input: SqliteImportInput): SqliteImportPlan {
+  const mirrorUsernameByUserId = new Map(
+    input.userMirrors.map((user) => [user.id, user.username]),
+  );
+  const mergedUsers = input.hexclaveUsers.map((user) => {
+    const metadata =
+      user.clientMetadata && typeof user.clientMetadata === "object"
+        ? user.clientMetadata
+        : {};
+    const mirrorUsername = mirrorUsernameByUserId.get(user.id);
+    const metadataUsername =
+      typeof metadata.username === "string" && metadata.username.trim()
+        ? metadata.username
+        : null;
+    return {
+      ...user,
+      clientMetadata: {
+        ...metadata,
+        username: mirrorUsername ?? metadataUsername,
+      },
+    };
+  });
+
+  const userPlan = planHexclaveImport(mergedUsers, input.userMirrors);
+
+  const definitions: TableDefinition[] = [
+    { table: "users", columns: [...USER_COLUMNS], rows: userPlan.rows.map(mapUserRow) },
+    {
+      table: "content",
+      columns: [...CONTENT_COLUMNS],
+      rows: input.content.map(mapContentRow),
+    },
+    {
+      table: "discussions",
+      columns: [...DISCUSSION_COLUMNS],
+      rows: input.discussions.map(mapDiscussionRow),
+    },
+    {
+      table: "user_ratings",
+      columns: [...RATING_COLUMNS],
+      rows: input.ratings.map(mapRatingRow),
+    },
+    {
+      table: "reviews",
+      columns: [...REVIEW_COLUMNS],
+      rows: input.reviews.map(mapReviewRow),
+    },
+    {
+      table: "comments",
+      columns: [...COMMENT_COLUMNS],
+      rows: input.comments.map(mapCommentRow),
+    },
+    {
+      table: "reports",
+      columns: [...REPORT_COLUMNS],
+      rows: input.reports.map(mapReportRow),
+    },
+    {
+      table: "contact_messages",
+      columns: [...CONTACT_COLUMNS],
+      rows: input.contacts.map(mapContactRow),
+    },
+    {
+      table: "blog_posts",
+      columns: [...BLOG_POST_COLUMNS],
+      rows: input.blogPosts.map(mapBlogPostRow),
+    },
+  ];
+
+  const rowCounts = Object.fromEntries(
+    definitions.map((definition) => [definition.table, definition.rows.length]),
+  );
+  return {
+    definitions,
+    claims: userPlan.claims,
+    usernameDropped: userPlan.usernameDropped,
+    rowCounts,
+  };
+}
+
+export function sqlValue(value: unknown): string {
   if (value === null) return "NULL";
   if (typeof value === "number") {
-    if (!Number.isFinite(value)) throw new Error("Cannot serialize non-finite number");
+    if (!Number.isFinite(value)) {
+      throw new Error("Cannot serialize non-finite number");
+    }
     return String(value);
   }
   if (typeof value === "string") {
@@ -123,9 +503,9 @@ function sqlValue(value: unknown): string {
   throw new Error(`Unsupported SQL value type: ${typeof value}`);
 }
 
-function insertStatements(
+export function insertStatements(
   table: string,
-  columns: string[],
+  columns: readonly string[],
   rows: Record<string, unknown>[],
 ) {
   const statements: string[] = [];
@@ -144,373 +524,7 @@ function insertStatements(
   return statements;
 }
 
-const [
-  userMirrors,
-  sourceContent,
-  sourceDiscussions,
-  sourceRatings,
-  sourceReviews,
-  sourceComments,
-  sourceReports,
-  sourceContacts,
-  sourceBlogPosts,
-  hexclave,
-] = await Promise.all([
-  readNeonTable("users"),
-  readNeonTable("content"),
-  readNeonTable("discussions"),
-  readNeonTable("user_ratings"),
-  readNeonTable("reviews"),
-  readNeonTable("comments"),
-  readNeonTable("reports"),
-  readNeonTable("contact_messages"),
-  readNeonTable("blog_posts"),
-  readJson<HexclaveExport>(resolve("data/migration/hexclave/users.json")),
-]);
-
-const usernameByUserId = new Map(
-  userMirrors.map((user) => [
-    stringValue(required(user, "id")),
-    nullableString(user.username),
-  ]),
-);
-const emailOwners = new Map<string, string>();
-const usernameOwners = new Map<string, string>();
-const claims: Record<string, unknown>[] = [];
-
-const users = hexclave.users.map((user) => {
-  const metadata =
-    user.clientMetadata && typeof user.clientMetadata === "object"
-      ? (user.clientMetadata as Record<string, unknown>)
-      : {};
-  const readOnlyMetadata =
-    user.clientReadOnlyMetadata &&
-    typeof user.clientReadOnlyMetadata === "object"
-      ? (user.clientReadOnlyMetadata as Record<string, unknown>)
-      : {};
-  const email =
-    user.primaryEmail?.trim().toLowerCase() ?? `legacy-${user.id}@nfc.invalid`;
-  const username =
-    usernameByUserId.get(user.id) ?? nullableString(metadata.username);
-  const existingEmailOwner = emailOwners.get(email);
-  if (existingEmailOwner && existingEmailOwner !== user.id) {
-    throw new Error("Hexclave contains a case-insensitive email collision");
-  }
-  emailOwners.set(email, user.id);
-
-  if (username) {
-    const normalizedUsername = username.toLowerCase();
-    const existingUsernameOwner = usernameOwners.get(normalizedUsername);
-    if (existingUsernameOwner && existingUsernameOwner !== user.id) {
-      throw new Error("Hexclave contains a case-insensitive username collision");
-    }
-    usernameOwners.set(normalizedUsername, user.id);
-  }
-
-  claims.push({
-    userId: user.id,
-    hasPassword: user.hasPassword,
-    providers: user.oauthProviders,
-    requiresPasswordReset: user.hasPassword,
-    requiresProviderClaim: user.oauthProviders.length > 0,
-    requiresEmailClaim: user.primaryEmail === null,
-  });
-
-  return {
-    id: user.id,
-    name:
-      user.displayName?.trim() ||
-      user.primaryEmail?.split("@")[0] ||
-      "NFC Member",
-    email,
-    email_verified: user.primaryEmail ? booleanInteger(user.primaryEmailVerified) : 0,
-    image: user.profileImageUrl,
-    username,
-    role: readOnlyMetadata.role === "admin" ? "admin" : "user",
-    regular: readOnlyMetadata.regular === true ? 1 : 0,
-    created_at: timestampMilliseconds(user.signedUpAt),
-    updated_at: timestampMilliseconds(user.signedUpAt),
-  };
-});
-
-const content = sourceContent.map((row) => ({
-  id: stringValue(required(row, "id")),
-  title: stringValue(required(row, "title")),
-  content_type: stringValue(required(row, "content_type")),
-  runtime: nullableInteger(row.runtime),
-  release_date: nullableTimestamp(row.release_date),
-  rating: nullableString(row.rating),
-  synopsis: nullableString(row.synopsis),
-  genre: jsonText(row.genre, []),
-  poster_media_id: null,
-  poster_image: nullableString(row.poster_image),
-  poster_version: nullableInteger(row.poster_version),
-  trailer_url: nullableString(row.trailer_url),
-  streaming_url: nullableString(row.streaming_url),
-  streaming_platform: nullableString(row.streaming_platform),
-  other_platform: nullableString(row.other_platform),
-  viewing_category: nullableString(row.viewing_category),
-  cast_members: jsonText(row.cast_members),
-  is_movie_of_the_week: booleanInteger(row.is_movie_of_the_week),
-  catalog_number: nullableInteger(row.catalog_number),
-  created_at: timestampMilliseconds(required(row, "created_at")),
-  updated_at: timestampMilliseconds(required(row, "updated_at")),
-}));
-
-const discussions = sourceDiscussions.map((row) => ({
-  id: stringValue(required(row, "id")),
-  title: stringValue(required(row, "title")),
-  description: nullableString(row.description),
-  content_id: nullableString(row.content_id),
-  space_url: nullableString(row.space_url),
-  podcast_links: jsonText(row.podcast_links, []),
-  episode_number: nullableInteger(row.episode_number),
-  discussion_date: nullableTimestamp(row.discussion_date),
-  created_at: timestampMilliseconds(required(row, "created_at")),
-  updated_at: timestampMilliseconds(required(row, "updated_at")),
-}));
-
-const ratings = sourceRatings.map((row) => ({
-  id: stringValue(required(row, "id")),
-  content_id: stringValue(required(row, "content_id")),
-  user_id: stringValue(required(row, "user_id")),
-  rating: integerValue(required(row, "rating")),
-  review: nullableString(row.review),
-  edited: booleanInteger(row.edited),
-  flagged: booleanInteger(row.flagged),
-  restricted: booleanInteger(row.restricted),
-  created_at: timestampMilliseconds(required(row, "created_at")),
-  updated_at: timestampMilliseconds(required(row, "updated_at")),
-}));
-
-const reviews = sourceReviews.map((row) => ({
-  id: stringValue(required(row, "id")),
-  content_id: stringValue(required(row, "content_id")),
-  title: stringValue(required(row, "title")),
-  description: stringValue(required(row, "description")),
-  score_tenths: scoreTenths(row.score),
-  reviewer: stringValue(required(row, "reviewer")),
-  external_url: nullableString(row.external_url),
-  review_media_id: null,
-  review_image: nullableString(row.review_image),
-  published_at: nullableTimestamp(row.published_at),
-  created_at: timestampMilliseconds(required(row, "created_at")),
-  updated_at: timestampMilliseconds(required(row, "updated_at")),
-}));
-
-const comments = sourceComments.map((row) => ({
-  id: stringValue(required(row, "id")),
-  review_id: stringValue(required(row, "review_id")),
-  parent_id: nullableString(row.parent_id),
-  user_id: stringValue(required(row, "user_id")),
-  body: stringValue(required(row, "body")),
-  depth: integerValue(required(row, "depth")),
-  flagged: booleanInteger(row.flagged),
-  restricted: booleanInteger(row.restricted),
-  created_at: timestampMilliseconds(required(row, "created_at")),
-  updated_at: timestampMilliseconds(required(row, "updated_at")),
-}));
-
-const reports = sourceReports.map((row) => ({
-  id: stringValue(required(row, "id")),
-  target_type: stringValue(required(row, "target_type")),
-  target_id: stringValue(required(row, "target_id")),
-  reporter_id: stringValue(required(row, "reporter_id")),
-  reason: stringValue(required(row, "reason")),
-  note: nullableString(row.note),
-  status: stringValue(required(row, "status")),
-  resolved_by: nullableString(row.resolved_by),
-  resolved_at: nullableTimestamp(row.resolved_at),
-  created_at: timestampMilliseconds(required(row, "created_at")),
-}));
-
-const contacts = sourceContacts.map((row) => ({
-  id: stringValue(required(row, "id")),
-  category: stringValue(required(row, "category")),
-  message: stringValue(required(row, "message")),
-  email: nullableString(row.email),
-  user_id: nullableString(row.user_id),
-  status: stringValue(required(row, "status")),
-  resolved_by: nullableString(row.resolved_by),
-  resolved_at: nullableTimestamp(row.resolved_at),
-  created_at: timestampMilliseconds(required(row, "created_at")),
-}));
-
-const blogPosts = sourceBlogPosts.map((row) => ({
-  id: stringValue(required(row, "id")),
-  title: stringValue(required(row, "title")),
-  content: stringValue(required(row, "content")),
-  excerpt: nullableString(row.excerpt),
-  slug: stringValue(required(row, "slug")),
-  published: booleanInteger(row.published),
-  published_at: nullableTimestamp(row.published_at),
-  created_at: timestampMilliseconds(required(row, "created_at")),
-  updated_at: timestampMilliseconds(required(row, "updated_at")),
-}));
-
-const definitions = [
-  {
-    table: "users",
-    columns: [
-      "id",
-      "name",
-      "email",
-      "email_verified",
-      "image",
-      "username",
-      "role",
-      "regular",
-      "created_at",
-      "updated_at",
-    ],
-    rows: users,
-  },
-  {
-    table: "content",
-    columns: [
-      "id",
-      "title",
-      "content_type",
-      "runtime",
-      "release_date",
-      "rating",
-      "synopsis",
-      "genre",
-      "poster_media_id",
-      "poster_image",
-      "poster_version",
-      "trailer_url",
-      "streaming_url",
-      "streaming_platform",
-      "other_platform",
-      "viewing_category",
-      "cast_members",
-      "is_movie_of_the_week",
-      "catalog_number",
-      "created_at",
-      "updated_at",
-    ],
-    rows: content,
-  },
-  {
-    table: "discussions",
-    columns: [
-      "id",
-      "title",
-      "description",
-      "content_id",
-      "space_url",
-      "podcast_links",
-      "episode_number",
-      "discussion_date",
-      "created_at",
-      "updated_at",
-    ],
-    rows: discussions,
-  },
-  {
-    table: "user_ratings",
-    columns: [
-      "id",
-      "content_id",
-      "user_id",
-      "rating",
-      "review",
-      "edited",
-      "flagged",
-      "restricted",
-      "created_at",
-      "updated_at",
-    ],
-    rows: ratings,
-  },
-  {
-    table: "reviews",
-    columns: [
-      "id",
-      "content_id",
-      "title",
-      "description",
-      "score_tenths",
-      "reviewer",
-      "external_url",
-      "review_media_id",
-      "review_image",
-      "published_at",
-      "created_at",
-      "updated_at",
-    ],
-    rows: reviews,
-  },
-  {
-    table: "comments",
-    columns: [
-      "id",
-      "review_id",
-      "parent_id",
-      "user_id",
-      "body",
-      "depth",
-      "flagged",
-      "restricted",
-      "created_at",
-      "updated_at",
-    ],
-    rows: comments,
-  },
-  {
-    table: "reports",
-    columns: [
-      "id",
-      "target_type",
-      "target_id",
-      "reporter_id",
-      "reason",
-      "note",
-      "status",
-      "resolved_by",
-      "resolved_at",
-      "created_at",
-    ],
-    rows: reports,
-  },
-  {
-    table: "contact_messages",
-    columns: [
-      "id",
-      "category",
-      "message",
-      "email",
-      "user_id",
-      "status",
-      "resolved_by",
-      "resolved_at",
-      "created_at",
-    ],
-    rows: contacts,
-  },
-  {
-    table: "blog_posts",
-    columns: [
-      "id",
-      "title",
-      "content",
-      "excerpt",
-      "slug",
-      "published",
-      "published_at",
-      "created_at",
-      "updated_at",
-    ],
-    rows: blogPosts,
-  },
-] satisfies Array<{
-  table: string;
-  columns: string[];
-  rows: Record<string, unknown>[];
-}>;
-
-const deleteOrder = [
+const DELETE_ORDER = [
   "comments",
   "reports",
   "reviews",
@@ -525,49 +539,124 @@ const deleteOrder = [
   "sessions",
   "users",
 ];
-const statements = [
-  "PRAGMA foreign_keys = ON;",
-  "BEGIN IMMEDIATE;",
-  ...deleteOrder.map((table) => `DELETE FROM "${table}";`),
-  ...definitions.flatMap((definition) =>
-    insertStatements(definition.table, definition.columns, definition.rows),
-  ),
-  `UPDATE content
-   SET catalog_number = (
-     SELECT MIN(episode_number)
-     FROM discussions
-     WHERE discussions.content_id = content.id
-   );`,
-  "COMMIT;",
-];
-const sqlOutput = `${statements.join("\n\n")}\n`;
-const rowCounts = Object.fromEntries(
-  definitions.map((definition) => [definition.table, definition.rows.length]),
-);
 
-await Promise.all([
-  writeTextAtomic(outputSqlPath, sqlOutput),
-  writeJsonAtomic(outputManifestPath, {
-    generatedAt: new Date().toISOString(),
-    sqlChecksum: checksum(sqlOutput),
-    rowCounts,
-    sourceRowCount: Object.values(rowCounts).reduce(
+export function renderImportSql(definitions: TableDefinition[]): string {
+  const statements = [
+    "PRAGMA foreign_keys = ON;",
+    "BEGIN IMMEDIATE;",
+    ...DELETE_ORDER.map((table) => `DELETE FROM "${table}";`),
+    ...definitions.flatMap((definition) =>
+      insertStatements(definition.table, definition.columns, definition.rows),
+    ),
+    `UPDATE content
+     SET catalog_number = (
+       SELECT MIN(episode_number)
+       FROM discussions
+       WHERE discussions.content_id = content.id
+     );`,
+    "COMMIT;",
+  ];
+  return `${statements.join("\n\n")}\n`;
+}
+
+export interface ImportManifest {
+  generatedAt: string;
+  sqlChecksum: string;
+  rowCounts: Record<string, number>;
+  usernameDropped: string[];
+  sourceRowCount: number;
+}
+
+export function buildImportManifest(
+  sql: string,
+  plan: SqliteImportPlan,
+  generatedAt = new Date(),
+): ImportManifest {
+  return {
+    generatedAt: generatedAt.toISOString(),
+    sqlChecksum: checksum(sql),
+    rowCounts: plan.rowCounts,
+    usernameDropped: plan.usernameDropped,
+    sourceRowCount: Object.values(plan.rowCounts).reduce(
       (total, count) => total + count,
       0,
     ),
-  }),
-  writeJsonAtomic(claimsPath, {
-    generatedAt: new Date().toISOString(),
-    reason:
-      "Hexclave does not expose password hashes or OAuth provider account IDs through the server SDK.",
-    users: claims,
-  }),
-]);
+  };
+}
 
-console.log(
-  JSON.stringify({
-    message: "SQLite import transformation complete",
-    rowCounts,
-    outputSqlPath,
-  }),
-);
+async function readNeonTable(directory: string, table: string) {
+  return JSON.parse(
+    await readFile(resolve(directory, `${table}.json`), "utf8"),
+  ) as NeonRow[];
+}
+
+async function main() {
+  const neonDirectory = resolve("data/migration/neon");
+  const outputSqlPath = resolve("data/migration/sqlite-import.sql");
+  const outputManifestPath = resolve(
+    "data/migration/sqlite-import-manifest.json",
+  );
+  const claimsPath = resolve("data/migration/account-claims.json");
+
+  const [
+    userMirrors,
+    sourceContent,
+    sourceDiscussions,
+    sourceRatings,
+    sourceReviews,
+    sourceComments,
+    sourceReports,
+    sourceContacts,
+    sourceBlogPosts,
+    hexclaveUsers,
+  ] = await Promise.all([
+    readNeonTable(neonDirectory, "users"),
+    readNeonTable(neonDirectory, "content"),
+    readNeonTable(neonDirectory, "discussions"),
+    readNeonTable(neonDirectory, "user_ratings"),
+    readNeonTable(neonDirectory, "reviews"),
+    readNeonTable(neonDirectory, "comments"),
+    readNeonTable(neonDirectory, "reports"),
+    readNeonTable(neonDirectory, "contact_messages"),
+    readNeonTable(neonDirectory, "blog_posts"),
+    readHexclaveExport(resolve("data/migration/hexclave/users.json")),
+  ]);
+
+  const plan = planSqliteImport({
+    userMirrors,
+    hexclaveUsers,
+    content: sourceContent,
+    discussions: sourceDiscussions,
+    ratings: sourceRatings,
+    reviews: sourceReviews,
+    comments: sourceComments,
+    reports: sourceReports,
+    contacts: sourceContacts,
+    blogPosts: sourceBlogPosts,
+  });
+  const sql = renderImportSql(plan.definitions);
+
+  await Promise.all([
+    writeTextAtomic(outputSqlPath, sql),
+    writeJsonAtomic(outputManifestPath, buildImportManifest(sql, plan)),
+    writeJsonAtomic(claimsPath, {
+      generatedAt: new Date().toISOString(),
+      reason:
+        "Hexclave does not expose password hashes or OAuth provider account IDs through the server SDK.",
+      users: plan.claims,
+    }),
+  ]);
+
+  console.log(
+    JSON.stringify({
+      message: "SQLite import transformation complete",
+      rowCounts: plan.rowCounts,
+      usernameCollisionsDropped: plan.usernameDropped.length,
+      outputSqlPath,
+    }),
+  );
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  await main();
+}

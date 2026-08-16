@@ -45,7 +45,7 @@ export interface PlannedUserRow {
 
 export interface ExistingUser {
   id: string;
-  email: string;
+  email?: string;
   username: string | null;
 }
 
@@ -101,7 +101,9 @@ export function planHexclaveImport(
   const emailOwners = new Map<string, string>();
   const usernameOwners = new Map<string, string>();
   for (const row of existing) {
-    emailOwners.set(row.email.toLowerCase(), row.id);
+    if (row.email) {
+      emailOwners.set(row.email.toLowerCase(), row.id);
+    }
     if (row.username) {
       usernameOwners.set(row.username.toLowerCase(), row.id);
     }
