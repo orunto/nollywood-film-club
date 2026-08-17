@@ -3,6 +3,7 @@ import * as schema from "../db/schema";
 import { createBetterAuthService } from "../auth/server";
 import { CatalogWriteRepository } from "../repositories/catalog-write";
 import { AdminUsersRepository } from "../repositories/admin-users";
+import { AdminModerationRepository } from "../repositories/admin-moderation";
 import { CommunityWriteRepository } from "../repositories/community-write";
 import { ContactMessageRepository } from "../repositories/contact-message";
 import { PublicReadRepository } from "../repositories/public-read";
@@ -30,6 +31,7 @@ class D1Database implements Database {
   readonly profiles: UserProfileRepository;
   readonly contacts: ContactMessageRepository;
   readonly adminUsers: AdminUsersRepository;
+  readonly adminModeration: AdminModerationRepository;
 
   constructor(
     private readonly binding: globalThis.D1Database,
@@ -41,6 +43,7 @@ class D1Database implements Database {
     this.profiles = new UserProfileRepository(this);
     this.contacts = new ContactMessageRepository(instance);
     this.adminUsers = new AdminUsersRepository(instance);
+    this.adminModeration = new AdminModerationRepository(instance);
   }
 
   async check() {

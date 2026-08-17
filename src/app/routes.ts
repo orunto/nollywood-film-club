@@ -20,6 +20,12 @@ export default [
   route("api/admin/users", "routes/api.admin.users.tsx"),
   route("api/admin/users/:id/admin-role", "routes/api.admin.users.$id.admin-role.tsx"),
   route("api/admin/users/:id/regular-role", "routes/api.admin.users.$id.regular-role.tsx"),
+  route("api/admin/user-ratings", "routes/api.admin.user-ratings.tsx"),
+  route("api/admin/user-ratings/:id/flag", "routes/api.admin.user-ratings.$id.flag.tsx"),
+  route("api/admin/user-ratings/:id/restrict", "routes/api.admin.user-ratings.$id.restrict.tsx"),
+  route("api/admin/comments", "routes/api.admin.comments.tsx"),
+  route("api/admin/comments/:id/flag", "routes/api.admin.comments.$id.flag.tsx"),
+  route("api/admin/comments/:id/restrict", "routes/api.admin.comments.$id.restrict.tsx"),
   layout("routes/site.tsx", [
     index("routes/home.tsx"),
     route("movie/:slug", "routes/movie.$slug.tsx"),
