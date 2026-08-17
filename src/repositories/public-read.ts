@@ -683,6 +683,7 @@ export class PublicReadRepository {
     const rows = await this.database
       .select()
       .from(reviews)
+      .leftJoin(media, eq(reviews.reviewMediaId, media.id))
       .where(eq(reviews.contentId, contentId))
       .orderBy(
         sql`${reviews.publishedAt} IS NULL`,
@@ -690,18 +691,20 @@ export class PublicReadRepository {
         desc(reviews.createdAt),
       );
 
-    return rows.map((row) => ({
-      id: row.id,
-      contentId: row.contentId,
-      title: row.title,
-      description: row.description,
-      score: row.scoreTenths === null ? null : row.scoreTenths / 10,
-      reviewer: row.reviewer,
-      externalUrl: row.externalUrl,
-      reviewImage: row.legacyReviewImage,
-      publishedAt: toIsoString(row.publishedAt),
-      createdAt: row.createdAt.toISOString(),
-      updatedAt: row.updatedAt.toISOString(),
+    return rows.map(({ reviews: review, media: image }) => ({
+      id: review.id,
+      contentId: review.contentId,
+      title: review.title,
+      description: review.description,
+      score: review.scoreTenths === null ? null : review.scoreTenths / 10,
+      reviewer: review.reviewer,
+      externalUrl: review.externalUrl,
+      reviewImage: image?.objectKey
+        ? `/media/${image.objectKey}`
+        : review.legacyReviewImage,
+      publishedAt: toIsoString(review.publishedAt),
+      createdAt: review.createdAt.toISOString(),
+      updatedAt: review.updatedAt.toISOString(),
     }));
   }
 
