@@ -38,7 +38,10 @@ export interface CloudinaryManifestAsset {
   createdAt: string | null;
   sourceUrl: string | null;
   destinationKey: string;
-  status: "pending";
+  status: "pending" | "copied" | "failed";
+  copiedAt: string | null;
+  copiedChecksum: string | null;
+  copyError: string | null;
 }
 
 export interface CloudinaryManifest {
@@ -71,6 +74,9 @@ export function normalizeResource(resource: CloudinaryResource): CloudinaryManif
     sourceUrl: resource.secure_url ?? null,
     destinationKey: destinationKey(resource),
     status: "pending",
+    copiedAt: null,
+    copiedChecksum: null,
+    copyError: null,
   };
 }
 

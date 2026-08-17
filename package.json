@@ -20,6 +20,7 @@
     "migration:export-neon": "tsx tools/migration/export-neon.ts",
     "migration:export-hexclave": "tsx tools/migration/export-hexclave.ts",
     "migration:inventory-cloudinary": "tsx tools/migration/inventory-cloudinary.ts",
+    "migration:copy-cloudinary": "tsx tools/migration/copy-cloudinary-assets.ts",
     "migration:import-hexclave-users": "tsx tools/migration/import-hexclave-users.ts",
     "migration:export": "bun run migration:export-neon && bun run migration:export-hexclave",
     "migration:generate-sqlite": "drizzle-kit generate --config drizzle.sqlite.config.ts",

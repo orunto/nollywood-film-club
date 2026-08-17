@@ -45,6 +45,9 @@ describe("Cloudinary inventory", () => {
       sourceUrl: "https://res.cloudinary.com/example/image/upload/v42/nfc/poster.jpg",
       destinationKey: "media/nfc/poster/v42.jpg",
       status: "pending",
+      copiedAt: null,
+      copiedChecksum: null,
+      copyError: null,
     });
   });
 });
