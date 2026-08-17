@@ -12,6 +12,7 @@ import { createNodeSqliteDatabase } from "../../src/services/node";
 import { AdminUsersRepository } from "../../src/repositories/admin-users";
 import { AdminModerationRepository } from "../../src/repositories/admin-moderation";
 import { AdminReportsRepository } from "../../src/repositories/admin-reports";
+import { AdminReviewsRepository } from "../../src/repositories/admin-reviews";
 import { PassthroughImageTransformer } from "../../src/services/pending";
 import { users } from "../../src/db/schema";
 import type { AppServices, MailService } from "../../src/services/contracts";
@@ -45,6 +46,7 @@ async function createFixture() {
     adminUsers: new AdminUsersRepository(database.instance),
     adminModeration: new AdminModerationRepository(database.instance),
     adminReports: new AdminReportsRepository(database.instance),
+    adminReviews: new AdminReviewsRepository(database.instance),
     auth,
     objects: {
       check: async () => undefined,

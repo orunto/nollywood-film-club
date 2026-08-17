@@ -14,6 +14,7 @@ import { CatalogWriteRepository } from "../repositories/catalog-write";
 import { AdminUsersRepository } from "../repositories/admin-users";
 import { AdminModerationRepository } from "../repositories/admin-moderation";
 import { AdminReportsRepository } from "../repositories/admin-reports";
+import { AdminReviewsRepository } from "../repositories/admin-reviews";
 import { CommunityWriteRepository } from "../repositories/community-write";
 import { ContactMessageRepository } from "../repositories/contact-message";
 import { PublicReadRepository } from "../repositories/public-read";
@@ -44,6 +45,7 @@ export class NodeSqliteDatabase implements Database {
   readonly adminUsers: AdminUsersRepository;
   readonly adminModeration: AdminModerationRepository;
   readonly adminReports: AdminReportsRepository;
+  readonly adminReviews: AdminReviewsRepository;
 
   constructor(
     database: DatabaseSync,
@@ -59,6 +61,7 @@ export class NodeSqliteDatabase implements Database {
     this.adminUsers = new AdminUsersRepository(instance);
     this.adminModeration = new AdminModerationRepository(instance);
     this.adminReports = new AdminReportsRepository(instance);
+    this.adminReviews = new AdminReviewsRepository(instance);
   }
 
   async check() {
