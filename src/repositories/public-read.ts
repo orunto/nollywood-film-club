@@ -16,6 +16,7 @@ import {
 import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 import {
   CONTENT_TYPES,
+  accountClaims,
   comments,
   content,
   discussions,
@@ -593,6 +594,18 @@ export class PublicReadRepository {
       .where(eq(users.id, id))
       .limit(1);
     return row !== undefined;
+  }
+
+  async findUserByEmail(email: string) {
+    const [row] = await this.database.select().from(users)
+      .where(sql`lower(${users.email}) = ${email.toLowerCase()}`).limit(1);
+    return row ?? null;
+  }
+
+  async findAccountClaim(tokenHash: string) {
+    const [row] = await this.database.select().from(accountClaims)
+      .where(eq(accountClaims.tokenHash, tokenHash)).limit(1);
+    return row ?? null;
   }
 
   async getUsernameOwner(username: string): Promise<{ userId: string } | null> {

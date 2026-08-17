@@ -8,6 +8,8 @@ export default [
   route("onboarding", "routes/onboarding.tsx"),
   route("forgot-password", "routes/forgot-password.tsx"),
   route("reset-password/:token", "routes/reset-password.tsx"),
+  route("account-claim", "routes/account-claim.tsx"),
+  route("api/account-claim", "routes/api.account-claim.ts"),
   route("api/auth/*", "routes/api.auth.ts"),
   route("api/check-username", "routes/api.check-username.ts"),
   route("api/create-username", "routes/api.create-username.ts"),

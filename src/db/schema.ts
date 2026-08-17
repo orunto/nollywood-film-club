@@ -180,6 +180,25 @@ export const verifications = sqliteTable(
   ],
 );
 
+// One-time, operator-issued claims bridge provider identities that cannot be
+// exported from the legacy identity provider without allowing duplicate users.
+export const accountClaims = sqliteTable(
+  "account_claims",
+  {
+    id: id(),
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    providerId: text("provider_id").notNull(),
+    tokenHash: text("token_hash").notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    consumedAt: timestamp("consumed_at"),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    uniqueIndex("account_claims_token_hash_unique").on(table.tokenHash),
+    index("account_claims_user_id_idx").on(table.userId),
+  ],
+);
+
 export const media = sqliteTable(
   "media",
   {
@@ -568,6 +587,7 @@ export const reviewRelations = relations(reviews, ({ one }) => ({
 export const userRelations = relations(users, ({ many }) => ({
   sessions: many(sessions),
   accounts: many(accounts),
+  accountClaims: many(accountClaims),
 }));
 
 export const sessionRelations = relations(sessions, ({ one }) => ({

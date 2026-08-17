@@ -1,9 +1,5 @@
-// Provider-neutral poster delivery URLs. The new runtime's DB stores provider-
-// neutral public IDs + versions; until the R2 phase lands these still resolve
-// through Cloudinary's delivery network, with the cloud name read from the
-// runtime env (VITE_CLOUDINARY_CLOUD_NAME). The `http` pass-through covers the
-// legacy rows that store a full delivery URL instead of a bare public ID.
-const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+// Provider-neutral media URLs. Transform intent is applied by the media route
+// rather than leaking a storage provider into application components.
 
 export interface PosterUrlOptions {
   version?: number | null;
@@ -20,8 +16,6 @@ export function posterUrl(
   if (publicId.startsWith("http") || publicId.startsWith("/media/")) {
     return publicId;
   }
-  const transforms = `c_fill${width ? `,w_${width}` : ""}${height ? `,h_${height}` : ""}${gravity ? `,g_${gravity}` : ""},q_auto,f_${format ?? "auto"}`;
-  const path = version ? `v${version}/${publicId}` : publicId;
-  if (!CLOUD_NAME) return path;
-  return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/${transforms}/${path}`;
+  void width; void height; void format; void gravity;
+  return `/media/${version ? `media/${publicId}/v${version}` : publicId}`;
 }
