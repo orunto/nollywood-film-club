@@ -1,10 +1,21 @@
+"use client";
+import { useState } from "react";
 import { Link } from "react-router";
+import { DotsThreeIcon, FlagIcon } from "@phosphor-icons/react";
 import { Badge } from "../ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 import { cn, contentPath, contentTypeLabel, markdownToPlainText } from "../../lib/utils";
 import type { FeedReview } from "../../repositories/public-read";
 import { posterUrl } from "../../lib/media";
 import RatingFace from "./rating-face";
+import ReportDialog from "./report-dialog";
 import ReviewText from "./review-text";
+import CommentSheet from "./comment-sheet";
 import RegularBadge from "./regular-badge";
 
 const formatWhen = (value: string) =>
@@ -24,6 +35,7 @@ interface ReviewCardProps {
 }
 
 export default function ReviewCard({ review, expanded, className }: ReviewCardProps) {
+  const [isReporting, setIsReporting] = useState(false);
   const { film } = review;
 
   const year = film?.releaseDate ? new Date(film.releaseDate).getUTCFullYear() : null;
@@ -84,6 +96,24 @@ export default function ReviewCard({ review, expanded, className }: ReviewCardPr
               </Link>
             )}
           </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label="Review options"
+                className="shrink-0 text-black/40 hover:text-black cursor-pointer"
+              >
+                <DotsThreeIcon className="h-5 w-5" weight="bold" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="rounded-sm">
+              <DropdownMenuItem onClick={() => setIsReporting(true)} className="cursor-pointer">
+                <FlagIcon className="mr-2 h-4 w-4" />
+                Report
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {review.review &&
@@ -123,7 +153,26 @@ export default function ReviewCard({ review, expanded, className }: ReviewCardPr
             </div>
           </Link>
         )}
+
+        {!expanded && (
+          <CommentSheet
+            reviewId={review.id}
+            count={review.commentCount}
+            review={{
+              username: review.username ?? "Member",
+              rating: review.rating,
+              body: review.review,
+            }}
+          />
+        )}
       </div>
+
+      <ReportDialog
+        targetType="review"
+        targetId={review.id}
+        open={isReporting}
+        onOpenChange={setIsReporting}
+      />
     </article>
   );
 }

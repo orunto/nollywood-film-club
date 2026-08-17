@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useRevalidator } from "react-router";
 import {
   ArrowLeftIcon,
   ArrowSquareOutIcon,
@@ -29,6 +29,7 @@ import ScoreBox from "../custom/score-box";
 import RatingFace from "../custom/rating-face";
 import ReviewText from "../custom/review-text";
 import RegularBadge from "../custom/regular-badge";
+import MovieRatingSheet from "../custom/movie-rating-sheet";
 import { STREAMING_PLATFORMS } from "./movie-hero";
 import type { Content, Discussion, UserRating } from "../../repositories/public-read";
 import type { CriticReview } from "../../repositories/public-read";
@@ -123,6 +124,7 @@ export default function ContentDetailsClient({
   episodes,
 }: ContentDetailsClientProps) {
   const navigate = useNavigate();
+  const { revalidate } = useRevalidator();
   const [isPlaying, setIsPlaying] = useState(false);
   const [reviewFilter, setReviewFilter] =
     useState<(typeof USER_REVIEW_TABS)[number]["value"]>("all");
@@ -295,6 +297,12 @@ export default function ContentDetailsClient({
                   ? "Watched it? Tell the club what you thought."
                   : "Rating opens after we discuss it on the space."}
               </span>
+              <MovieRatingSheet
+                movieId={movie.id}
+                movieTitle={movie.title}
+                isRatingEnabled={isRatingEnabled}
+                onRatingSubmit={revalidate}
+              />
             </div>
 
             {/* Where to watch */}

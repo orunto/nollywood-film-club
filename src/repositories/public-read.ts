@@ -589,6 +589,24 @@ export class PublicReadRepository {
     return row ? { userId: row.userId } : null;
   }
 
+  // The caller's own rating for a single title, used by the rating sheet to
+  // preload into edit mode (?contentId= on GET /api/user/ratings).
+  async getUserRating(
+    contentId: string,
+    userId: string,
+  ): Promise<UserRating | null> {
+    const [row] = await this.database
+      .select({ rating: userRatings, user: users })
+      .from(userRatings)
+      .leftJoin(users, eq(userRatings.userId, users.id))
+      .where(
+        and(eq(userRatings.contentId, contentId), eq(userRatings.userId, userId)),
+      )
+      .limit(1);
+
+    return row ? mapUserRating(row.rating, row.user) : null;
+  }
+
   async getRatingId(
     contentId: string,
     userId: string,
@@ -735,6 +753,101 @@ export class PublicReadRepository {
       isRegular: true,
       joinedAt: row.createdAt.toISOString(),
     }));
+  }
+
+  // Public profile for /members/[username]. Usernames are stored lowercased,
+  // so the lookup uses the canonical casing rather than trusting the segment.
+  async getPublicProfile(username: string): Promise<PublicProfile | null> {
+    const [row] = await this.database
+      .select()
+      .from(users)
+      .where(sql`lower(${users.username}) = ${username.toLowerCase()}`)
+      .limit(1);
+
+    if (!row) return null;
+
+    return {
+      id: row.id,
+      username: row.username,
+      displayName: row.name,
+      profileImage: row.image ?? undefined,
+      isRegular: row.regular,
+      joinedAt: row.createdAt.toISOString(),
+    };
+  }
+
+  // Like/okay/disliked counts for a member's profile header, over their
+  // visible (non-restricted) ratings only.
+  async getUserRatingStats(userId: string): Promise<{
+    total: number;
+    liked: number;
+    okay: number;
+    disliked: number;
+  }> {
+    const rows = await this.database
+      .select({
+        rating: userRatings.rating,
+        n: count(userRatings.id),
+      })
+      .from(userRatings)
+      .where(and(eq(userRatings.userId, userId), eq(userRatings.restricted, false)))
+      .groupBy(userRatings.rating);
+
+    const stats = { total: 0, liked: 0, okay: 0, disliked: 0 };
+    for (const row of rows) {
+      const n = Number(row.n);
+      stats.total += n;
+      if (row.rating === 10) stats.liked += n;
+      else if (row.rating === 5) stats.okay += n;
+      else if (row.rating === 0) stats.disliked += n;
+    }
+    return stats;
+  }
+
+  // A member's ratings for their public profile page. Unlike the trending feed
+  // this deliberately does NOT require review text — a profile should show
+  // every title a member rated, including score-only ratings.
+  async getRatingsByUser(
+    userId: string,
+    { limit = 12, offset = 0 }: { limit?: number; offset?: number } = {},
+  ): Promise<FeedReview[]> {
+    const rows = await this.database
+      .select({
+        rating: userRatings,
+        title: content.title,
+        contentType: content.contentType,
+        releaseDate: content.releaseDate,
+        posterImage: content.legacyPosterImage,
+        commentCount: count(comments.id),
+        user: users,
+      })
+      .from(userRatings)
+      .leftJoin(content, eq(userRatings.contentId, content.id))
+      .leftJoin(
+        comments,
+        and(
+          eq(comments.reviewId, userRatings.id),
+          eq(comments.restricted, false),
+        ),
+      )
+      .leftJoin(users, eq(userRatings.userId, users.id))
+      .where(and(eq(userRatings.userId, userId), eq(userRatings.restricted, false)))
+      .groupBy(userRatings.id, content.id, users.id)
+      .orderBy(desc(userRatings.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    return rows.map((row) => mapFeedReview(row));
+  }
+
+  // Total for a member's profile, for pagination.
+  async countRatingsByUser(userId: string): Promise<number> {
+    const [row] = await this.database
+      .select({ total: count() })
+      .from(userRatings)
+      .where(and(eq(userRatings.userId, userId), eq(userRatings.restricted, false)));
+
+    return Number(row?.total ?? 0);
   }
 
   private contentWithRatings(where?: SQL, limit?: number) {

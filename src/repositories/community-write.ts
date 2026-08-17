@@ -176,6 +176,28 @@ export class CommunityWriteRepository {
     return results[0].changes > 0;
   }
 
+  // Partial update of one of the caller's own ratings by id (the PUT on
+  // /api/user/ratings/[id]). Returns false when the row isn't theirs — a
+  // 404, same as a missing row, so ids can't be probed for ownership.
+  async updateRating(
+    id: string,
+    userId: string,
+    input: { rating: number; review: string | null },
+  ): Promise<boolean> {
+    const now = Date.now();
+    const results = await this.access.atomic([
+      {
+        sql: `
+          UPDATE user_ratings
+          SET rating = ?, review = ?, edited = 1, updated_at = ?
+          WHERE id = ? AND user_id = ?
+        `,
+        params: [input.rating, input.review, now, id, userId],
+      },
+    ]);
+    return results[0].changes > 0;
+  }
+
   // Posts a comment or reply. The review must exist and remain public, and the
   // parent (when present) must sit under the same review and still be public.
   // Depth is derived from the parent, never trusted from the client.
