@@ -14,6 +14,7 @@ import { AdminModerationRepository } from "../../src/repositories/admin-moderati
 import { AdminReportsRepository } from "../../src/repositories/admin-reports";
 import { AdminReviewsRepository } from "../../src/repositories/admin-reviews";
 import { AdminDiscussionsRepository } from "../../src/repositories/admin-discussions";
+import { AdminBlogRepository } from "../../src/repositories/admin-blog";
 import { PassthroughImageTransformer } from "../../src/services/pending";
 import { users } from "../../src/db/schema";
 import type { AppServices, MailService } from "../../src/services/contracts";
@@ -49,6 +50,7 @@ async function createFixture() {
     adminReports: new AdminReportsRepository(database.instance),
     adminReviews: new AdminReviewsRepository(database.instance),
     adminDiscussions: new AdminDiscussionsRepository(database.instance, database.catalog),
+    adminBlog: new AdminBlogRepository(database.instance),
     auth,
     objects: {
       check: async () => undefined,

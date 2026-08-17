@@ -1,0 +1,5 @@
+import type { Route } from "./+types/api.admin.blog-posts.$id.publish";
+import { appServicesContext } from "../context";
+import { requireAdmin } from "../admin-auth";
+
+export async function action({ context, params, request }: Route.ActionArgs) { const services = context.get(appServicesContext); const authorization = await requireAdmin(services, request); if (authorization instanceof Response) return authorization; const body = (await request.json()) as { published?: unknown; publishedAt?: unknown }; if (typeof body.published !== "boolean") return Response.json({ success: false, error: "published must be a boolean" }, { status: 400 }); const post = await services.db.adminBlog.publish(params.id, body.published, typeof body.publishedAt === "string" ? body.publishedAt : null); if (!post) return Response.json({ success: false, error: "Blog post not found" }, { status: 404 }); return Response.json({ success: true, data: post, message: `Blog post ${body.published ? "published" : "unpublished"}` }); }

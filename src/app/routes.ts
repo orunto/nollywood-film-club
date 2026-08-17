@@ -34,6 +34,9 @@ export default [
   route("api/admin/reviews/:id", "routes/api.admin.reviews.$id.tsx"),
   route("api/admin/discussions", "routes/api.admin.discussions.tsx"),
   route("api/admin/discussions/:id", "routes/api.admin.discussions.$id.tsx"),
+  route("api/admin/blog-posts", "routes/api.admin.blog-posts.tsx"),
+  route("api/admin/blog-posts/:id", "routes/api.admin.blog-posts.$id.tsx"),
+  route("api/admin/blog-posts/:id/publish", "routes/api.admin.blog-posts.$id.publish.tsx"),
   layout("routes/site.tsx", [
     index("routes/home.tsx"),
     route("movie/:slug", "routes/movie.$slug.tsx"),

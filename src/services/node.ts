@@ -16,6 +16,7 @@ import { AdminModerationRepository } from "../repositories/admin-moderation";
 import { AdminReportsRepository } from "../repositories/admin-reports";
 import { AdminReviewsRepository } from "../repositories/admin-reviews";
 import { AdminDiscussionsRepository } from "../repositories/admin-discussions";
+import { AdminBlogRepository } from "../repositories/admin-blog";
 import { CommunityWriteRepository } from "../repositories/community-write";
 import { ContactMessageRepository } from "../repositories/contact-message";
 import { PublicReadRepository } from "../repositories/public-read";
@@ -48,6 +49,7 @@ export class NodeSqliteDatabase implements Database {
   readonly adminReports: AdminReportsRepository;
   readonly adminReviews: AdminReviewsRepository;
   readonly adminDiscussions: AdminDiscussionsRepository;
+  readonly adminBlog: AdminBlogRepository;
 
   constructor(
     database: DatabaseSync,
@@ -65,6 +67,7 @@ export class NodeSqliteDatabase implements Database {
     this.adminReports = new AdminReportsRepository(instance);
     this.adminReviews = new AdminReviewsRepository(instance);
     this.adminDiscussions = new AdminDiscussionsRepository(instance, this.catalog);
+    this.adminBlog = new AdminBlogRepository(instance);
   }
 
   async check() {
