@@ -13,6 +13,7 @@ import { createBetterAuthService } from "../auth/server";
 import { CatalogWriteRepository } from "../repositories/catalog-write";
 import { AdminUsersRepository } from "../repositories/admin-users";
 import { AdminModerationRepository } from "../repositories/admin-moderation";
+import { AdminReportsRepository } from "../repositories/admin-reports";
 import { CommunityWriteRepository } from "../repositories/community-write";
 import { ContactMessageRepository } from "../repositories/contact-message";
 import { PublicReadRepository } from "../repositories/public-read";
@@ -42,6 +43,7 @@ export class NodeSqliteDatabase implements Database {
   readonly contacts: ContactMessageRepository;
   readonly adminUsers: AdminUsersRepository;
   readonly adminModeration: AdminModerationRepository;
+  readonly adminReports: AdminReportsRepository;
 
   constructor(
     database: DatabaseSync,
@@ -56,6 +58,7 @@ export class NodeSqliteDatabase implements Database {
     this.contacts = new ContactMessageRepository(instance);
     this.adminUsers = new AdminUsersRepository(instance);
     this.adminModeration = new AdminModerationRepository(instance);
+    this.adminReports = new AdminReportsRepository(instance);
   }
 
   async check() {

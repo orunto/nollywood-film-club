@@ -26,6 +26,8 @@ export default [
   route("api/admin/comments", "routes/api.admin.comments.tsx"),
   route("api/admin/comments/:id/flag", "routes/api.admin.comments.$id.flag.tsx"),
   route("api/admin/comments/:id/restrict", "routes/api.admin.comments.$id.restrict.tsx"),
+  route("api/admin/reports", "routes/api.admin.reports.tsx"),
+  route("api/admin/reports/:id", "routes/api.admin.reports.$id.tsx"),
   layout("routes/site.tsx", [
     index("routes/home.tsx"),
     route("movie/:slug", "routes/movie.$slug.tsx"),

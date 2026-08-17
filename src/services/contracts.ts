@@ -3,6 +3,7 @@ import type { CommunityWriteRepository } from "../repositories/community-write";
 import type { ContactMessageRepository } from "../repositories/contact-message";
 import type { AdminUsersRepository } from "../repositories/admin-users";
 import type { AdminModerationRepository } from "../repositories/admin-moderation";
+import type { AdminReportsRepository } from "../repositories/admin-reports";
 import type { PublicReadRepository } from "../repositories/public-read";
 import type { UserProfileRepository } from "../repositories/user-profile";
 
@@ -36,6 +37,7 @@ export interface Database {
   contacts: ContactMessageRepository;
   adminUsers: AdminUsersRepository;
   adminModeration: AdminModerationRepository;
+  adminReports: AdminReportsRepository;
   atomic(commands: AtomicCommand[]): Promise<AtomicResult[]>;
 }
 
