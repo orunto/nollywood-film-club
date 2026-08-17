@@ -40,7 +40,11 @@ async function createFixture() {
     runtime: "node",
     db: database,
     auth,
-    objects: { check: async () => undefined },
+    objects: {
+      check: async () => undefined,
+      get: async () => null,
+      put: async () => undefined,
+    },
     images: new PassthroughImageTransformer(),
     mail,
   };

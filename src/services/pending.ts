@@ -52,6 +52,15 @@ export class HttpImageTransformer implements ImageTransformer {
   }
 }
 
+// Test and migration fixtures can still construct an in-memory response
+// transformer without configuring an external image service. Production
+// runtimes do not use this adapter.
+export class PassthroughImageTransformer implements ImageTransformer {
+  async transform(source: ReadableStream<Uint8Array>) {
+    return new Response(source);
+  }
+}
+
 export class HttpMailService implements MailService {
   constructor(
     private readonly endpoint: string,
