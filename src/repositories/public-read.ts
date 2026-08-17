@@ -19,6 +19,7 @@ import {
   comments,
   content,
   discussions,
+  media,
   reviews,
   userRatings,
   users,
@@ -168,6 +169,7 @@ const contentSelection = {
   genre: content.genre,
   posterImage: content.legacyPosterImage,
   posterVersion: content.legacyPosterVersion,
+  posterObjectKey: media.objectKey,
   trailerUrl: content.trailerUrl,
   streamingUrl: content.streamingUrl,
   streamingPlatform: content.streamingPlatform,
@@ -192,6 +194,7 @@ type ContentRow = Omit<
     legacyPosterVersion?: number | null;
     posterImage?: string | null;
     posterVersion?: number | null;
+    posterObjectKey?: string | null;
     userRating?: string | number | null;
   };
 
@@ -205,7 +208,9 @@ function mapContent(item: ContentRow): Content {
     rating: item.rating,
     synopsis: item.synopsis,
     genre: item.genre,
-    posterImage: item.posterImage ?? item.legacyPosterImage ?? null,
+    posterImage: item.posterObjectKey
+      ? `/media/${item.posterObjectKey}`
+      : item.posterImage ?? item.legacyPosterImage ?? null,
     posterVersion: item.posterVersion ?? item.legacyPosterVersion ?? null,
     trailerUrl: item.trailerUrl,
     streamingUrl: item.streamingUrl,
@@ -328,6 +333,7 @@ interface FeedReviewRow {
   contentType: ContentType | null;
   releaseDate: Date | null;
   posterImage: string | null;
+  posterObjectKey: string | null;
   commentCount: number;
   user: typeof users.$inferSelect | null;
 }
@@ -343,7 +349,9 @@ function mapFeedReview(row: FeedReviewRow): FeedReview {
             title: row.title,
             contentType: row.contentType,
             releaseDate: toIsoString(row.releaseDate),
-            posterImage: row.posterImage,
+            posterImage: row.posterObjectKey
+              ? `/media/${row.posterObjectKey}`
+              : row.posterImage,
           },
   };
 }
@@ -353,8 +361,9 @@ export class PublicReadRepository {
 
   async getMovieOfTheWeek(): Promise<Content | null> {
     const [row] = await this.database
-      .select()
+      .select({ ...contentSelection })
       .from(content)
+      .leftJoin(media, eq(content.posterMediaId, media.id))
       .where(eq(content.isMovieOfTheWeek, true))
       .limit(1);
 
@@ -382,6 +391,7 @@ export class PublicReadRepository {
       })
       .from(content)
       .leftJoin(userRatings, eq(content.id, userRatings.contentId))
+      .leftJoin(media, eq(content.posterMediaId, media.id))
       .where(eq(content.id, id))
       .groupBy(content.id)
       .limit(1);
@@ -419,6 +429,7 @@ export class PublicReadRepository {
       })
       .from(content)
       .leftJoin(userRatings, eq(content.id, userRatings.contentId))
+      .leftJoin(media, eq(content.posterMediaId, media.id))
       .where(contentType ? eq(content.contentType, contentType) : undefined)
       .groupBy(content.id)
       .having(sql`avg(${userRatings.rating}) IS NOT NULL`)
@@ -447,11 +458,13 @@ export class PublicReadRepository {
         contentType: content.contentType,
         releaseDate: content.releaseDate,
         posterImage: content.legacyPosterImage,
+        posterObjectKey: media.objectKey,
         commentCount: count(comments.id),
         user: users,
       })
       .from(userRatings)
       .leftJoin(content, eq(userRatings.contentId, content.id))
+      .leftJoin(media, eq(content.posterMediaId, media.id))
       .leftJoin(
         comments,
         and(
@@ -498,11 +511,13 @@ export class PublicReadRepository {
         contentType: content.contentType,
         releaseDate: content.releaseDate,
         posterImage: content.legacyPosterImage,
+        posterObjectKey: media.objectKey,
         commentCount: count(comments.id),
         user: users,
       })
       .from(userRatings)
       .leftJoin(content, eq(userRatings.contentId, content.id))
+      .leftJoin(media, eq(content.posterMediaId, media.id))
       .leftJoin(
         comments,
         and(
@@ -818,11 +833,13 @@ export class PublicReadRepository {
         contentType: content.contentType,
         releaseDate: content.releaseDate,
         posterImage: content.legacyPosterImage,
+        posterObjectKey: media.objectKey,
         commentCount: count(comments.id),
         user: users,
       })
       .from(userRatings)
       .leftJoin(content, eq(userRatings.contentId, content.id))
+      .leftJoin(media, eq(content.posterMediaId, media.id))
       .leftJoin(
         comments,
         and(
@@ -858,6 +875,7 @@ export class PublicReadRepository {
       })
       .from(content)
       .leftJoin(userRatings, eq(content.id, userRatings.contentId))
+      .leftJoin(media, eq(content.posterMediaId, media.id))
       .where(where)
       .groupBy(content.id)
       .orderBy(

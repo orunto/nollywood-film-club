@@ -17,7 +17,9 @@ export function posterUrl(
   publicId: string,
   { version, width, height, format, gravity }: PosterUrlOptions = {},
 ): string {
-  if (publicId.startsWith("http")) return publicId;
+  if (publicId.startsWith("http") || publicId.startsWith("/media/")) {
+    return publicId;
+  }
   const transforms = `c_fill${width ? `,w_${width}` : ""}${height ? `,h_${height}` : ""}${gravity ? `,g_${gravity}` : ""},q_auto,f_${format ?? "auto"}`;
   const path = version ? `v${version}/${publicId}` : publicId;
   if (!CLOUD_NAME) return path;
