@@ -18,6 +18,7 @@ import { AdminReviewsRepository } from "../repositories/admin-reviews";
 import { AdminDiscussionsRepository } from "../repositories/admin-discussions";
 import { AdminBlogRepository } from "../repositories/admin-blog";
 import { AdminContentRepository } from "../repositories/admin-content";
+import { MediaRepository } from "../repositories/media";
 import { CommunityWriteRepository } from "../repositories/community-write";
 import { ContactMessageRepository } from "../repositories/contact-message";
 import { PublicReadRepository } from "../repositories/public-read";
@@ -52,6 +53,7 @@ export class NodeSqliteDatabase implements Database {
   readonly adminDiscussions: AdminDiscussionsRepository;
   readonly adminBlog: AdminBlogRepository;
   readonly adminContent: AdminContentRepository;
+  readonly media: MediaRepository;
 
   constructor(
     database: DatabaseSync,
@@ -71,6 +73,7 @@ export class NodeSqliteDatabase implements Database {
     this.adminDiscussions = new AdminDiscussionsRepository(instance, this.catalog);
     this.adminBlog = new AdminBlogRepository(instance);
     this.adminContent = new AdminContentRepository(instance, this.catalog);
+    this.media = new MediaRepository(instance);
   }
 
   async check() {
