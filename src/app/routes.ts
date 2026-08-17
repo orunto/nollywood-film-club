@@ -40,6 +40,8 @@ export default [
   route("api/admin/movies", "routes/api.admin.movies.tsx"),
   route("api/admin/movies/:id", "routes/api.admin.movies.$id.tsx"),
   route("api/admin/movies/:id/movie-of-the-week", "routes/api.admin.movies.$id.movie-of-the-week.tsx"),
+  route("admin", "routes/admin.tsx"),
+  route("user-dashboard", "routes/user-dashboard.tsx"),
   layout("routes/site.tsx", [
     index("routes/home.tsx"),
     route("movie/:slug", "routes/movie.$slug.tsx"),
