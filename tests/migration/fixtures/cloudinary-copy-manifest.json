@@ -1,0 +1,50 @@
+{
+  "generatedAt": "2026-01-01T00:00:00.000Z",
+  "pageSize": 500,
+  "complete": true,
+  "nextCursor": null,
+  "assets": [
+    {
+      "publicId": "nfc/poster",
+      "assetFolder": "nfc",
+      "version": 42,
+      "format": "jpg",
+      "mimeType": "image/jpeg",
+      "resourceType": "image",
+      "deliveryType": "upload",
+      "width": 2,
+      "height": 2,
+      "bytes": 4,
+      "assetId": "asset-copy",
+      "etag": null,
+      "createdAt": null,
+      "sourceUrl": "https://fixture.test/poster.jpg",
+      "destinationKey": "media/nfc/poster/v42.jpg",
+      "status": "pending",
+      "copiedAt": null,
+      "copiedChecksum": null,
+      "copyError": null
+    },
+    {
+      "publicId": "nfc/banner",
+      "assetFolder": "nfc",
+      "version": 7,
+      "format": "png",
+      "mimeType": "image/png",
+      "resourceType": "image",
+      "deliveryType": "upload",
+      "width": 2,
+      "height": 2,
+      "bytes": 5,
+      "assetId": "asset-mismatch",
+      "etag": null,
+      "createdAt": null,
+      "sourceUrl": "https://fixture.test/banner.png",
+      "destinationKey": "media/nfc/banner/v7.png",
+      "status": "pending",
+      "copiedAt": null,
+      "copiedChecksum": null,
+      "copyError": null
+    }
+  ]
+}

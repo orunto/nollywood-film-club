@@ -41,6 +41,7 @@ export default [
   route("api/admin/movies/:id", "routes/api.admin.movies.$id.tsx"),
   route("api/admin/movies/:id/movie-of-the-week", "routes/api.admin.movies.$id.movie-of-the-week.tsx"),
   route("api/admin/upload-image", "routes/api.admin.upload-image.tsx"),
+  route("api/admin/justwatch", "routes/api.admin.justwatch.tsx"),
   route("admin", "routes/admin.tsx"),
   route("user-dashboard", "routes/user-dashboard.tsx"),
   layout("routes/site.tsx", [

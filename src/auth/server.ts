@@ -39,9 +39,9 @@ export function createBetterAuthService(
     appName: "Nollywood Film Club",
     emailAndPassword: {
       enabled: true,
-      // A reset link is the only email the app currently sends, so it goes
-      // through the same portable MailService seam as everything else. The
-      // provider behind it (transactional email) is selected in a later phase.
+      requireEmailVerification: true,
+      autoSignIn: true,
+      // Reset and verification links use the same portable MailService seam.
       sendResetPassword: async ({ user, url }) => {
         await options.mail.send({
           to: user.email,
@@ -58,6 +58,23 @@ export function createBetterAuthService(
       // A stolen session should not survive a password reset: the legitimate
       // owner signs back in from the reset page.
       revokeSessionsOnPasswordReset: true,
+    },
+    emailVerification: {
+      sendOnSignUp: true,
+      sendOnSignIn: true,
+      sendVerificationEmail: async ({ user, url }) => {
+        await options.mail.send({
+          to: user.email,
+          subject: "Verify your Nollywood Film Club email",
+          text: [
+            "Verify your Nollywood Film Club email address to finish setting up your account.",
+            "",
+            url,
+            "",
+            "If you did not create this account, you can safely ignore this email.",
+          ].join("\n"),
+        });
+      },
     },
     socialProviders: {
       google: options.google

@@ -22,6 +22,7 @@ import { users } from "../../src/db/schema";
 import type { AppServices, MailService } from "../../src/services/contracts";
 
 const BASE_URL = "http://localhost:3000";
+const authMessages = new WeakMap<AppServices, string[]>();
 
 async function createFixture() {
   const directory = await mkdtemp(join(tmpdir(), "nfc-routes-"));
@@ -38,7 +39,10 @@ async function createFixture() {
     setup.close();
   }
   const database = createNodeSqliteDatabase(databasePath);
-  const mail: MailService = { send: async () => undefined };
+  const messages: string[] = [];
+  const mail: MailService = {
+    send: async (message) => messages.push(message.text),
+  };
   const auth = createBetterAuthService(database.instance, {
     baseURL: BASE_URL,
     secret: "test-secret-that-is-long-enough-32chars",
@@ -64,8 +68,9 @@ async function createFixture() {
     images: new PassthroughImageTransformer(),
     mail,
   };
+  authMessages.set(services, messages);
   const context = { get: () => services };
-  return { database, services, context, directory, databasePath };
+  return { database, services, context, directory, databasePath, messages };
 }
 
 function post(path: string, body: unknown, cookie?: string): Request {
@@ -94,7 +99,22 @@ async function signUp(
     post("/api/auth/sign-up/email", { email, password, name: "Iroko Critic" }),
   );
   assert.equal(response.status, 200);
-  return cookieHeader(response);
+  const messages = authMessages.get(services);
+  const latestMessage = messages?.at(-1);
+  if (!latestMessage) throw new Error("expected a verification email");
+  const verificationUrl = latestMessage.match(
+    /http:\/\/[^\s]+\/verify-email\?[^\s]+/,
+  );
+  assert.ok(verificationUrl, "expected a verification URL in the email");
+  const verification = await services.auth.handler(
+    new Request(verificationUrl[0]),
+  );
+  assert.equal(verification.status, 302);
+  return cookieHeader(
+    await services.auth.handler(
+      post("/api/auth/sign-in/email", { email, password }),
+    ),
+  );
 }
 
 test("username checks require a signed-in user", async () => {

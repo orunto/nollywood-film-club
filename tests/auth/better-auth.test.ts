@@ -115,22 +115,17 @@ test("email sign-up creates a user with server-owned defaults", async () => {
   }
 });
 
-test("sign-up issues a session cookie that getSession recognizes", async () => {
+test("unverified sign-up does not issue an authenticated session", async () => {
   const t = await createTestAuth();
   try {
     const response = await signUp(t);
     const cookies = cookieHeader(response);
-    assert.notEqual(cookies, "");
+    assert.equal(cookies, "");
 
     const session = await t.auth.getSession(
       new Request(`${BASE_URL}/`, { headers: { Cookie: cookies } }),
     );
-    assert.equal(typeof session?.userId, "string");
-    assert.equal(session?.email, "critic@example.com");
-    assert.equal(session?.name, "Iroko Critic");
-    assert.equal(session?.username, null);
-    assert.equal(session?.role, "user");
-    assert.equal(session?.regular, false);
+    assert.equal(session, null);
   } finally {
     t.database.close();
     await rm(t.directory, { recursive: true, force: true });
@@ -141,6 +136,13 @@ test("email sign-in with correct credentials yields a session", async () => {
   const t = await createTestAuth();
   try {
     await signUp(t);
+
+    const verificationUrl = t.messages[0].text.match(
+      /http:\/\/[^\s]+\/verify-email\?[^\s]+/,
+    );
+    assert.ok(verificationUrl, "expected a verification URL in the email");
+    const verification = await t.auth.handler(new Request(verificationUrl[0]));
+    assert.equal(verification.status, 302);
 
     const signIn = await t.auth.handler(
       post("/api/auth/sign-in/email", {
@@ -162,10 +164,66 @@ test("email sign-in with correct credentials yields a session", async () => {
   }
 });
 
+test("unverified email sign-in is rejected and sends a verification link", async () => {
+  const t = await createTestAuth();
+  try {
+    await signUp(t);
+    t.messages.length = 0;
+
+    const signIn = await t.auth.handler(
+      post("/api/auth/sign-in/email", {
+        email: "critic@example.com",
+        password: "correct-horse-battery",
+      }),
+    );
+    assert.equal(signIn.status, 403);
+    assert.equal(t.messages.length, 1);
+    assert.match(t.messages[0].subject, /verify/i);
+  } finally {
+    t.database.close();
+    await rm(t.directory, { recursive: true, force: true });
+  }
+});
+
+test("verification link marks the account verified and safely handles replay", async () => {
+  const t = await createTestAuth();
+  try {
+    await signUp(t);
+    const verificationUrl = t.messages[0].text.match(
+      /http:\/\/[^\s]+\/verify-email\?[^\s]+/,
+    );
+    assert.ok(verificationUrl, "expected a verification URL in the email");
+
+    const response = await t.auth.handler(new Request(verificationUrl[0]));
+    assert.equal(response.status, 302);
+    const user = readOnlyRow(
+      t.databasePath,
+      "SELECT email_verified FROM users WHERE email = ?",
+      "critic@example.com",
+    ) as { email_verified: number };
+    assert.equal(user.email_verified, 1);
+
+    const replay = await t.auth.handler(new Request(verificationUrl[0]));
+    assert.equal(replay.status, 302);
+    assert.equal(
+      (readOnlyRow(
+        t.databasePath,
+        "SELECT email_verified FROM users WHERE email = ?",
+        "critic@example.com",
+      ) as { email_verified: number }).email_verified,
+      1,
+    );
+  } finally {
+    t.database.close();
+    await rm(t.directory, { recursive: true, force: true });
+  }
+});
+
 test("sign-in rejects a wrong password", async () => {
   const t = await createTestAuth();
   try {
     await signUp(t);
+    t.messages.length = 0;
 
     const signIn = await t.auth.handler(
       post("/api/auth/sign-in/email", {
@@ -203,6 +261,7 @@ test("password reset request emails a link and never confirms existence", async 
     assert.equal(t.messages.length, 0);
 
     await signUp(t);
+    t.messages.length = 0;
 
     const knownResponse = await t.auth.handler(
       post("/api/auth/request-password-reset", { email: "critic@example.com" }),
@@ -220,8 +279,21 @@ test("password reset request emails a link and never confirms existence", async 
 test("a reset link works once, signs out old sessions, and lets the new password in", async () => {
   const t = await createTestAuth();
   try {
-    const signUpResponse = await signUp(t);
-    const oldCookie = cookieHeader(signUpResponse);
+    await signUp(t);
+    const verificationUrl = t.messages[0].text.match(
+      /http:\/\/[^\s]+\/verify-email\?[^\s]+/,
+    );
+    assert.ok(verificationUrl, "expected a verification URL in the email");
+    await t.auth.handler(new Request(verificationUrl[0]));
+    const oldCookie = cookieHeader(
+      await t.auth.handler(
+        post("/api/auth/sign-in/email", {
+          email: "critic@example.com",
+          password: "correct-horse-battery",
+        }),
+      ),
+    );
+    t.messages.length = 0;
 
     await t.auth.handler(
       post("/api/auth/request-password-reset", { email: "critic@example.com" }),
