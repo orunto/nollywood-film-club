@@ -199,8 +199,9 @@ const VIEWING_CATEGORY_NOTES: Record<ViewingCategory, string> = {
   unavailable: "Not available anywhere yet.",
 };
 
-export function viewingCategoryNote(category: ViewingCategory): string {
-  return VIEWING_CATEGORY_NOTES[category];
+export function viewingCategoryNote(category: ViewingCategory | string | null): string {
+  if (!category) return "Not available anywhere yet.";
+  return VIEWING_CATEGORY_NOTES[category as ViewingCategory] ?? "Not available anywhere yet.";
 }
 
 // The viewing category owns the streaming link: only a film that is actually

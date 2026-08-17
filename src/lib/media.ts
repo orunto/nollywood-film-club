@@ -9,14 +9,16 @@ export interface PosterUrlOptions {
   version?: number | null;
   width?: number;
   height?: number;
+  format?: "jpeg" | "webp" | "jpg";
+  gravity?: "auto";
 }
 
 export function posterUrl(
   publicId: string,
-  { version, width, height }: PosterUrlOptions = {},
+  { version, width, height, format, gravity }: PosterUrlOptions = {},
 ): string {
   if (publicId.startsWith("http")) return publicId;
-  const transforms = `c_fill${width ? `,w_${width}` : ""}${height ? `,h_${height}` : ""},q_auto,f_auto`;
+  const transforms = `c_fill${width ? `,w_${width}` : ""}${height ? `,h_${height}` : ""}${gravity ? `,g_${gravity}` : ""},q_auto,f_${format ?? "auto"}`;
   const path = version ? `v${version}/${publicId}` : publicId;
   if (!CLOUD_NAME) return path;
   return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/${transforms}/${path}`;

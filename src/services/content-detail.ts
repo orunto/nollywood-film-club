@@ -5,6 +5,7 @@ import type {
   PublicReadRepository,
   UserRating,
 } from "../repositories/public-read";
+import { contentTypeLabel } from "../lib/utils";
 import { mergeDiscussions } from "./homepage";
 
 const UUID_PATTERN =
@@ -98,6 +99,35 @@ export interface ContentDetailData {
   criticReviews: CriticReview[];
   related: Content[];
   discussion: ReturnType<typeof mergeDiscussions>;
+}
+
+// A UUID, slug, or legacy UUID used as the raw path param for a content route.
+// True when the resolved item's canonical path matches the path it was opened
+// under; used to permanent-redirect stale/wrong-type URLs (see content-route).
+export function isCanonicalFor(
+  data: ContentDetailData,
+  rawParam: string,
+  basePath: "/movie" | "/tv" | "/short",
+): boolean {
+  return data.canonicalPath === `${basePath}/${decodeURIComponent(rawParam)}`;
+}
+
+export function contentMetadata(item: Content | null): {
+  title: string;
+  description: string;
+  canonical: string | null;
+} {
+  if (!item) {
+    return { title: "Not Found — Nollywood Film Club", description: "", canonical: null };
+  }
+
+  const year = item.releaseDate ? new Date(item.releaseDate).getUTCFullYear() : null;
+  const title = `${item.title}${year ? ` (${year})` : ""} — Nollywood Film Club`;
+  const description =
+    item.synopsis ??
+    `${item.title} — ${contentTypeLabel(item.contentType)} on Nollywood Film Club.`;
+
+  return { title, description, canonical: contentPath(item) };
 }
 
 export async function getContentDetailData(

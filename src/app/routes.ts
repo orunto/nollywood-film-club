@@ -13,6 +13,12 @@ export default [
   route("api/contact", "routes/api.contact.ts"),
   layout("routes/site.tsx", [
     index("routes/home.tsx"),
+    route("movie/:slug", "routes/movie.$slug.tsx"),
+    route("tv/:slug", "routes/tv.$slug.tsx"),
+    route("short/:slug", "routes/short.$slug.tsx"),
+    route("movie/:slug/opengraph-image", "routes/og.movie.$slug.ts"),
+    route("tv/:slug/opengraph-image", "routes/og.tv.$slug.ts"),
+    route("short/:slug/opengraph-image", "routes/og.short.$slug.ts"),
     route("movies-and-tv", "routes/movies-and-tv.tsx"),
     route("scoreboard", "routes/scoreboard.tsx"),
     route("discussions", "routes/discussions.tsx"),
