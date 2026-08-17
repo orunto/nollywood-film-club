@@ -159,6 +159,7 @@ test("claims and row counts are reported for every table", () => {
   );
   assert.deepEqual(plan.rowCounts, {
     users: 1,
+    media: 0,
     content: 1,
     discussions: 0,
     user_ratings: 0,
@@ -246,6 +247,46 @@ test("content genre defaults to an empty JSON array when absent", () => {
   assert.equal(row.genre, "[]");
   assert.equal(row.is_movie_of_the_week, 0);
   assert.equal(row.cast_members, null);
+});
+
+test("media references are deterministic and shared by imported rows", () => {
+  const plan = planSqliteImport(
+    baseInput({
+      content: [
+        {
+          id: "c1",
+          title: "Ijé",
+          content_type: "movie",
+          poster_image: "https://res.cloudinary.com/demo/image/upload/v42/nfc/poster.jpg",
+          poster_version: 42,
+          is_movie_of_the_week: false,
+          created_at: "2024-01-01T00:00:00.000Z",
+          updated_at: "2024-01-01T00:00:00.000Z",
+        },
+      ],
+      reviews: [
+        {
+          id: "rv1",
+          content_id: "c1",
+          title: "Review",
+          description: "A review",
+          score: "8",
+          reviewer: "Critic",
+          review_image: "nfc/review",
+          created_at: "2024-01-01T00:00:00.000Z",
+          updated_at: "2024-01-01T00:00:00.000Z",
+        },
+      ],
+    }),
+  );
+
+  const mediaRows = plan.definitions.find((definition) => definition.table === "media")?.rows ?? [];
+  const contentRow = plan.definitions.find((definition) => definition.table === "content")?.rows[0];
+  const reviewRow = plan.definitions.find((definition) => definition.table === "reviews")?.rows[0];
+  assert.equal(mediaRows.length, 2);
+  assert.equal(contentRow?.poster_media_id, mediaRows[0]?.id);
+  assert.equal(reviewRow?.review_media_id, mediaRows[1]?.id);
+  assert.equal(mediaRows[0]?.original_provider, "cloudinary");
 });
 
 test("discussion rows keep podcast links and nullable episodes", () => {

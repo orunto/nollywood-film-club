@@ -83,6 +83,22 @@ const CONTENT_COLUMNS = [
   "created_at",
   "updated_at",
 ] as const;
+const MEDIA_COLUMNS = [
+  "id",
+  "object_key",
+  "public_id",
+  "version",
+  "mime_type",
+  "width",
+  "height",
+  "byte_size",
+  "checksum",
+  "status",
+  "original_provider",
+  "original_metadata",
+  "created_at",
+  "updated_at",
+] as const;
 const DISCUSSION_COLUMNS = [
   "id",
   "title",
@@ -246,6 +262,92 @@ function scoreTenths(value: unknown) {
   return Number(whole) * 10 + Number(fraction);
 }
 
+interface MediaReference {
+  id: string;
+  objectKey: string;
+  publicId: string;
+  version: number;
+  format: string;
+}
+
+function mediaReference(value: unknown, versionValue: unknown): MediaReference | null {
+  const raw = nullableString(value);
+  if (!raw) return null;
+
+  let publicId = raw;
+  let version = nullableInteger(versionValue) ?? 1;
+  if (raw.startsWith("http")) {
+    const url = new URL(raw);
+    const uploadIndex = url.pathname.indexOf("/upload/");
+    const path = uploadIndex >= 0 ? url.pathname.slice(uploadIndex + 8) : url.pathname;
+    const segments = path.split("/").filter(Boolean);
+    const versionIndex = segments.findIndex((segment) => /^v\d+$/.test(segment));
+    if (versionIndex >= 0) {
+      version = Number(segments[versionIndex].slice(1));
+      publicId = segments.slice(versionIndex + 1).join("/");
+    } else {
+      publicId = segments.at(-1) ?? raw;
+    }
+  }
+
+  const extension = publicId.match(/\.([a-z0-9]+)$/i)?.[1]?.toLowerCase();
+  const format = extension === "jpeg" ? "jpg" : extension ?? "jpg";
+  if (extension) publicId = publicId.slice(0, -(extension.length + 1));
+  const identity = `${publicId}:${version}:${format}`;
+  const id = `media-${checksum(identity).slice(0, 32)}`;
+  return {
+    id,
+    objectKey: `media/${publicId}/v${version}.${format}`,
+    publicId,
+    version,
+    format,
+  };
+}
+
+function mediaRow(reference: MediaReference, owner: string) {
+  return {
+    id: reference.id,
+    object_key: reference.objectKey,
+    public_id: reference.publicId,
+    version: reference.version,
+    mime_type: `image/${reference.format === "jpg" ? "jpeg" : reference.format}`,
+    width: null,
+    height: null,
+    byte_size: null,
+    checksum: null,
+    status: "staged",
+    original_provider: "cloudinary",
+    original_metadata: JSON.stringify({ owner }),
+    created_at: 0,
+    updated_at: 0,
+  };
+}
+
+function buildMediaPlan(contentRows: NeonRow[], reviewRows: NeonRow[]) {
+  const assets = new Map<string, { reference: MediaReference; owner: string }>();
+  const contentIds = new Map<string, string | null>();
+  const reviewIds = new Map<string, string | null>();
+
+  for (const row of contentRows) {
+    const id = stringValue(required(row, "id"));
+    const reference = mediaReference(row.poster_image, row.poster_version);
+    contentIds.set(id, reference?.id ?? null);
+    if (reference) assets.set(`${reference.publicId}:${reference.version}:${reference.format}`, { reference, owner: `content:${id}` });
+  }
+  for (const row of reviewRows) {
+    const id = stringValue(required(row, "id"));
+    const reference = mediaReference(row.review_image, null);
+    reviewIds.set(id, reference?.id ?? null);
+    if (reference) assets.set(`${reference.publicId}:${reference.version}:${reference.format}`, { reference, owner: `review:${id}` });
+  }
+
+  return {
+    contentIds,
+    reviewIds,
+    rows: [...assets.values()].map(({ reference, owner }) => mediaRow(reference, owner)),
+  };
+}
+
 export function mapUserRow(
   row: {
     id: string;
@@ -274,7 +376,7 @@ export function mapUserRow(
   };
 }
 
-export function mapContentRow(row: NeonRow): Record<string, unknown> {
+export function mapContentRow(row: NeonRow, posterMediaId: string | null = null): Record<string, unknown> {
   return {
     id: stringValue(required(row, "id")),
     title: stringValue(required(row, "title")),
@@ -284,7 +386,7 @@ export function mapContentRow(row: NeonRow): Record<string, unknown> {
     rating: nullableString(row.rating),
     synopsis: nullableString(row.synopsis),
     genre: jsonText(row.genre, []),
-    poster_media_id: null,
+    poster_media_id: posterMediaId,
     poster_image: nullableString(row.poster_image),
     poster_version: nullableInteger(row.poster_version),
     trailer_url: nullableString(row.trailer_url),
@@ -330,7 +432,7 @@ export function mapRatingRow(row: NeonRow): Record<string, unknown> {
   };
 }
 
-export function mapReviewRow(row: NeonRow): Record<string, unknown> {
+export function mapReviewRow(row: NeonRow, reviewMediaId: string | null = null): Record<string, unknown> {
   return {
     id: stringValue(required(row, "id")),
     content_id: stringValue(required(row, "content_id")),
@@ -339,7 +441,7 @@ export function mapReviewRow(row: NeonRow): Record<string, unknown> {
     score_tenths: scoreTenths(row.score),
     reviewer: stringValue(required(row, "reviewer")),
     external_url: nullableString(row.external_url),
-    review_media_id: null,
+    review_media_id: reviewMediaId,
     review_image: nullableString(row.review_image),
     published_at: nullableTimestamp(row.published_at),
     created_at: timestampMilliseconds(required(row, "created_at")),
@@ -433,13 +535,24 @@ export function planSqliteImport(input: SqliteImportInput): SqliteImportPlan {
   });
 
   const userPlan = planHexclaveImport(mergedUsers, input.userMirrors);
+  const mediaPlan = buildMediaPlan(input.content, input.reviews);
 
   const definitions: TableDefinition[] = [
     { table: "users", columns: [...USER_COLUMNS], rows: userPlan.rows.map(mapUserRow) },
     {
+      table: "media",
+      columns: [...MEDIA_COLUMNS],
+      rows: mediaPlan.rows,
+    },
+    {
       table: "content",
       columns: [...CONTENT_COLUMNS],
-      rows: input.content.map(mapContentRow),
+      rows: input.content.map((row) =>
+        mapContentRow(
+          row,
+          mediaPlan.contentIds.get(stringValue(required(row, "id"))) ?? null,
+        ),
+      ),
     },
     {
       table: "discussions",
@@ -454,7 +567,12 @@ export function planSqliteImport(input: SqliteImportInput): SqliteImportPlan {
     {
       table: "reviews",
       columns: [...REVIEW_COLUMNS],
-      rows: input.reviews.map(mapReviewRow),
+      rows: input.reviews.map((row) =>
+        mapReviewRow(
+          row,
+          mediaPlan.reviewIds.get(stringValue(required(row, "id"))) ?? null,
+        ),
+      ),
     },
     {
       table: "comments",
