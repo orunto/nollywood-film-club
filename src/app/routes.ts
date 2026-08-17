@@ -32,6 +32,8 @@ export default [
   route("api/admin/contact/:id", "routes/api.admin.contact.$id.tsx"),
   route("api/admin/reviews", "routes/api.admin.reviews.tsx"),
   route("api/admin/reviews/:id", "routes/api.admin.reviews.$id.tsx"),
+  route("api/admin/discussions", "routes/api.admin.discussions.tsx"),
+  route("api/admin/discussions/:id", "routes/api.admin.discussions.$id.tsx"),
   layout("routes/site.tsx", [
     index("routes/home.tsx"),
     route("movie/:slug", "routes/movie.$slug.tsx"),
