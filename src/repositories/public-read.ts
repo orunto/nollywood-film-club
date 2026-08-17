@@ -142,6 +142,15 @@ export interface DiscussionPageOptions {
   now?: Date;
 }
 
+export interface PublicProfile {
+  id: string;
+  username: string | null;
+  displayName: string | null;
+  profileImage?: string;
+  isRegular: boolean;
+  joinedAt: string | null;
+}
+
 type AsyncSQLiteDatabase = BaseSQLiteDatabase<
   "async",
   unknown,
@@ -708,6 +717,24 @@ export class PublicReadRepository {
       );
 
     return rows.map((row) => mapDiscussion(row.discussions, row.content));
+  }
+
+  async getRegularUsers(limit = 200): Promise<PublicProfile[]> {
+    const rows = await this.database
+      .select()
+      .from(users)
+      .where(eq(users.regular, true))
+      .orderBy(asc(users.createdAt))
+      .limit(limit);
+
+    return rows.map((row) => ({
+      id: row.id,
+      username: row.username,
+      displayName: row.name,
+      profileImage: row.image ?? undefined,
+      isRegular: true,
+      joinedAt: row.createdAt.toISOString(),
+    }));
   }
 
   private contentWithRatings(where?: SQL, limit?: number) {

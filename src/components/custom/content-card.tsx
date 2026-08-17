@@ -1,0 +1,80 @@
+import { forwardRef, memo } from "react";
+import { Link } from "react-router";
+import { Card, CardTitle, CardHeader, CardContent, CardDescription, CardFooter } from "../ui/card";
+import { Badge } from "../ui/badge";
+import type { Content } from "../../repositories/public-read";
+import { cn, contentTypeLabel, contentPath } from "../../lib/utils";
+import { posterUrl } from "../../lib/media";
+import ScoreBox from "./score-box";
+
+interface ContentCardProps {
+    item: Content;
+    className?: string;
+}
+
+const ContentCard = forwardRef<HTMLAnchorElement, ContentCardProps>(
+    function ContentCard({ item, className, ...rest }, ref) {
+        return (
+            <Link to={contentPath(item)} ref={ref} className={cn(className)} {...rest}>
+                <Card className="@container rounded-sm h-full shadow-none p-0 gap-0">
+                    <CardHeader className="px-4 bg-primary/50 max-h-30 overflow-y-visible relative z-10 overflow-visible rounded-t-sm">
+                        {/* Static 16:9 box; the absolutely-positioned inner container is
+                            what grows on hover (to 200% = the old 112.5% of width), so the
+                            animation can never contribute to layout and push the card body */}
+                        <div className="w-full pt-[56.25%] relative translate-y-4 z-10">
+                            <div className="absolute inset-x-0 top-0 h-full hover:h-[200%] transition-[height] duration-300 ease-in-out">
+                                <img
+                                    src={posterUrl(item.posterImage || "nollywood-film-club/elj", {
+                                        version: item.posterVersion ?? undefined,
+                                        width: 440,
+                                        height: 660,
+                                    })}
+                                    alt={`${item.title} Poster`}
+                                    className="object-cover object-top rounded-sm w-full h-full"
+                                    loading="lazy"
+                                />
+                            </div>
+                        </div>
+                    </CardHeader>
+
+                    <CardContent className="p-4 relative flex flex-col gap-2 lg:mt-10 mt-8 min-h-41.5">
+                        <CardTitle className="text-base @xs:text-lg @md:text-xl font-semibold flex items-center gap-2 mt-5 lg:mt-0">
+                            {item.title}
+                        </CardTitle>
+
+                        <CardDescription className="flex flex-wrap items-center gap-2">
+                            <Badge className="w-fit text-xs text-black bg-transparent border border-black">
+                                {contentTypeLabel(item.contentType)}
+                            </Badge>
+                            {item.rating && (
+                                <Badge className="w-fit text-xs text-black bg-transparent border border-black">
+                                    {item.rating}
+                                </Badge>
+                            )}
+                        </CardDescription>
+
+                        {item.synopsis && (
+                            <p className="text-xs text-black/60 font-light line-clamp-3">
+                                {item.synopsis}
+                            </p>
+                        )}
+                    </CardContent>
+
+                    <CardFooter className="p-4 flex justify-between border-t items-start">
+                        <span className="text-black/40 text-xs @sm:text-sm">NFC SCORE</span>
+                        <ScoreBox
+                            score={item.userRating}
+                            className="h-12 w-12 @sm:h-15 @sm:w-15 shrink-0 text-base @sm:text-lg"
+                        />
+                    </CardFooter>
+                </Card>
+            </Link>
+        );
+    },
+);
+
+// Memoised because the browse page re-renders on every keystroke of its search
+// box: each card rebuilds a Cloudinary URL (~0.7ms), so an unmemoised grid burns
+// ~8ms per keystroke before React even reconciles. `item` comes straight from the
+// fetched catalogue, so its identity is stable across those renders.
+export default memo(ContentCard);

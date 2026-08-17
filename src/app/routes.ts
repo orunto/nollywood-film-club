@@ -13,6 +13,10 @@ export default [
   route("api/contact", "routes/api.contact.ts"),
   layout("routes/site.tsx", [
     index("routes/home.tsx"),
+    route("movies-and-tv", "routes/movies-and-tv.tsx"),
+    route("scoreboard", "routes/scoreboard.tsx"),
+    route("discussions", "routes/discussions.tsx"),
+    route("about", "routes/about.tsx"),
     route("privacy", "routes/privacy.tsx"),
     route("terms", "routes/terms.tsx"),
     route("contact", "routes/contact.tsx"),

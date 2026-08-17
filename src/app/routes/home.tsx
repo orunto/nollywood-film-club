@@ -1,6 +1,10 @@
 import type { Route } from "./+types/home";
+import { useLoaderData } from "react-router";
 import { appServicesContext } from "../context";
 import { getHomepageData } from "../../services/homepage";
+import Footer from "../../components/site/footer";
+import { Hero, MovieOfTheWeek, MoviesAndTVSeries, Reviews, Discussions } from "../../components/sections";
+import { posterPath } from "../../lib/utils";
 
 export const meta: Route.MetaFunction = () => [
   { title: "Nollywood Film Club" },
@@ -8,19 +12,58 @@ export const meta: Route.MetaFunction = () => [
 
 export async function loader({ context }: Route.LoaderArgs) {
   const services = context.get(appServicesContext);
-  return getHomepageData(services.db.publicReads);
+  const [{ movieOfTheWeek, movieOfTheWeekDiscussion, moviesAndTVSeries, reviews, discussions }, allContent] =
+    await Promise.all([
+      getHomepageData(services.db.publicReads),
+      services.db.publicReads.getAllContent(),
+    ]);
+
+  // Feature the newest episode that has a Spotify link in the hero player,
+  // falling back to the latest discussion overall (discussions are newest-first).
+  const latestEpisode =
+    discussions.find((d) => d.podcastLinks?.some((l) => l.includes("spotify"))) ??
+    discussions[0] ??
+    null;
+
+  // Every catalogue poster feeds the hero's moving poster-wall background.
+  const posters = allContent
+    .map((item) => (item.posterImage ? posterPath(item.posterImage, item.posterVersion) : null))
+    .filter((src): src is string => Boolean(src));
+
+  return {
+    movieOfTheWeek,
+    movieOfTheWeekDiscussion,
+    moviesAndTVSeries,
+    reviews,
+    discussions,
+    latestEpisode,
+    posters,
+  };
 }
 
 export default function Home() {
+  const {
+    movieOfTheWeek,
+    movieOfTheWeekDiscussion,
+    moviesAndTVSeries,
+    reviews,
+    discussions,
+    latestEpisode,
+    posters,
+  } = useLoaderData<typeof loader>();
+
   return (
-    <main className="shell">
-      <p className="eyebrow">New runtime online</p>
-      <h1>Nollywood, one film at a time.</h1>
-      <p>
-        This React Router shell now runs from the same repository as the legacy
-        application. Existing routes will move here only after their behavior is
-        characterized.
-      </p>
-    </main>
+    <>
+      <main className="min-h-screen">
+        <Hero latestEpisode={latestEpisode} posters={posters} />
+        <div className="w-full flex flex-col lg:px-10 lg:py-8 py-10 px-6 gap-15">
+          <MovieOfTheWeek movie={movieOfTheWeek} spaceUrl={movieOfTheWeekDiscussion?.spaceUrl} podcastLinks={movieOfTheWeekDiscussion?.podcastLinks} discussionDate={movieOfTheWeekDiscussion?.discussionDate} />
+          <MoviesAndTVSeries moviesAndTVSeries={moviesAndTVSeries} />
+          <Reviews reviews={reviews} />
+          <Discussions discussions={discussions} />
+        </div>
+      </main>
+      <Footer />
+    </>
   );
 }
