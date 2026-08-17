@@ -1,6 +1,8 @@
-import { access, mkdir } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { access, mkdir, stat, writeFile } from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import { dirname, extname, resolve } from "node:path";
 import { DatabaseSync, type SQLInputValue } from "node:sqlite";
+import { Readable } from "node:stream";
 import {
   drizzle,
   type AsyncRemoteCallback,
@@ -19,10 +21,13 @@ import type {
   AtomicResult,
   Database,
   ObjectStore,
+  ObjectPutOptions,
+  ObjectValue,
 } from "./contracts";
 import {
-  PassthroughImageTransformer,
-  PendingMailService,
+  HttpImageTransformer,
+  HttpMailService,
+  requireServiceConfig,
 } from "./pending";
 
 export class NodeSqliteDatabase implements Database {
@@ -76,12 +81,74 @@ export class NodeSqliteDatabase implements Database {
   }
 }
 
-class FileSystemObjectStore implements ObjectStore {
+export class FileSystemObjectStore implements ObjectStore {
   constructor(private readonly root: string) {}
 
   async check() {
     await access(this.root);
   }
+
+  async get(key: string): Promise<ObjectValue | null> {
+    const path = this.pathFor(key);
+    try {
+      const details = await stat(path);
+      if (!details.isFile()) return null;
+
+      return {
+        body: Readable.toWeb(createReadStream(path)) as ReadableStream<Uint8Array>,
+        contentType: contentTypeFor(path),
+        contentLength: details.size,
+        etag: null,
+      };
+    } catch (error) {
+      if (isMissingFile(error)) return null;
+      throw error;
+    }
+  }
+
+  async put(
+    key: string,
+    value: string | Blob | ArrayBuffer | Uint8Array | ReadableStream<Uint8Array> | null,
+    options: ObjectPutOptions = {},
+  ) {
+    const path = this.pathFor(key);
+    await mkdir(dirname(path), { recursive: true });
+    const bytes = new Uint8Array(
+      await new Response(value as BodyInit).arrayBuffer(),
+    );
+    await writeFile(path, bytes);
+    void options;
+  }
+
+  private pathFor(key: string) {
+    if (
+      !key ||
+      key.startsWith("/") ||
+      key.includes("\\") ||
+      key.split("/").includes("..")
+    ) {
+      throw new Error("Invalid object key");
+    }
+    return resolve(this.root, key);
+  }
+}
+
+function isMissingFile(error: unknown): boolean {
+  return error instanceof Error && "code" in error && error.code === "ENOENT";
+}
+
+function contentTypeFor(path: string): string | null {
+  return (
+    {
+      ".avif": "image/avif",
+      ".gif": "image/gif",
+      ".jpeg": "image/jpeg",
+      ".jpg": "image/jpeg",
+      ".png": "image/png",
+      ".svg": "image/svg+xml",
+      ".webp": "image/webp",
+    } as Record<string, string>
+  )[extname(path).toLowerCase()] ?? null;
 }
 
 export function createNodeSqliteDatabase(
@@ -139,20 +206,30 @@ async function createNodeServices(): Promise<AppServices> {
 
   const sqlite = createNodeSqliteDatabase(sqlitePath);
 
-  const mail = new PendingMailService();
+  const mail = new HttpMailService(
+    requireServiceConfig("MAIL_API_URL", process.env.MAIL_API_URL),
+    requireServiceConfig("MAIL_API_KEY", process.env.MAIL_API_KEY),
+    requireServiceConfig("MAIL_FROM", process.env.MAIL_FROM),
+  );
 
   return {
     runtime: "node",
     db: sqlite,
     auth: createBetterAuthService(sqlite.instance, {
       baseURL: process.env.AUTH_URL ?? "http://localhost:3000",
-      secret: process.env.AUTH_SECRET ?? "dev-secret-change-me",
+      secret: requireServiceConfig("AUTH_SECRET", process.env.AUTH_SECRET),
       mail,
       google: optionalProvider("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"),
       twitter: optionalProvider("X_CLIENT_ID", "X_CLIENT_SECRET"),
     }),
     objects: new FileSystemObjectStore(objectRoot),
-    images: new PassthroughImageTransformer(),
+    images: new HttpImageTransformer(
+      requireServiceConfig(
+        "IMAGE_TRANSFORMER_URL",
+        process.env.IMAGE_TRANSFORMER_URL,
+      ),
+      process.env.IMAGE_TRANSFORMER_API_KEY,
+    ),
     mail,
   };
 }

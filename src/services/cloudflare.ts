@@ -13,8 +13,14 @@ import type {
   Database,
   ImageTransformer,
   ObjectStore,
+  ObjectPutOptions,
+  ObjectValue,
 } from "./contracts";
-import { PendingMailService } from "./pending";
+import {
+  HttpImageTransformer,
+  HttpMailService,
+  requireServiceConfig,
+} from "./pending";
 
 class D1Database implements Database {
   readonly publicReads: PublicReadRepository;
@@ -65,7 +71,32 @@ class R2ObjectStore implements ObjectStore {
   constructor(private readonly binding: R2Bucket) {}
 
   async check() {
-    await this.binding.head("__nfc_healthcheck__");
+    await this.binding.list({ limit: 1 });
+  }
+
+  async get(key: string): Promise<ObjectValue | null> {
+    const object = await this.binding.get(key);
+    if (!object) return null;
+
+    return {
+      body: object.body,
+      contentType: object.httpMetadata?.contentType ?? null,
+      contentLength: object.size,
+      etag: object.etag ?? null,
+    };
+  }
+
+  async put(
+    key: string,
+    value: string | Blob | ArrayBuffer | Uint8Array | ReadableStream<Uint8Array> | null,
+    options: ObjectPutOptions = {},
+  ) {
+    await this.binding.put(key, value, {
+      httpMetadata: {
+        contentType: options.contentType,
+        cacheControl: options.cacheControl,
+      },
+    });
   }
 }
 
@@ -97,13 +128,17 @@ class CloudflareImageTransformer implements ImageTransformer {
 export function createCloudflareServices(env: Env): AppServices {
   const instance = drizzle(env.DB, { schema });
   const authEnv = env as AuthEnv;
-  const mail = new PendingMailService();
+  const mail = new HttpMailService(
+    requireServiceConfig("MAIL_API_URL", authEnv.MAIL_API_URL),
+    requireServiceConfig("MAIL_API_KEY", authEnv.MAIL_API_KEY),
+    requireServiceConfig("MAIL_FROM", authEnv.MAIL_FROM),
+  );
   return {
     runtime: "cloudflare",
     db: new D1Database(env.DB, instance),
     auth: createBetterAuthService(instance, {
       baseURL: authEnv.AUTH_URL ?? "http://localhost:8787",
-      secret: authEnv.AUTH_SECRET ?? "dev-secret-change-me",
+      secret: requireServiceConfig("AUTH_SECRET", authEnv.AUTH_SECRET),
       mail,
       google:
         authEnv.GOOGLE_CLIENT_ID && authEnv.GOOGLE_CLIENT_SECRET
@@ -121,7 +156,12 @@ export function createCloudflareServices(env: Env): AppServices {
           : undefined,
     }),
     objects: new R2ObjectStore(env.OBJECTS),
-    images: new CloudflareImageTransformer(env.IMAGES),
+    images: authEnv.IMAGE_TRANSFORMER_URL
+      ? new HttpImageTransformer(
+          authEnv.IMAGE_TRANSFORMER_URL,
+          authEnv.IMAGE_TRANSFORMER_API_KEY,
+        )
+      : new CloudflareImageTransformer(env.IMAGES),
     mail,
   };
 }
@@ -135,4 +175,9 @@ interface AuthEnv {
   GOOGLE_CLIENT_SECRET?: string;
   X_CLIENT_ID?: string;
   X_CLIENT_SECRET?: string;
+  MAIL_API_URL?: string;
+  MAIL_API_KEY?: string;
+  MAIL_FROM?: string;
+  IMAGE_TRANSFORMER_URL?: string;
+  IMAGE_TRANSFORMER_API_KEY?: string;
 }

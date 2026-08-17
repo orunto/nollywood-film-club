@@ -42,6 +42,25 @@ export interface AuthService {
 
 export interface ObjectStore {
   check(): Promise<void>;
+  get(key: string): Promise<ObjectValue | null>;
+  put(
+    key: string,
+    value: string | Blob | ArrayBuffer | Uint8Array | ReadableStream<Uint8Array> | null,
+    options?: ObjectPutOptions,
+  ): Promise<void>;
+}
+
+export interface ObjectValue {
+  body: ReadableStream<Uint8Array>;
+  contentType: string | null;
+  contentLength: number | null;
+  etag: string | null;
+}
+
+export interface ObjectPutOptions {
+  contentType?: string;
+  contentLength?: number;
+  cacheControl?: string;
 }
 
 export interface ImageTransformer {
