@@ -28,6 +28,8 @@ export default [
   route("api/admin/comments/:id/restrict", "routes/api.admin.comments.$id.restrict.tsx"),
   route("api/admin/reports", "routes/api.admin.reports.tsx"),
   route("api/admin/reports/:id", "routes/api.admin.reports.$id.tsx"),
+  route("api/admin/contact", "routes/api.admin.contact.tsx"),
+  route("api/admin/contact/:id", "routes/api.admin.contact.$id.tsx"),
   layout("routes/site.tsx", [
     index("routes/home.tsx"),
     route("movie/:slug", "routes/movie.$slug.tsx"),
