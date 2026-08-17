@@ -8,6 +8,7 @@ import { AdminReportsRepository } from "../repositories/admin-reports";
 import { AdminReviewsRepository } from "../repositories/admin-reviews";
 import { AdminDiscussionsRepository } from "../repositories/admin-discussions";
 import { AdminBlogRepository } from "../repositories/admin-blog";
+import { AdminContentRepository } from "../repositories/admin-content";
 import { CommunityWriteRepository } from "../repositories/community-write";
 import { ContactMessageRepository } from "../repositories/contact-message";
 import { PublicReadRepository } from "../repositories/public-read";
@@ -40,6 +41,7 @@ class D1Database implements Database {
   readonly adminReviews: AdminReviewsRepository;
   readonly adminDiscussions: AdminDiscussionsRepository;
   readonly adminBlog: AdminBlogRepository;
+  readonly adminContent: AdminContentRepository;
 
   constructor(
     private readonly binding: globalThis.D1Database,
@@ -56,6 +58,7 @@ class D1Database implements Database {
     this.adminReviews = new AdminReviewsRepository(instance);
     this.adminDiscussions = new AdminDiscussionsRepository(instance, this.catalog);
     this.adminBlog = new AdminBlogRepository(instance);
+    this.adminContent = new AdminContentRepository(instance, this.catalog);
   }
 
   async check() {

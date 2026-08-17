@@ -7,6 +7,7 @@ import type { AdminReportsRepository } from "../repositories/admin-reports";
 import type { AdminReviewsRepository } from "../repositories/admin-reviews";
 import type { AdminDiscussionsRepository } from "../repositories/admin-discussions";
 import type { AdminBlogRepository } from "../repositories/admin-blog";
+import type { AdminContentRepository } from "../repositories/admin-content";
 import type { PublicReadRepository } from "../repositories/public-read";
 import type { UserProfileRepository } from "../repositories/user-profile";
 
@@ -44,6 +45,7 @@ export interface Database {
   adminReviews: AdminReviewsRepository;
   adminDiscussions: AdminDiscussionsRepository;
   adminBlog: AdminBlogRepository;
+  adminContent: AdminContentRepository;
   atomic(commands: AtomicCommand[]): Promise<AtomicResult[]>;
 }
 
