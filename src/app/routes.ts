@@ -17,6 +17,9 @@ export default [
   route("api/user/comments", "routes/api.user.comments.ts"),
   route("api/user/comments/:id", "routes/api.user.comments.$id.ts"),
   route("api/user/reports", "routes/api.user.reports.ts"),
+  route("api/admin/users", "routes/api.admin.users.tsx"),
+  route("api/admin/users/:id/admin-role", "routes/api.admin.users.$id.admin-role.tsx"),
+  route("api/admin/users/:id/regular-role", "routes/api.admin.users.$id.regular-role.tsx"),
   layout("routes/site.tsx", [
     index("routes/home.tsx"),
     route("movie/:slug", "routes/movie.$slug.tsx"),

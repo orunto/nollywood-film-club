@@ -9,6 +9,7 @@ import * as checkUsernameRoute from "../../src/app/routes/api.check-username";
 import * as createUsernameRoute from "../../src/app/routes/api.create-username";
 import { createBetterAuthService } from "../../src/auth/server";
 import { createNodeSqliteDatabase } from "../../src/services/node";
+import { AdminUsersRepository } from "../../src/repositories/admin-users";
 import { PassthroughImageTransformer } from "../../src/services/pending";
 import { users } from "../../src/db/schema";
 import type { AppServices, MailService } from "../../src/services/contracts";
@@ -39,6 +40,7 @@ async function createFixture() {
   const services: AppServices = {
     runtime: "node",
     db: database,
+    adminUsers: new AdminUsersRepository(database.instance),
     auth,
     objects: {
       check: async () => undefined,

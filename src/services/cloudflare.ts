@@ -2,6 +2,7 @@ import { drizzle, type DrizzleD1Database } from "drizzle-orm/d1";
 import * as schema from "../db/schema";
 import { createBetterAuthService } from "../auth/server";
 import { CatalogWriteRepository } from "../repositories/catalog-write";
+import { AdminUsersRepository } from "../repositories/admin-users";
 import { CommunityWriteRepository } from "../repositories/community-write";
 import { ContactMessageRepository } from "../repositories/contact-message";
 import { PublicReadRepository } from "../repositories/public-read";
@@ -28,6 +29,7 @@ class D1Database implements Database {
   readonly catalog: CatalogWriteRepository;
   readonly profiles: UserProfileRepository;
   readonly contacts: ContactMessageRepository;
+  readonly adminUsers: AdminUsersRepository;
 
   constructor(
     private readonly binding: globalThis.D1Database,
@@ -38,6 +40,7 @@ class D1Database implements Database {
     this.catalog = new CatalogWriteRepository(this);
     this.profiles = new UserProfileRepository(this);
     this.contacts = new ContactMessageRepository(instance);
+    this.adminUsers = new AdminUsersRepository(instance);
   }
 
   async check() {
