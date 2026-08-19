@@ -102,15 +102,14 @@ export function createBetterAuthService(
     },
     account: {
       accountLinking: {
-        // Pre-migrated users keep their Hexclave user IDs, so an OAuth
-        // sign-in for an existing email must attach the provider account to
-        // that row rather than minting a duplicate user.
+        // Never auto-link a provider identity into an existing local row.
+        // Implicit linking merged the Twitter login into the admin Google
+        // account because both shared an email, handing admin access to the
+        // Twitter credential. Ambiguous identities must go through the
+        // explicit account-claim flow, per the migration plan.
         enabled: true,
-        // Only link a provider identity into a local row whose email is
-        // verified, and never from a provider's unverified email claim on its
-        // own. Anything ambiguous must go through an authenticated claim
-        // flow, per the migration plan.
         requireLocalEmailVerified: true,
+        disableImplicitLinking: true,
       },
     },
     advanced: {
