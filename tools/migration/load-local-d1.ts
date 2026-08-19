@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
 const stateDirectory = resolve(
-  "data/local-d1-import/v3/d1/miniflare-D1DatabaseObject",
+  ".wrangler/state/v3/d1/miniflare-D1DatabaseObject",
 );
 const databaseFiles = (await readdir(stateDirectory)).filter(
   (name) => name.endsWith(".sqlite") && name !== "metadata.sqlite",

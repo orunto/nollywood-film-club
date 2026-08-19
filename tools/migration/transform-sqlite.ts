@@ -8,6 +8,7 @@ import {
   type ExistingUser,
   type HexclaveExportUser,
 } from "./import-hexclave-users";
+import type { CloudinaryManifest } from "./inventory-cloudinary";
 
 // Postgres-to-SQLite transformation for the new canonical schema. The neon
 // exports (data/migration/neon/*.json) and the Hexclave user export
@@ -39,6 +40,7 @@ export interface SqliteImportInput {
   reports: NeonRow[];
   contacts: NeonRow[];
   blogPosts: NeonRow[];
+  mediaVersions?: Map<string, number>;
 }
 
 export interface SqliteImportPlan {
@@ -270,7 +272,11 @@ interface MediaReference {
   format: string;
 }
 
-function mediaReference(value: unknown, versionValue: unknown): MediaReference | null {
+function mediaReference(
+  value: unknown,
+  versionValue: unknown,
+  mediaVersions = new Map<string, number>(),
+): MediaReference | null {
   const raw = nullableString(value);
   if (!raw) return null;
 
@@ -293,6 +299,9 @@ function mediaReference(value: unknown, versionValue: unknown): MediaReference |
   const extension = publicId.match(/\.([a-z0-9]+)$/i)?.[1]?.toLowerCase();
   const format = extension === "jpeg" ? "jpg" : extension ?? "jpg";
   if (extension) publicId = publicId.slice(0, -(extension.length + 1));
+  if (versionValue === null || versionValue === undefined) {
+    version = mediaVersions.get(publicId) ?? version;
+  }
   const identity = `${publicId}:${version}:${format}`;
   const id = `media-${checksum(identity).slice(0, 32)}`;
   return {
@@ -323,20 +332,24 @@ function mediaRow(reference: MediaReference, owner: string) {
   };
 }
 
-function buildMediaPlan(contentRows: NeonRow[], reviewRows: NeonRow[]) {
+function buildMediaPlan(
+  contentRows: NeonRow[],
+  reviewRows: NeonRow[],
+  mediaVersions: Map<string, number>,
+) {
   const assets = new Map<string, { reference: MediaReference; owner: string }>();
   const contentIds = new Map<string, string | null>();
   const reviewIds = new Map<string, string | null>();
 
   for (const row of contentRows) {
     const id = stringValue(required(row, "id"));
-    const reference = mediaReference(row.poster_image, row.poster_version);
+    const reference = mediaReference(row.poster_image, row.poster_version, mediaVersions);
     contentIds.set(id, reference?.id ?? null);
     if (reference) assets.set(`${reference.publicId}:${reference.version}:${reference.format}`, { reference, owner: `content:${id}` });
   }
   for (const row of reviewRows) {
     const id = stringValue(required(row, "id"));
-    const reference = mediaReference(row.review_image, null);
+    const reference = mediaReference(row.review_image, null, mediaVersions);
     reviewIds.set(id, reference?.id ?? null);
     if (reference) assets.set(`${reference.publicId}:${reference.version}:${reference.format}`, { reference, owner: `review:${id}` });
   }
@@ -535,7 +548,7 @@ export function planSqliteImport(input: SqliteImportInput): SqliteImportPlan {
   });
 
   const userPlan = planHexclaveImport(mergedUsers, input.userMirrors);
-  const mediaPlan = buildMediaPlan(input.content, input.reviews);
+  const mediaPlan = buildMediaPlan(input.content, input.reviews, input.mediaVersions ?? new Map());
 
   const definitions: TableDefinition[] = [
     { table: "users", columns: [...USER_COLUMNS], rows: userPlan.rows.map(mapUserRow) },
@@ -627,17 +640,25 @@ export function insertStatements(
   rows: Record<string, unknown>[],
 ) {
   const statements: string[] = [];
-  for (let offset = 0; offset < rows.length; offset += 100) {
-    const batch = rows.slice(offset, offset + 100);
-    const values = batch
-      .map(
-        (row) =>
-          `(${columns.map((column) => sqlValue(row[column] ?? null)).join(", ")})`,
-      )
-      .join(",\n");
-    statements.push(
-      `INSERT INTO "${table}" (${columns.map((column) => `"${column}"`).join(", ")}) VALUES\n${values};`,
-    );
+  const prefix = `INSERT INTO "${table}" (${columns.map((column) => `"${column}"`).join(", ")}) VALUES\n`;
+  const maxStatementBytes = 64 * 1024;
+  let batch: string[] = [];
+  let batchBytes = prefix.length;
+
+  for (const row of rows) {
+    const value = `(${columns.map((column) => sqlValue(row[column] ?? null)).join(", ")})`;
+    const valueBytes = new TextEncoder().encode(value).byteLength;
+    const separatorBytes = batch.length ? 2 : 0;
+    if (batch.length && batchBytes + separatorBytes + valueBytes + 1 > maxStatementBytes) {
+      statements.push(`${prefix}${batch.join(",\n")};`);
+      batch = [];
+      batchBytes = prefix.length;
+    }
+    batch.push(value);
+    batchBytes += (batch.length > 1 ? 2 : 0) + valueBytes;
+  }
+  if (batch.length) {
+    statements.push(`${prefix}${batch.join(",\n")};`);
   }
   return statements;
 }
@@ -715,6 +736,7 @@ async function main() {
     "data/migration/sqlite-import-manifest.json",
   );
   const claimsPath = resolve("data/migration/account-claims.json");
+  const mediaManifestPath = resolve("data/migration/cloudinary/manifest.json");
 
   const [
     userMirrors,
@@ -739,6 +761,12 @@ async function main() {
     readNeonTable(neonDirectory, "blog_posts"),
     readHexclaveExport(resolve("data/migration/hexclave/users.json")),
   ]);
+  const mediaManifest = await readFile(mediaManifestPath, "utf8").then(
+    (value) => JSON.parse(value) as CloudinaryManifest,
+  );
+  const mediaVersions = new Map(
+    mediaManifest.assets.map((asset) => [asset.publicId, asset.version]),
+  );
 
   const plan = planSqliteImport({
     userMirrors,
@@ -751,6 +779,7 @@ async function main() {
     reports: sourceReports,
     contacts: sourceContacts,
     blogPosts: sourceBlogPosts,
+    mediaVersions,
   });
   const sql = renderImportSql(plan.definitions);
 

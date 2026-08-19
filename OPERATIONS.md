@@ -29,6 +29,25 @@ npm run migration:copy-objects -- data/objects data/objects-restore
 For S3-compatible storage set `S3_ENDPOINT`, `S3_BUCKET`, and AWS credentials;
 the object command uses `aws s3 sync` and keeps immutable media keys unchanged.
 
+## R2 seeding
+
+Seed local Wrangler R2 directly:
+
+```text
+bun run migration:seed-r2 -- --local
+```
+
+Seed a remote R2 bucket through Wrangler authentication:
+
+```text
+$env:R2_BUCKET = "nollywood-film-club-media-production"
+bun run migration:seed-r2 -- --remote
+```
+
+The command uses `wrangler r2 object put` with eight concurrent uploads,
+preserves every `media/...` key, and is safe to rerun. Remote mode requires a
+Cloudflare API token or an authenticated Wrangler session.
+
 ## Cutover and rollback
 
 1. Lower DNS TTL and freeze legacy writes.
