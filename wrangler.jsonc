@@ -1,0 +1,82 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "nollywood-film-club",
+  "account_id": "db56ea80424c0a6df3baaafed36c1bc0",
+  "main": "./workers/app.ts",
+  "compatibility_date": "2026-08-16",
+  "compatibility_flags": ["nodejs_compat"],
+  "upload_source_maps": true,
+  "assets": {
+    "directory": "./build/client",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "head_sampling_rate": 1
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 0.01
+    }
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "nollywood-film-club",
+      "migrations_dir": "./drizzle-sqlite"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "OBJECTS",
+      "bucket_name": "nollywood-film-club-media"
+    }
+  ],
+  "images": {
+    "binding": "IMAGES"
+  },
+  "vars": {
+    "AUTH_URL": "https://nollywoodfilm.club",
+    "GOOGLE_CLIENT_ID": "895805672891-2j5tiv1lqrod32gd65eid3ncev9mfnsm.apps.googleusercontent.com",
+    "X_CLIENT_ID": "dzdVTGJIV0RtMVZNUnhITlJzeUc6MTpjaQ"
+  },
+  "env": {
+    "staging": {
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "nollywood-film-club-staging",
+          "migrations_dir": "./drizzle-sqlite"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "OBJECTS",
+          "bucket_name": "nollywood-film-club-media-staging"
+        }
+      ],
+      "images": {
+        "binding": "IMAGES"
+      }
+    },
+    "production": {
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "nollywood-film-club-production",
+          "migrations_dir": "./drizzle-sqlite"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "OBJECTS",
+          "bucket_name": "nollywood-film-club-media-production"
+        }
+      ],
+      "images": {
+        "binding": "IMAGES"
+      }
+    }
+  }
+}

@@ -1,0 +1,350 @@
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+// Rating system utilities
+export const RATING_OPTIONS = {
+  LIKED: { value: 10, label: "I liked it", points: 10 },
+  OKAY: { value: 5, label: "It was okay", points: 5 },
+  DISLIKED: { value: 0, label: "I didn't like it", points: 0 },
+} as const;
+
+export function getRatingLabel(rating: number | null): string {
+  if (rating === null) return "No rating";
+
+  switch (rating) {
+    case 10:
+      return RATING_OPTIONS.LIKED.label;
+    case 5:
+      return RATING_OPTIONS.OKAY.label;
+    case 0:
+      return RATING_OPTIONS.DISLIKED.label;
+    default:
+      return "Unknown rating";
+  }
+}
+
+export function calculateAverageRating(
+  ratings: Array<{ rating: number | null }>,
+): number {
+  const validRatings = ratings
+    .filter((r) => r.rating !== null)
+    .map((r) => r.rating as number);
+
+  if (validRatings.length === 0) return 0;
+
+  const sum = validRatings.reduce((acc, rating) => acc + rating, 0);
+  return Math.round((sum / validRatings.length) * 10) / 10; // Round to 1 decimal place
+}
+
+export function getAverageRatingLabel(average: number): string {
+  if (average === 0) return "No ratings yet";
+  if (average >= 8) return "Highly liked";
+  if (average >= 6) return "Generally liked";
+  if (average >= 3) return "Mixed reviews";
+  return "Generally disliked";
+}
+
+// Converts a YouTube watch/share URL to its embeddable form. YouTube's
+// /watch pages send X-Frame-Options headers that block iframing entirely —
+// only /embed/<id> URLs can be framed. Returns null if no video id is found.
+export function toYoutubeEmbedUrl(rawUrl: string): string | null {
+  try {
+    const url = new URL(rawUrl);
+    let id: string | null = null;
+    if (url.hostname === "youtu.be") id = url.pathname.slice(1);
+    else if (url.pathname === "/watch") id = url.searchParams.get("v");
+    else if (url.pathname.startsWith("/embed/")) id = url.pathname.replace("/embed/", "");
+    return id ? `https://www.youtube.com/embed/${id}` : null;
+  } catch {
+    return null;
+  }
+}
+
+// Converts an open.spotify.com share URL (episode/show/track/playlist/album)
+// to its embeddable /embed/ form so it can be dropped into an iframe player.
+// Accepts links that are already in /embed/ form. Returns null when the URL
+// isn't a recognisable Spotify link. Used to build the homepage hero player.
+export function toSpotifyEmbedUrl(rawUrl: string): string | null {
+  try {
+    const url = new URL(rawUrl);
+    if (!url.hostname.endsWith("spotify.com")) return null;
+
+    const segments = url.pathname.split("/").filter(Boolean);
+    // Drop a leading "embed" segment so an already-embeddable URL still works
+    if (segments[0] === "embed") segments.shift();
+
+    const [type, id] = segments;
+    const embeddableTypes = ["episode", "show", "track", "playlist", "album"];
+    if (!type || !id || !embeddableTypes.includes(type)) return null;
+
+    return `https://open.spotify.com/embed/${type}/${id}?utm_source=generator`;
+  } catch {
+    return null;
+  }
+}
+
+// The NFC score is stored and averaged on the 0-10 scale the ratings use, but
+// it is *displayed* as a percentage everywhere: "86%" reads as a share of the
+// room that liked it, which is what the average of a like/okay/dislike vote
+// actually measures. Only the presentation changes — every threshold below,
+// every filter band, and the SQL AVG() all still speak 0-10.
+export function nfcPercent(userRating: number | string | null): number | null {
+  if (userRating === null) return null;
+  const score = Number(userRating);
+  return Number.isNaN(score) ? null : Math.round(score * 10);
+}
+
+// NFC score badge color for a content item's userRating (0-10, or null if unrated)
+export function scoreBadgeClass(userRating: number | string | null): string {
+  if (userRating === null) return "bg-gray-400";
+  const score = Number(userRating);
+  if (score > 7) return "bg-green-900";
+  if (score > 4) return "bg-amber-500";
+  return "bg-red-700";
+}
+
+// Content type labels
+const CONTENT_TYPE_LABELS: Record<"movie" | "tv_show" | "short_film", string> = {
+  movie: "Movie",
+  tv_show: "TV Show",
+  short_film: "Short Film",
+};
+
+export function contentTypeLabel(contentType: "movie" | "tv_show" | "short_film"): string {
+  return CONTENT_TYPE_LABELS[contentType];
+}
+
+// Where a content item can be watched right now. Declaration order drives the
+// admin select and the browse filter list.
+export const VIEWING_CATEGORIES = [
+  { value: "in_cinemas", label: "In Cinemas" },
+  { value: "streaming", label: "Streaming Now" },
+  { value: "coming_to_cinemas", label: "Coming to Cinemas" },
+  { value: "coming_to_streaming", label: "Coming to Streaming" },
+  { value: "unavailable", label: "Not Available Anywhere" },
+] as const;
+
+export type ViewingCategory = (typeof VIEWING_CATEGORIES)[number]["value"];
+
+// Which service a watch link points at, so pasting a URL into the admin form
+// can fill the platform in rather than making somebody pick it twice. Keys
+// match the streamingPlatform values the admin select offers and the labels in
+// lib/browse.ts. Matching is on the parsed hostname, never a substring of the
+// whole URL — otherwise a "?ref=netflix.com" tracking param would win.
+const STREAMING_HOSTS: Record<string, string> = {
+  "netflix.com": "netflix",
+  "primevideo.com": "prime_video",
+  "amazon.com": "prime_video",
+  "amazon.co.uk": "prime_video",
+  "youtube.com": "youtube",
+  "youtu.be": "youtube",
+  "disneyplus.com": "disney_plus",
+  "hulu.com": "hulu",
+  "max.com": "hbo_max",
+  "hbomax.com": "hbo_max",
+  "apple.com": "apple_tv", // tv.apple.com
+  "paramountplus.com": "paramount_plus",
+  "peacocktv.com": "peacock",
+};
+
+// "#83 · Anikulapo" for a discussion, but most episode titles are already
+// stored with their own number on the front ("#83 Anikulapo: Rise Of The
+// Spectre"), so prefixing blindly gives "#83 · #83 Anikulapo…".
+export function episodeLabel(
+  episodeNumber: number | null,
+  title: string,
+): string {
+  const trimmed = title.trim();
+  if (episodeNumber === null) return trimmed;
+  const alreadyNumbered = new RegExp(`^#${episodeNumber}\\b`).test(trimmed);
+  return alreadyNumbered ? trimmed : `#${episodeNumber} · ${trimmed}`;
+}
+
+// Returns null when nothing matches, so an unrecognised link leaves the admin's
+// own choice alone instead of guessing "other".
+export function detectStreamingPlatform(url: string): string | null {
+  let hostname: string;
+  try {
+    hostname = new URL(url.trim()).hostname.toLowerCase();
+  } catch {
+    return null;
+  }
+  hostname = hostname.replace(/^www\./, "");
+
+  // Walk the domain down (tv.apple.com -> apple.com) so subdomains still match
+  const parts = hostname.split(".");
+  for (let i = 0; i < parts.length - 1; i++) {
+    const candidate = parts.slice(i).join(".");
+    if (STREAMING_HOSTS[candidate]) return STREAMING_HOSTS[candidate];
+  }
+  return null;
+}
+
+export function viewingCategoryLabel(category: ViewingCategory | string | null): string {
+  if (!category) return "Not Available";
+  return VIEWING_CATEGORIES.find((c) => c.value === category)?.label ?? category;
+}
+
+// Longer form of the same idea, for the "Where to Watch" slot where a sentence
+// reads better than the badge's clipped label.
+const VIEWING_CATEGORY_NOTES: Record<ViewingCategory, string> = {
+  in_cinemas: "Currently in cinemas.",
+  streaming: "Streaming now.",
+  coming_to_cinemas: "Coming to cinemas.",
+  coming_to_streaming: "Coming to streaming.",
+  unavailable: "Not available anywhere yet.",
+};
+
+export function viewingCategoryNote(category: ViewingCategory | string | null): string {
+  if (!category) return "Not available anywhere yet.";
+  return VIEWING_CATEGORY_NOTES[category as ViewingCategory] ?? "Not available anywhere yet.";
+}
+
+// The viewing category owns the streaming link: only a film that is actually
+// streaming gets one, so a stale streamingUrl on a film that has left the
+// platform can't send anyone to a dead page. An unset category falls back to
+// the URL, so rows from before the category existed keep working.
+export function isStreamable(
+  viewingCategory: ViewingCategory | string | null,
+  streamingUrl: string | null,
+): boolean {
+  return (
+    (viewingCategory === "streaming" || viewingCategory === null) &&
+    Boolean(streamingUrl)
+  );
+}
+
+// A space dated ahead of now has not been held yet, so there is no recording to
+// send anyone to: offer a reminder instead. Dates are entered day-granular (the
+// admin field is a date picker), so this flips at midnight on the day itself
+// rather than when the space actually starts.
+export function isUpcomingSpace(discussionDate?: string | null): boolean {
+  return Boolean(discussionDate && new Date(discussionDate) > new Date());
+}
+
+export function spaceDateLabel(discussionDate?: string | null): string | null {
+  if (!discussionDate) return null;
+  return new Date(discussionDate).toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+// Rating opens at least a day after the club has discussed the film: either the
+// discussion's podcast episode is already out, or 24h have passed since the
+// space was held (discussion_date). It is deliberately NOT tied to when the film
+// was added to the catalog.
+export function isRatingOpen(
+  discussionDate: string | null | undefined,
+  hasPodcastLink: boolean,
+): boolean {
+  if (hasPodcastLink) return true;
+  if (!discussionDate) return false;
+  const spaceTime = new Date(discussionDate).getTime();
+  if (Number.isNaN(spaceTime)) return false;
+  return Date.now() - spaceTime > 24 * 60 * 60 * 1000;
+}
+
+// Reviews are stored as Markdown. For clamped card excerpts and meta
+// descriptions we need readable plain text, so strip the common Markdown
+// syntax rather than rendering it.
+export function markdownToPlainText(md: string): string {
+  return md
+    .replace(/```[\s\S]*?```/g, " ") // fenced code
+    .replace(/`([^`]+)`/g, "$1") // inline code
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ") // images
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1") // links -> text
+    .replace(/^\s{0,3}#{1,6}\s+/gm, "") // headings
+    .replace(/^\s{0,3}>\s?/gm, "") // blockquotes
+    .replace(/^\s*[-*+]\s+/gm, "") // bullet markers
+    .replace(/^\s*\d+\.\s+/gm, "") // ordered markers
+    .replace(/(\*\*|__)(.*?)\1/g, "$2") // bold
+    .replace(/(\*|_)(.*?)\1/g, "$2") // italic
+    .replace(/~~(.*?)~~/g, "$2") // strikethrough
+    .replace(/\r?\n{2,}/g, "\n") // collapse blank lines
+    .replace(/[ \t]+/g, " ")
+    .trim();
+}
+
+// URL slug utilities
+// Details pages live under a type-specific base path with an SEO slug of
+// title + release year, e.g. /movie/everybody-loves-jenifa-2024
+const CONTENT_TYPE_BASE_PATH: Record<"movie" | "tv_show" | "short_film", string> = {
+  movie: "/movie",
+  tv_show: "/tv",
+  short_film: "/short",
+};
+
+export function slugifyTitle(title: string): string {
+  return title
+    .toLowerCase()
+    .normalize("NFKD") // Strip accents: "Àjàkájú" → "ajakaju"
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+export function contentSlug(title: string, releaseDate?: Date | string | null): string {
+  const slug = slugifyTitle(title);
+  if (!releaseDate) return slug;
+  const date = typeof releaseDate === "string" ? new Date(releaseDate) : releaseDate;
+  // UTC year so client-rendered links and server-side lookups always agree
+  return isNaN(date.getTime()) ? slug : `${slug}-${date.getUTCFullYear()}`;
+}
+
+export function contentPath(item: {
+  contentType: "movie" | "tv_show" | "short_film";
+  title: string;
+  releaseDate?: Date | string | null;
+}): string {
+  return `${CONTENT_TYPE_BASE_PATH[item.contentType]}/${contentSlug(item.title, item.releaseDate)}`;
+}
+
+// Image naming utilities
+/**
+ * Generates a public image name for Cloudinary based on movie title and release year.
+ * Converts to snake_case format.
+ *
+ * @param title - The movie/content title
+ * @param releaseDate - The release date (Date, string, or null)
+ * @returns A snake_case formatted string suitable for use as a public image name
+ */
+export function generateImagePublicName(title: string, releaseDate?: Date | string | null): string {
+  if (!title) return "";
+
+  let year = "";
+  if (releaseDate) {
+    const date = typeof releaseDate === "string" ? new Date(releaseDate) : releaseDate;
+    if (!isNaN(date.getTime())) {
+      year = date.getFullYear().toString();
+    }
+  }
+
+  const snakeCaseTitle = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_|_$/g, "");
+
+  return year ? `${snakeCaseTitle}_${year}` : snakeCaseTitle;
+}
+
+/**
+ * Prefixes a Cloudinary public ID with its version segment, for the places that
+ * build delivery URLs by hand rather than through CldImage (which takes a
+ * `version` prop instead). Posters are re-uploaded under the same public ID, so
+ * without the version the URL never changes and browsers keep serving the old
+ * image from cache.
+ *
+ * @example
+ * posterPath("nfc/everybody_loves_jenifa_2024", 1712345678)
+ * // Returns: "v1712345678/nfc/everybody_loves_jenifa_2024"
+ */
+export function posterPath(publicId: string, version?: number | null): string {
+  return version ? `v${version}/${publicId}` : publicId;
+}
