@@ -17,6 +17,7 @@ export interface AuthSession {
   email: string;
   name: string;
   username: string | null;
+  profileImageUrl: string | null;
   role: "user" | "admin";
   regular: boolean;
 }

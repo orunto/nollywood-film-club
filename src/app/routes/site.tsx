@@ -16,7 +16,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     ? {
         displayName: session.name,
         primaryEmail: session.email,
-        profileImageUrl: null,
+        profileImageUrl: session.profileImageUrl,
         username: session.username,
       }
     : null;

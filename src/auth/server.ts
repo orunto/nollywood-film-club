@@ -132,6 +132,7 @@ export function createBetterAuthService(
         email: result.user.email,
         name: result.user.name,
         username: result.user.username ?? null,
+        profileImageUrl: result.user.image ?? null,
         role: result.user.role === "admin" ? "admin" : "user",
         regular: Boolean(result.user.regular),
       };
