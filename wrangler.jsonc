@@ -62,7 +62,9 @@
     },
     "production": {
       "vars": {
-        "AUTH_URL": "https://nollywoodfilm.club"
+        "AUTH_URL": "https://nollywoodfilm.club",
+        "GOOGLE_CLIENT_ID": "895805672891-2j5tiv1lqrod32gd65eid3ncev9mfnsm.apps.googleusercontent.com",
+        "X_CLIENT_ID": "dzdVTGJIV0RtMVZNUnhITlJzeUc6MTpjaQ"
       },
       "d1_databases": [
         {

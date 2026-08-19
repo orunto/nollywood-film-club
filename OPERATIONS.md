@@ -12,6 +12,29 @@ The `/auth/callback` route is the app's post-login destination, not Google's
 OAuth callback endpoint. For local development, use the matching URI for the
 dev server, for example `http://localhost:5173/api/auth/callback/google`.
 
+X OAuth must use this callback URI. Better Auth registers the provider as
+`twitter`, even though the service is branded X:
+
+```text
+https://nollywoodfilm.club/api/auth/callback/twitter
+```
+
+Deploy the live Worker with the production environment so its `AUTH_URL`,
+client IDs, and production bindings are used:
+
+```text
+wrangler deploy --env production
+```
+
+The production D1 database must exist before the first production deploy.
+Create it, then deploy once to run migrations:
+
+```text
+wrangler d1 create nollywood-film-club-production
+wrangler d1 migrations apply nollywood-film-club-production --remote
+wrangler deploy --env production
+```
+
 Set runtime secrets per environment, never in `wrangler.jsonc` or committed
 `.env` files:
 
