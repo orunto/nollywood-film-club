@@ -81,6 +81,7 @@ export function createBetterAuthService(
         ? {
             clientId: options.google.clientId,
             clientSecret: options.google.clientSecret,
+            prompt: "consent",
           }
         : undefined,
       twitter: options.twitter

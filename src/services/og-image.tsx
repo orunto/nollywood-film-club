@@ -1,90 +1,92 @@
-import { ImageResponse } from "@vercel/og";
+import { initWasm, Resvg } from "@resvg/resvg-wasm";
+import resvgWasm from "#resvg-wasm";
 import { NFC_LOGO_SVG } from "../lib/nfc-logo";
 import type { PublicReadRepository } from "../repositories/public-read";
 import { resolveContent } from "./content-detail";
 import { posterUrl } from "../lib/media";
 
 export const OG_SIZE = { width: 1200, height: 630 };
-export const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
 
-const NFC_LOGO_DATA_URI = `data:image/svg+xml;base64,${btoa(NFC_LOGO_SVG)}`;
+// The badge is the vector logo (text as paths) inlined as a nested <svg>, so
+// no font loading is needed at runtime — @vercel/og's font fetch is what broke
+// under workerd (new URL("./Geist-Regular.ttf", import.meta.url) throws).
+const NFC_LOGO_INNER = NFC_LOGO_SVG.replace(/^<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
 
-// The circular NFC badge, rendered from the vector logo
-function NfcBadge({ size }: { size: number }) {
-  return <img src={NFC_LOGO_DATA_URI} alt="" width={size} height={size} />;
+let wasmReady: Promise<void> | null = null;
+function ensureWasm(): Promise<void> {
+  wasmReady ??= initWasm(resvgWasm);
+  return wasmReady;
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
+function svgFor(posterDataUri: string | null): string {
+  const { width, height } = OG_SIZE;
+  const poster = posterDataUri
+    ? `<image href="${posterDataUri}" x="0" y="0" width="${width}" height="${height}" preserveAspectRatio="xMidYMid slice"/>`
+    : "";
+  const badge = posterDataUri
+    ? { size: 160, x: width - 40 - 160, y: height - 40 - 160 }
+    : { size: 320, x: (width - 320) / 2, y: (height - 320) / 2 };
+  const badgeSvg = `<svg x="${badge.x}" y="${badge.y}" width="${badge.size}" height="${badge.size}" viewBox="0 0 300 300">${NFC_LOGO_INNER}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect width="${width}" height="${height}" fill="#000000"/>${poster}${badgeSvg}</svg>`;
+}
+
+async function svgToPng(svg: string): Promise<Uint8Array> {
+  await ensureWasm();
+  const resvg = new Resvg(svg, { fitTo: { mode: "original" } });
+  const png = resvg.render().asPng();
+  resvg.free();
+  return png;
 }
 
 // Shared generator behind the OG routes of /movie/:slug, /tv/:slug and
 // /short/:slug — the poster full-bleed with the NFC badge in the bottom-right
-// corner. The badge is the vector logo (text as paths) embedded as a data URI,
-// since satori can't decode the webp logo asset. f_jpg because satori doesn't
-// decode webp/avif; g_auto keeps the landscape crop of the portrait poster in
-// frame. Mirrors lib/og-image.tsx on the legacy side.
+// corner. When the poster can't be resolved the badge is centered on black.
+// Mirrors lib/og-image.tsx on the legacy side.
 export async function contentOgImage(
   repository: PublicReadRepository,
   rawSlug: string,
+  request?: Request,
 ): Promise<Response> {
   const item = await resolveContent(repository, rawSlug);
 
-  // f_jpg (satori can't decode webp/avif) + g_auto (keeps the subject of the
-  // portrait poster in the landscape frame) via posterUrl. Only render the
-  // poster when an absolute URL is produced — without the configured cloud name
-  // posterUrl falls back to a bare path, which satori can't fetch.
-  const src =
-    item?.posterImage && CLOUD_NAME
-      ? posterUrl(item.posterImage, {
-          version: item.posterVersion ?? undefined,
-          width: OG_SIZE.width,
-          height: OG_SIZE.height,
-          format: "jpg",
-          gravity: "auto",
-        })
-      : null;
+  let posterDataUri: string | null = null;
+  if (item?.posterImage && request) {
+    try {
+      const src = posterUrl(item.posterImage, {
+        version: item.posterVersion ?? undefined,
+        width: OG_SIZE.width,
+        height: OG_SIZE.height,
+        format: "jpg",
+        gravity: "auto",
+      });
+      const url = new URL(src, request.url);
+      if (url.protocol === "http:" || url.protocol === "https:") {
+        const res = await fetch(url);
+        if (res.ok) {
+          const bytes = new Uint8Array(await res.arrayBuffer());
+          const contentType = res.headers.get("content-type") ?? "image/jpeg";
+          posterDataUri = `data:${contentType};base64,${bytesToBase64(bytes)}`;
+        }
+      }
+    } catch {
+      // Fall back to the badge-only layout.
+    }
+  }
 
-  return new ImageResponse(
-    (
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          backgroundColor: "#000000",
-        }}
-      >
-        {src && (
-          <img
-            src={src}
-            alt=""
-            width={OG_SIZE.width}
-            height={OG_SIZE.height}
-            style={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-            }}
-          />
-        )}
-        {src ? (
-          <div style={{ position: "absolute", right: 40, bottom: 40, display: "flex" }}>
-            <NfcBadge size={160} />
-          </div>
-        ) : (
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <NfcBadge size={320} />
-          </div>
-        )}
-      </div>
-    ),
-    OG_SIZE,
-  );
+  const png = await svgToPng(svgFor(posterDataUri));
+  return new Response(png as unknown as BodyInit, {
+    headers: {
+      "Content-Type": "image/png",
+      "Cache-Control": "public, max-age=31536000, immutable",
+    },
+  });
 }
