@@ -20,13 +20,13 @@ export async function loader({ context, request }: Route.LoaderArgs) {
 }
 
 const sections = [
-  ["users", "Users", "/api/admin/users"],
-  ["content", "Movies and TV", "/api/admin/movies"],
-  ["reviews", "External reviews", "/api/admin/reviews"],
-  ["discussions", "Discussions", "/api/admin/discussions"],
-  ["reports", "Reports", "/api/admin/reports"],
-  ["contacts", "Contact messages", "/api/admin/contact"],
-  ["posts", "Blog posts", "/api/admin/blog-posts"],
+  ["users", "Users"],
+  ["content", "Movies and TV"],
+  ["reviews", "External reviews"],
+  ["discussions", "Discussions"],
+  ["reports", "Reports"],
+  ["contacts", "Contact messages"],
+  ["posts", "Blog posts"],
 ] as const;
 
 export default function AdminRoute() {
@@ -39,8 +39,21 @@ export default function AdminRoute() {
           <Link className="text-sm underline" to="/">Return to site</Link>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {sections.map(([key, label, endpoint]) => <Link key={key} to={endpoint} className="rounded-sm border border-black/10 p-5 transition hover:border-black"><p className="text-sm text-black/60">{label}</p><p className="mt-2 text-3xl font-semibold">{counts[key]}</p><p className="mt-4 text-xs uppercase tracking-widest text-black/40">Open API</p></Link>)}
+          {sections.map(([key, label]) => (
+            <div key={key} className="rounded-sm border border-black/10 p-5">
+              <p className="text-sm text-black/60">{label}</p>
+              <p className="mt-2 text-3xl font-semibold">{counts[key]}</p>
+              <p className="mt-4 text-xs uppercase tracking-widest text-black/40">
+                Dashboard overview
+              </p>
+            </div>
+          ))}
         </div>
+        <p className="mt-8 text-sm text-black/50">
+          Admin data is protected behind the dashboard and its server-side
+          admin actions. API endpoints are not intended to be opened directly
+          in the browser.
+        </p>
       </div>
     </main>
   );

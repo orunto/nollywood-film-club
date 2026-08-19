@@ -2,6 +2,16 @@
 
 ## Secrets
 
+Google OAuth must use this authorized redirect URI:
+
+```text
+https://nollywoodfilm.club/api/auth/callback/google
+```
+
+The `/auth/callback` route is the app's post-login destination, not Google's
+OAuth callback endpoint. For local development, use the matching URI for the
+dev server, for example `http://localhost:5173/api/auth/callback/google`.
+
 Set runtime secrets per environment, never in `wrangler.jsonc` or committed
 `.env` files:
 

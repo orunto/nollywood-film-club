@@ -20,6 +20,7 @@
 # production
 /build
 /.wrangler
+/.wrangler-dry
 
 # React Router
 /.react-router

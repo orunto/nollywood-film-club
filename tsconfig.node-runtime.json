@@ -1,7 +1,10 @@
 {
   "extends": "./tsconfig.react-router.json",
   "compilerOptions": {
-    "types": ["node", "vite/client"]
+    "types": ["node", "vite/client"],
+    "paths": {
+      "#resvg-wasm": ["./src/lib/resvg-wasm.node.ts"]
+    }
   },
   "include": [
     ".react-router/types/**/*",
@@ -9,6 +12,7 @@
     "src/db/**/*",
     "src/runtime/**/*",
     "src/repositories/**/*",
+    "src/lib/wasm-module.d.ts",
     "src/services/contracts.ts",
     "src/services/pending.ts",
     "src/services/homepage.ts",
