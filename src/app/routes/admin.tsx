@@ -101,7 +101,7 @@ export default function AdminRoute() {
   return (
     <main className="min-h-screen bg-[#f6f6f3] text-black">
       <div className="mx-auto grid min-h-screen max-w-[1440px] lg:grid-cols-[232px_1fr]">
-        <aside className="border-b border-black/10 bg-black px-5 py-6 text-white lg:border-b-0 lg:border-r lg:px-6">
+        <aside className="border-b border-black/10 bg-black px-5 py-6 text-white lg:sticky lg:top-0 lg:h-screen lg:max-h-screen lg:overflow-y-auto lg:border-b-0 lg:border-r lg:px-6">
           <div className="flex items-start justify-between lg:block">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/50">
