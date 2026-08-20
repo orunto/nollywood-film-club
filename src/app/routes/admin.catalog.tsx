@@ -179,8 +179,8 @@ export async function loader({ context, request }: Route.LoaderArgs) {
   ]);
 
   return {
-    content: content.map((row) => mapRow(row)),
-    discussions: discussions.map((discussion) => mapDiscussion(discussion)),
+    content: content.map((row: ContentRowInput) => mapRow(row)),
+    discussions: discussions.map((discussion: DiscussionOption) => mapDiscussion(discussion)),
   };
 }
 
