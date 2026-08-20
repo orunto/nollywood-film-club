@@ -123,6 +123,7 @@ interface ContentRowInput {
   genre: string[];
   legacyPosterImage: string | null;
   legacyPosterVersion: number | null;
+  posterObjectKey?: string | null;
   trailerUrl: string | null;
   streamingUrl: string | null;
   streamingPlatform: string | null;
@@ -144,8 +145,8 @@ const mapRow = (row: ContentRowInput): ContentRow => ({
   rating: row.rating,
   synopsis: row.synopsis,
   genre: row.genre ?? [],
-  posterImage: row.legacyPosterImage,
-  posterVersion: row.legacyPosterVersion,
+  posterImage: row.posterObjectKey ?? row.legacyPosterImage,
+  posterVersion: row.posterObjectKey ? null : row.legacyPosterVersion,
   trailerUrl: row.trailerUrl,
   streamingUrl: row.streamingUrl,
   streamingPlatform: row.streamingPlatform,
@@ -286,13 +287,13 @@ export default function AdminCatalogRoute() {
 
   // Store the JustWatch poster through the media pipeline so the content row
   // references a stable /media/ URL rather than a third-party hotlink.
-  const importPosterUrl = async (url: string) => {
+  const importPosterUrl = async (url: string, catalog: string) => {
     setIsUploadingPoster(true);
     try {
       const response = await fetch("/api/admin/justwatch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url, catalog }),
       });
       const result = await jsonResponse<{ url: string }>(response);
       if (result.success) {
@@ -335,7 +336,7 @@ export default function AdminCatalogRoute() {
 
     if (result.posterUrl) {
       setImportedPosterUrl(result.posterUrl);
-      await importPosterUrl(result.posterUrl);
+      await importPosterUrl(result.posterUrl, `${result.title}_${result.year ?? ""}`);
     }
   };
 
@@ -928,6 +929,7 @@ return (
                     </div>
                   )}
                   <PosterUploadButton
+                    catalog={`${formData.title}_${formData.releaseDate.slice(0, 4)}`}
                     onUploaded={(url) =>
                       setFormData((prev) => ({ ...prev, posterImage: url, posterVersion: null }))
                     }
@@ -1356,7 +1358,7 @@ return (
 // Poster upload
 // ---------------------------------------------------------------------------
 
-function PosterUploadButton({ onUploaded }: { onUploaded: (url: string) => void }) {
+function PosterUploadButton({ catalog, onUploaded }: { catalog: string; onUploaded: (url: string) => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -1374,6 +1376,7 @@ function PosterUploadButton({ onUploaded }: { onUploaded: (url: string) => void 
     try {
       const form = new FormData();
       form.append("file", file);
+      form.append("catalog", catalog);
       const response = await fetch("/api/admin/upload-image", {
         method: "POST",
         body: form,
@@ -1408,7 +1411,7 @@ function PosterUploadButton({ onUploaded }: { onUploaded: (url: string) => void 
       <Button
         type="button"
         variant="outline"
-        disabled={isUploading}
+        disabled={isUploading || !catalog.replace(/[_-]/g, "").trim()}
         onClick={() => inputRef.current?.click()}
         className="shrink-0 rounded-sm border-black text-black shadow-none hover:bg-black hover:text-white"
       >

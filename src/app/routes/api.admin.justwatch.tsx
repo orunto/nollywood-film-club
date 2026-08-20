@@ -2,6 +2,7 @@ import type { Route } from "./+types/api.admin.justwatch";
 import { appServicesContext } from "../context";
 import { requireAdmin } from "../admin-auth";
 import { fetchJustWatchImage } from "../../services/remote-image";
+import { catalogPosterIdentity } from "../../lib/media";
 
 const JUSTWATCH_GRAPHQL_URL = "https://apis.justwatch.com/graphql";
 const SEARCH_QUERY = `query GetSearchTitles($country: Country!, $language: Language!, $first: Int!, $filter: TitleFilter) { popularTitles(country: $country, filter: $filter, first: $first) { edges { node { id objectType content(country: $country, language: $language) { title originalReleaseYear originalReleaseDate runtime shortDescription genres { shortName } posterUrl ageCertification clips { externalId provider } credits { role name characterName } } offers(country: $country, platform: WEB) { monetizationType standardWebURL package { clearName technicalName } } } } } }`;
@@ -46,16 +47,16 @@ export async function action({ context, request }: Route.ActionArgs) {
   const services = context.get(appServicesContext);
   const authorization = await requireAdmin(services, request);
   if (authorization instanceof Response) return authorization;
-  const body = await request.json() as { url?: unknown };
+  const body = await request.json() as { url?: unknown; catalog?: unknown };
   if (typeof body.url !== "string") return Response.json({ success: false, error: "An image URL is required" }, { status: 400 });
+  if (typeof body.catalog !== "string" || !body.catalog.trim()) return Response.json({ success: false, error: "A catalog title is required" }, { status: 400 });
   try {
     const image = await fetchJustWatchImage(body.url);
-    const id = crypto.randomUUID();
-    const objectKey = `media/justwatch/${id}.${image.extension}`;
+    const { objectKey, publicId, version } = catalogPosterIdentity(body.catalog, image.extension);
     const digest = await crypto.subtle.digest("SHA-256", image.bytes.buffer as ArrayBuffer);
     const checksum = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
     await services.objects.put(objectKey, image.bytes, { contentType: image.mimeType, contentLength: image.bytes.byteLength, cacheControl: "public, max-age=31536000, immutable" });
-    const media = await services.db.media.create({ objectKey, publicId: id, version: 1, mimeType: image.mimeType, byteSize: image.bytes.byteLength, checksum });
+    const media = await services.db.media.create({ objectKey, publicId, version, mimeType: image.mimeType, byteSize: image.bytes.byteLength, checksum });
     return Response.json({ success: true, data: { id: media.id, objectKey, url: `/media/${objectKey}` } }, { status: 201 });
   } catch (error) {
     return Response.json({ success: false, error: error instanceof Error ? error.message : "Image import failed" }, { status: 400 });

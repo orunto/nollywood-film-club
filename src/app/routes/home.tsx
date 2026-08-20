@@ -4,7 +4,7 @@ import { appServicesContext } from "../context";
 import { getHomepageData } from "../../services/homepage";
 import Footer from "../../components/site/footer";
 import { Hero, MovieOfTheWeek, MoviesAndTVSeries, Reviews, Discussions } from "../../components/sections";
-import { posterPath } from "../../lib/utils";
+import { isCatalogPosterUrl } from "../../lib/media";
 
 export const meta: Route.MetaFunction = () => [
   { title: "Nollywood Film Club" },
@@ -25,10 +25,11 @@ export async function loader({ context }: Route.LoaderArgs) {
     discussions[0] ??
     null;
 
-  // Every catalogue poster feeds the hero's moving poster-wall background.
+  // Only migrated catalogue posters in R2 feed the hero's poster wall. This
+  // excludes legacy Cloudinary IDs and media stored outside media/nfc/.
   const posters = allContent
-    .map((item) => (item.posterImage ? posterPath(item.posterImage, item.posterVersion) : null))
-    .filter((src): src is string => Boolean(src));
+    .map((item) => item.posterImage)
+    .filter(isCatalogPosterUrl);
 
   return {
     movieOfTheWeek,

@@ -14,8 +14,7 @@ import { posterUrl } from "../../lib/media";
 interface HeroProps {
     // Newest episode/discussion, used to source the Spotify player
     latestEpisode?: Discussion | null;
-    // Cloudinary poster paths (version-prefixed — see posterPath) for every
-    // film in the catalogue — powers the moving poster-wall background.
+    // App-served R2 poster URLs from media/nfc/ for the catalogue.
     posters?: string[];
 }
 

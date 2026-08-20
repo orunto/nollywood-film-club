@@ -152,6 +152,39 @@ test("public reads preserve catalog, aggregate, and discussion behavior", async 
       ["top", "zero", "uncatalogued"],
     );
 
+    const poster = await database.media.create({
+      objectKey: "media/nfc/top_catalog_title/v42.jpg",
+      publicId: "nfc/top_catalog_title",
+      version: 42,
+      mimeType: "image/jpeg",
+      byteSize: 100,
+      checksum: "poster-checksum",
+    });
+    const updatedContent = await database.adminContent.update("top", {
+      title: "Top catalog title",
+      contentType: "movie",
+      runtime: null,
+      releaseDate: null,
+      rating: null,
+      synopsis: null,
+      genre: ["Drama", "Comedy"],
+      posterImage: "/media/media/nfc/top_catalog_title/v42.jpg",
+      posterVersion: null,
+      trailerUrl: null,
+      streamingUrl: null,
+      streamingPlatform: null,
+      otherPlatform: null,
+      viewingCategory: null,
+      castMembers: null,
+      isMovieOfTheWeek: false,
+    });
+    assert.equal(updatedContent?.posterMediaId, poster.id);
+    assert.equal(updatedContent?.posterObjectKey, "media/nfc/top_catalog_title/v42.jpg");
+    assert.equal(
+      (await database.publicReads.getContentById("top"))?.posterImage,
+      "/media/media/nfc/top_catalog_title/v42.jpg",
+    );
+
     const scoreboard = await database.publicReads.getScoreboard();
     assert.deepEqual(
       scoreboard.map(({ id, userRating, ratingsCount }) => ({
