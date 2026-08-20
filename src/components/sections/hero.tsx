@@ -63,7 +63,7 @@ export default function Hero({ latestEpisode, posters = [] }: HeroProps) {
                                                 alt=""
                                                 width={220}
                                                 height={330}
-                                                className="w-full aspect-[2/3] object-cover rounded-md"
+                                                className="w-full aspect-2/3 object-cover rounded-md"
                                                 loading="lazy"
                                             />
                                         ))}
@@ -74,7 +74,7 @@ export default function Hero({ latestEpisode, posters = [] }: HeroProps) {
                     </div>
                 )}
                 <div className="absolute inset-0 bg-black/70" />
-                <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black to-transparent" />
+                <div className="absolute inset-x-0 top-0 h-24 bg-linear-to-b from-black to-transparent" />
             </div>
 
             {/* Content */}
