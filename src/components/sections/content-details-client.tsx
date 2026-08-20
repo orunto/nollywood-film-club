@@ -315,13 +315,13 @@ export default function ContentDetailsClient({
                     className={cn("w-full py-4 max-h-13 flex gap-0", platform?.className)}
                   >
                     Stream on
-                    <span className="inline-flex items-center gap-1.5 font-semibold">
+                    <span className={`${platform ? '' : 'ml-1'} inline-flex items-center gap-1.5 font-semibold`}>
                       {platform ? (
                         <img src={platform.logo} alt={`${platform.label} logo`} />
                       ) : (
-                        <>
-                          <PlayIcon className="w-4 h-4" />
+                          <>
                           {movie.otherPlatform || "Platform"}
+                          <PlayIcon className="w-4 h-4" />
                         </>
                       )}
                     </span>
