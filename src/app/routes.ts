@@ -47,7 +47,13 @@ export default [
   route("api/movies-and-tv-series", "routes/api.movies-and-tv-series.tsx"),
   route("api/reviews", "routes/api.reviews.tsx"),
   route("api/admin/justwatch", "routes/api.admin.justwatch.tsx"),
-  route("admin", "routes/admin.tsx"),
+  route("admin", "routes/admin.tsx", [
+    index("routes/admin.index.tsx"),
+    route("members", "routes/admin.members.tsx"),
+    route("catalog", "routes/admin.catalog.tsx"),
+    route("moderation", "routes/admin.moderation.tsx"),
+    route("publishing", "routes/admin.publishing.tsx"),
+  ]),
   route("user-dashboard", "routes/user-dashboard.tsx"),
   layout("routes/site.tsx", [
     index("routes/home.tsx"),
