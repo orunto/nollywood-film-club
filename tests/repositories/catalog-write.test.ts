@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
-import { readFile, rm, mkdtemp } from "node:fs/promises";
+import { rm, mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
+import { applySqliteMigrations } from "../helpers/sqlite-migrations";
 import { createNodeSqliteDatabase } from "../../src/services/node";
 
 async function createTestDatabase() {
@@ -11,12 +12,7 @@ async function createTestDatabase() {
   const databasePath = join(directory, "test.sqlite");
   const setup = new DatabaseSync(databasePath);
   try {
-    setup.exec(
-      await readFile(
-        resolve("drizzle-sqlite/0000_secret_iron_monger.sql"),
-        "utf8",
-      ),
-    );
+    await applySqliteMigrations(setup);
     setup.exec(`
       INSERT INTO content (
         id, title, content_type, genre, is_movie_of_the_week,
@@ -26,11 +22,15 @@ async function createTestDatabase() {
         ('other', 'Other film', 'movie', '[]', 0, 2, 1000, 1000),
         ('orphan', 'Orphan film', 'movie', '[]', 0, 3, 1000, 1000);
       INSERT INTO discussions (
-        id, title, content_id, podcast_links, episode_number,
+        id, title, podcast_links, episode_number,
         discussion_date, created_at, updated_at
       ) VALUES
-        ('d1', 'Early', 'other', '[]', 2, 1000, 1000, 1000),
-        ('d2', 'Late', 'other', '[]', 5, 1000, 1000, 1000);
+        ('d1', 'Early', '[]', 2, 1000, 1000, 1000),
+        ('d2', 'Late', '[]', 5, 1000, 1000, 1000);
+      INSERT INTO discussion_content (discussion_id, content_id) VALUES
+        ('d1', 'other'),
+        ('d1', 'current'),
+        ('d2', 'other');
     `);
   } finally {
     setup.close();
@@ -132,7 +132,12 @@ test("a missing movie is rejected and nothing is demoted", async () => {
 test("syncing catalog numbers takes the minimum linked episode number", async () => {
   const { database, directory, databasePath } = await createTestDatabase();
   try {
-    await database.catalog.syncCatalogNumbers(["other", "orphan", null]);
+    await database.catalog.syncCatalogNumbers([
+      "other",
+      "orphan",
+      "current",
+      null,
+    ]);
 
     const rows = query(
       databasePath,
@@ -141,7 +146,7 @@ test("syncing catalog numbers takes the minimum linked episode number", async ()
     assert.deepEqual(
       rows.map(({ id, catalog }) => ({ id, catalog })),
       [
-        { id: "current", catalog: 1 },
+        { id: "current", catalog: 2 },
         { id: "orphan", catalog: null },
         { id: "other", catalog: 2 },
       ],

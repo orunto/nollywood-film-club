@@ -7,13 +7,54 @@ export interface CatalogWriteAccess {
   atomic(commands: AtomicCommand[]): Promise<AtomicResult[]>;
 }
 
+export function catalogNumberSyncCommand(
+  contentIds: (string | null | undefined)[],
+  now = Date.now(),
+): AtomicCommand | null {
+  const ids = [
+    ...new Set(contentIds.filter((id): id is string => Boolean(id))),
+  ];
+  if (ids.length === 0) return null;
+
+  const placeholders = ids.map(() => "?").join(", ");
+  return {
+    sql: `
+      UPDATE content
+      SET catalog_number = (
+        SELECT MIN(discussions.episode_number)
+        FROM discussion_content
+        INNER JOIN discussions
+          ON discussions.id = discussion_content.discussion_id
+        WHERE discussion_content.content_id = content.id
+      ),
+      updated_at = ?
+      WHERE id IN (${placeholders})
+    `,
+    params: [now, ...ids],
+  };
+}
+
+export function allCatalogNumbersSyncCommand(now = Date.now()): AtomicCommand {
+  const catalogNumber = `
+    SELECT MIN(discussions.episode_number)
+    FROM discussion_content
+    INNER JOIN discussions
+      ON discussions.id = discussion_content.discussion_id
+    WHERE discussion_content.content_id = content.id
+  `;
+  return {
+    sql: `
+      UPDATE content
+      SET catalog_number = (${catalogNumber}), updated_at = ?
+      WHERE catalog_number IS NOT (${catalogNumber})
+    `,
+    params: [now],
+  };
+}
+
 export class CatalogWriteRepository {
   constructor(private readonly access: CatalogWriteAccess) {}
 
-  // is_movie_of_the_week is a singleton via the partial motw_singleton index:
-  // promoting one film must demote every other in the same transaction, and
-  // demote-then-promote is the only order the index tolerates. Promoting a film
-  // that is already the current pick leaves it untouched via the id exclusion.
   async setMovieOfTheWeek(
     id: string,
     promote: boolean,
@@ -45,33 +86,10 @@ export class CatalogWriteRepository {
     return { status: "ok" };
   }
 
-  // Recomputes catalog_number as MIN(episode_number) across whatever
-  // discussions are currently linked to each content row (NULL when none, so
-  // it sorts last). Call after any discussion write that changes a content
-  // row's linked episode(s), passing every content_id touched by the write.
   async syncCatalogNumbers(
     contentIds: (string | null | undefined)[],
   ): Promise<void> {
-    const ids = [
-      ...new Set(contentIds.filter((id): id is string => Boolean(id))),
-    ];
-    if (ids.length === 0) return;
-
-    const placeholders = ids.map(() => "?").join(", ");
-    await this.access.atomic([
-      {
-        sql: `
-          UPDATE content
-          SET catalog_number = (
-            SELECT MIN(episode_number)
-            FROM discussions
-            WHERE discussions.content_id = content.id
-          ),
-          updated_at = ?
-          WHERE id IN (${placeholders})
-        `,
-        params: [Date.now(), ...ids],
-      },
-    ]);
+    const command = catalogNumberSyncCommand(contentIds);
+    if (command) await this.access.atomic([command]);
   }
 }

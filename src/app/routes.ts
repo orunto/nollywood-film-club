@@ -41,6 +41,7 @@ export default [
   route("api/admin/blog-posts/:id/publish", "routes/api.admin.blog-posts.$id.publish.tsx"),
   route("api/admin/movies", "routes/api.admin.movies.tsx"),
   route("api/admin/movies/:id", "routes/api.admin.movies.$id.tsx"),
+  route("api/admin/movies/:id/discussions", "routes/api.admin.movies.$id.discussions.tsx"),
   route("api/admin/movies/:id/movie-of-the-week", "routes/api.admin.movies.$id.movie-of-the-week.tsx"),
   route("api/admin/upload-image", "routes/api.admin.upload-image.tsx"),
   route("api/movie-of-the-week", "routes/api.movie-of-the-week.tsx"),

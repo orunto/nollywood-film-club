@@ -28,7 +28,7 @@ export default function EpisodeRow({ discussion }: EpisodeRowProps) {
   const hasLink = Boolean(
     discussion.spaceUrl || (discussion.podcastLinks && discussion.podcastLinks.length > 0),
   );
-  const date = discussion.discussionDate || discussion.content?.releaseDate;
+  const date = discussion.discussionDate;
   const label = episodeLabel(discussion.episodeNumber, discussion.title);
 
   const playButton = (
@@ -51,14 +51,19 @@ export default function EpisodeRow({ discussion }: EpisodeRowProps) {
       )}
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{label}</p>
-        {discussion.content && (
-          <Link
-            to={contentPath(discussion.content)}
-            onClick={(e) => e.stopPropagation()}
-            className="text-xs text-black/50 hover:text-black hover:underline"
-          >
-            {discussion.content.title}
-          </Link>
+        {discussion.contents.length > 0 && (
+          <div className="flex flex-wrap gap-x-2 gap-y-1 text-xs text-black/50">
+            {discussion.contents.map((item) => (
+              <Link
+                key={item.id}
+                to={contentPath(item)}
+                onClick={(event) => event.stopPropagation()}
+                className="break-words hover:text-black hover:underline"
+              >
+                {item.title}
+              </Link>
+            ))}
+          </div>
         )}
       </div>
       {date && (

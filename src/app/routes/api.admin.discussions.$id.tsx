@@ -13,12 +13,25 @@ export async function action({ context, params, request }: Route.ActionArgs) {
     return Response.json({ success: true, message: "Discussion deleted successfully" });
   }
   const body = (await request.json()) as Record<string, unknown>;
-  if (request.method === "PATCH") {
-    const updated = await services.db.adminDiscussions.link(params.id, typeof body.contentId === "string" ? body.contentId : null);
+  try {
+    if (request.method === "PATCH") {
+      if (!Array.isArray(body.contentIds) || body.contentIds.some((id) => typeof id !== "string")) {
+        return Response.json({ success: false, error: "contentIds must be an array of strings" }, { status: 400 });
+      }
+      const updated = await services.db.adminDiscussions.replaceContentLinks(params.id, body.contentIds as string[]);
+      if (!updated) return Response.json({ success: false, error: "Discussion not found" }, { status: 404 });
+      return Response.json({ success: true, data: updated, message: "Discussion content links updated" });
+    }
+    if (typeof body.title !== "string" || !body.title.trim()) {
+      return Response.json({ success: false, error: "Title is required and must be a string" }, { status: 400 });
+    }
+    if (!Array.isArray(body.contentIds) || body.contentIds.some((id) => typeof id !== "string")) {
+      return Response.json({ success: false, error: "contentIds must be an array of strings" }, { status: 400 });
+    }
+    const updated = await services.db.adminDiscussions.update(params.id, parseDiscussion(body));
     if (!updated) return Response.json({ success: false, error: "Discussion not found" }, { status: 404 });
-    return Response.json({ success: true, data: updated, message: body.contentId ? "Discussion linked to content" : "Discussion unlinked from content" });
+    return Response.json({ success: true, data: updated, message: "Discussion updated successfully" });
+  } catch (error) {
+    return Response.json({ success: false, error: error instanceof Error ? error.message : "Could not update discussion" }, { status: 400 });
   }
-  const updated = await services.db.adminDiscussions.update(params.id, parseDiscussion(body));
-  if (!updated) return Response.json({ success: false, error: "Discussion not found" }, { status: 404 });
-  return Response.json({ success: true, data: updated, message: "Discussion updated successfully" });
 }

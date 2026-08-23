@@ -120,7 +120,7 @@ try {
     .prepare(`
       SELECT
         (SELECT count(*) FROM user_ratings WHERE content_id = ?) AS ratings,
-        (SELECT count(*) FROM discussions WHERE content_id = ?) AS discussions,
+        (SELECT count(*) FROM discussion_content WHERE content_id = ?) AS discussions,
         (SELECT count(*) FROM reviews WHERE content_id = ?) AS reviews
     `)
     .get(movieOfTheWeek.id, movieOfTheWeek.id, movieOfTheWeek.id) as {

@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
-import { readFile, rm, mkdtemp } from "node:fs/promises";
+import { rm, mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import { createBetterAuthService } from "../../src/auth/server";
 import { createNodeSqliteDatabase } from "../../src/services/node";
 import type { MailMessage } from "../../src/services/contracts";
+import { applySqliteMigrations } from "../helpers/sqlite-migrations";
 
 const BASE_URL = "http://localhost:3000";
 
@@ -23,12 +24,7 @@ async function createTestAuth(): Promise<TestAuth> {
   const databasePath = join(directory, "test.sqlite");
   const setup = new DatabaseSync(databasePath);
   try {
-    setup.exec(
-      await readFile(
-        resolve("drizzle-sqlite/0000_secret_iron_monger.sql"),
-        "utf8",
-      ),
-    );
+    await applySqliteMigrations(setup);
   } finally {
     setup.close();
   }

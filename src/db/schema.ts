@@ -3,6 +3,7 @@ import {
   check,
   index,
   integer,
+  primaryKey,
   sqliteTable,
   text,
   uniqueIndex,
@@ -323,9 +324,6 @@ export const discussions = sqliteTable(
     id: id(),
     title: text("title").notNull(),
     description: text("description"),
-    contentId: text("content_id").references(() => content.id, {
-      onDelete: "set null",
-    }),
     spaceUrl: text("space_url"),
     podcastLinks: text("podcast_links", { mode: "json" })
       .$type<string[]>()
@@ -340,11 +338,26 @@ export const discussions = sqliteTable(
     uniqueIndex("discussions_episode_number_unique")
       .on(table.episodeNumber)
       .where(sql`${table.episodeNumber} IS NOT NULL`),
-    index("discussions_content_id_idx").on(table.contentId),
     check(
       "discussions_podcast_links_json_check",
       sql`json_valid(${table.podcastLinks}) AND json_type(${table.podcastLinks}) = 'array'`,
     ),
+  ],
+);
+
+export const discussionContent = sqliteTable(
+  "discussion_content",
+  {
+    discussionId: text("discussion_id")
+      .notNull()
+      .references(() => discussions.id, { onDelete: "cascade" }),
+    contentId: text("content_id")
+      .notNull()
+      .references(() => content.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.discussionId, table.contentId] }),
+    index("discussion_content_content_id_idx").on(table.contentId),
   ],
 );
 
@@ -542,12 +555,20 @@ export const contentRelations = relations(content, ({ one, many }) => ({
   }),
   ratings: many(userRatings),
   reviews: many(reviews),
-  discussions: many(discussions),
+  discussionLinks: many(discussionContent),
 }));
 
-export const discussionRelations = relations(discussions, ({ one }) => ({
+export const discussionRelations = relations(discussions, ({ many }) => ({
+  contentLinks: many(discussionContent),
+}));
+
+export const discussionContentRelations = relations(discussionContent, ({ one }) => ({
+  discussion: one(discussions, {
+    fields: [discussionContent.discussionId],
+    references: [discussions.id],
+  }),
   content: one(content, {
-    fields: [discussions.contentId],
+    fields: [discussionContent.contentId],
     references: [content.id],
   }),
 }));

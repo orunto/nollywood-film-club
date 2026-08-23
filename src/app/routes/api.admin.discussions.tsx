@@ -16,15 +16,21 @@ export async function action({ context, request }: Route.ActionArgs) {
   if (authorization instanceof Response) return authorization;
   const body = (await request.json()) as Record<string, unknown>;
   if (typeof body.title !== "string" || !body.title) return Response.json({ success: false, error: "Title is required and must be a string" }, { status: 400 });
-  const discussion = await services.db.adminDiscussions.create(parseDiscussion(body));
-  return Response.json({ success: true, data: discussion, message: "Discussion created successfully" }, { status: 201 });
+  try {
+    const discussion = await services.db.adminDiscussions.create(parseDiscussion(body));
+    return Response.json({ success: true, data: discussion, message: "Discussion created successfully" }, { status: 201 });
+  } catch (error) {
+    return Response.json({ success: false, error: error instanceof Error ? error.message : "Could not create discussion" }, { status: 400 });
+  }
 }
 
 export function parseDiscussion(body: Record<string, unknown>): DiscussionInput {
   return {
     title: body.title as string,
     description: typeof body.description === "string" ? body.description : null,
-    contentId: typeof body.contentId === "string" ? body.contentId : null,
+    contentIds: Array.isArray(body.contentIds)
+      ? body.contentIds.filter((value): value is string => typeof value === "string" && value.length > 0)
+      : [],
     spaceUrl: typeof body.spaceUrl === "string" ? body.spaceUrl : null,
     podcastLinks: Array.isArray(body.podcastLinks) ? body.podcastLinks.filter((value): value is string => typeof value === "string") : [],
     episodeNumber: typeof body.episodeNumber === "number" ? body.episodeNumber : null,

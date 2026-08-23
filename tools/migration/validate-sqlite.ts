@@ -3,21 +3,22 @@ import { readdir, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
-const migrationPath = process.env.SQLITE_MIGRATION_PATH
-  ? resolve(process.env.SQLITE_MIGRATION_PATH)
-  : await findInitialMigration();
-const migration = await readFile(migrationPath, "utf8");
+const migrationPaths = process.env.SQLITE_MIGRATION_PATH
+  ? [resolve(process.env.SQLITE_MIGRATION_PATH)]
+  : await findMigrations();
 const database = new DatabaseSync(":memory:");
 
 database.exec("PRAGMA foreign_keys = ON");
-database.exec(migration);
+for (const migrationPath of migrationPaths) {
+  database.exec(await readFile(migrationPath, "utf8"));
+}
 
 const tableCount = database
   .prepare(
     "SELECT count(*) AS count FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'",
   )
   .get() as { count: number };
-assert.equal(tableCount.count, 13);
+assert.equal(tableCount.count, 15);
 assert.deepEqual(database.prepare("PRAGMA foreign_key_check").all(), []);
 
 const now = Date.now();
@@ -98,17 +99,17 @@ database.close();
 console.log(
   JSON.stringify({
     message: "SQLite migration validation complete",
-    migrationPath,
+    migrationPaths,
     tableCount: tableCount.count,
   }),
 );
 
-async function findInitialMigration() {
+async function findMigrations() {
   const directory = resolve("drizzle-sqlite");
   const migrations = (await readdir(directory))
-    .filter((name) => /^0000_.+\.sql$/.test(name))
+    .filter((name) => /^\d{4}_.+\.sql$/.test(name))
     .sort();
 
-  assert.equal(migrations.length, 1, "Expected exactly one initial migration");
-  return resolve(directory, migrations[0]);
+  assert.ok(migrations.length > 0, "Expected numbered SQLite migrations");
+  return migrations.map((migration) => resolve(directory, migration));
 }

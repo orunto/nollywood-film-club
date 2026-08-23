@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
-import { readFile, rm, mkdtemp } from "node:fs/promises";
+import { rm, mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import * as callbackRoute from "../../src/app/routes/auth.callback";
@@ -20,6 +20,7 @@ import { MediaRepository } from "../../src/repositories/media";
 import { PassthroughImageTransformer } from "../../src/services/pending";
 import { users } from "../../src/db/schema";
 import type { AppServices, MailService } from "../../src/services/contracts";
+import { applySqliteMigrations } from "../helpers/sqlite-migrations";
 
 const BASE_URL = "http://localhost:3000";
 const authMessages = new WeakMap<AppServices, string[]>();
@@ -29,12 +30,7 @@ async function createFixture() {
   const databasePath = join(directory, "test.sqlite");
   const setup = new DatabaseSync(databasePath);
   try {
-    setup.exec(
-      await readFile(
-        resolve("drizzle-sqlite/0000_secret_iron_monger.sql"),
-        "utf8",
-      ),
-    );
+    await applySqliteMigrations(setup);
   } finally {
     setup.close();
   }
@@ -55,7 +51,9 @@ async function createFixture() {
     adminModeration: new AdminModerationRepository(database.instance),
     adminReports: new AdminReportsRepository(database.instance),
     adminReviews: new AdminReviewsRepository(database.instance),
-    adminDiscussions: new AdminDiscussionsRepository(database.instance, database.catalog),
+    adminDiscussions: new AdminDiscussionsRepository(database.instance, {
+      atomic: database.atomic.bind(database),
+    }),
     adminBlog: new AdminBlogRepository(database.instance),
     adminContent: new AdminContentRepository(database.instance, database.catalog),
     media: new MediaRepository(database.instance),

@@ -5,6 +5,7 @@ import {
   count,
   desc,
   eq,
+  inArray,
   isNull,
   isNotNull,
   lte,
@@ -19,6 +20,7 @@ import {
   accountClaims,
   comments,
   content,
+  discussionContent,
   discussions,
   media,
   reviews,
@@ -121,21 +123,20 @@ export interface Discussion {
   id: string;
   title: string;
   description: string | null;
-  contentId: string | null;
   spaceUrl: string | null;
   podcastLinks: string[] | null;
   episodeNumber: number | null;
   discussionDate: string | null;
   createdAt: string;
   updatedAt: string;
-  content: {
+  contents: {
     id: string;
     title: string;
     contentType: ContentType;
     releaseDate: string | null;
     synopsis: string | null;
     runtime: number | null;
-  } | null;
+  }[];
 }
 
 export interface DiscussionPageOptions {
@@ -232,29 +233,26 @@ function mapContent(item: ContentRow): Content {
 
 function mapDiscussion(
   item: typeof discussions.$inferSelect,
-  related: typeof content.$inferSelect | null,
+  related: (typeof content.$inferSelect)[],
 ): Discussion {
   return {
     id: item.id,
     title: item.title,
     description: item.description,
-    contentId: item.contentId,
     spaceUrl: item.spaceUrl,
     podcastLinks: item.podcastLinks,
     episodeNumber: item.episodeNumber,
     discussionDate: toIsoString(item.discussionDate),
     createdAt: item.createdAt.toISOString(),
     updatedAt: item.updatedAt.toISOString(),
-    content: related
-      ? {
-          id: related.id,
-          title: related.title,
-          contentType: related.contentType,
-          releaseDate: toIsoString(related.releaseDate),
-          synopsis: related.synopsis,
-          runtime: related.runtime,
-        }
-      : null,
+    contents: related.map((item) => ({
+      id: item.id,
+      title: item.title,
+      contentType: item.contentType,
+      releaseDate: toIsoString(item.releaseDate),
+      synopsis: item.synopsis,
+      runtime: item.runtime,
+    })),
   };
 }
 
@@ -733,13 +731,12 @@ export class PublicReadRepository {
     const rows = await this.database
       .select()
       .from(discussions)
-      .leftJoin(content, eq(discussions.contentId, content.id))
       .where(visibleDiscussions(now))
       .orderBy(...newestDiscussionOrder)
       .limit(limit)
       .offset(offset);
 
-    return rows.map((row) => mapDiscussion(row.discussions, row.content));
+    return this.hydrateDiscussions(rows);
   }
 
   async countDiscussions(now = new Date()): Promise<number> {
@@ -751,12 +748,23 @@ export class PublicReadRepository {
     return Number(row?.total ?? 0);
   }
 
-  async getDiscussionsForContent(contentId: string): Promise<Discussion[]> {
+  async getDiscussionsForContent(
+    contentId: string,
+    now = new Date(),
+  ): Promise<Discussion[]> {
     const rows = await this.database
-      .select()
+      .select({ discussion: discussions })
       .from(discussions)
-      .leftJoin(content, eq(discussions.contentId, content.id))
-      .where(eq(discussions.contentId, contentId))
+      .innerJoin(
+        discussionContent,
+        eq(discussions.id, discussionContent.discussionId),
+      )
+      .where(
+        and(
+          eq(discussionContent.contentId, contentId),
+          visibleDiscussions(now),
+        ),
+      )
       .orderBy(
         sql`${discussions.episodeNumber} IS NULL`,
         asc(discussions.episodeNumber),
@@ -765,7 +773,35 @@ export class PublicReadRepository {
         asc(discussions.createdAt),
       );
 
-    return rows.map((row) => mapDiscussion(row.discussions, row.content));
+    return this.hydrateDiscussions(rows.map((row) => row.discussion));
+  }
+
+  private async hydrateDiscussions(
+    rows: (typeof discussions.$inferSelect)[],
+  ): Promise<Discussion[]> {
+    if (rows.length === 0) return [];
+    const ids = rows.map((row) => row.id);
+    const chunks = Array.from(
+      { length: Math.ceil(ids.length / 80) },
+      (_, index) => ids.slice(index * 80, (index + 1) * 80),
+    );
+    const related = (
+      await Promise.all(chunks.map((chunk) =>
+        this.database
+          .select({ discussionId: discussionContent.discussionId, content })
+          .from(discussionContent)
+          .innerJoin(content, eq(discussionContent.contentId, content.id))
+          .where(inArray(discussionContent.discussionId, chunk))
+          .orderBy(asc(content.title)),
+      ))
+    ).flat();
+    const contentsByDiscussion = new Map<string, (typeof content.$inferSelect)[]>();
+    for (const row of related) {
+      const items = contentsByDiscussion.get(row.discussionId) ?? [];
+      items.push(row.content);
+      contentsByDiscussion.set(row.discussionId, items);
+    }
+    return rows.map((row) => mapDiscussion(row, contentsByDiscussion.get(row.id) ?? []));
   }
 
   async getRegularUsers(limit = 200): Promise<PublicProfile[]> {

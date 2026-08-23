@@ -56,7 +56,7 @@ interface DiscussionOption {
   id: string;
   episodeNumber: number | null;
   title: string;
-  contentId: string | null;
+  contentIds: string[];
 }
 
 interface ContentRow {
@@ -161,7 +161,7 @@ const mapDiscussion = (discussion: DiscussionOption): DiscussionOption => ({
   id: discussion.id,
   episodeNumber: discussion.episodeNumber,
   title: discussion.title,
-  contentId: discussion.contentId,
+  contentIds: discussion.contentIds,
 });
 
 // ---------------------------------------------------------------------------
@@ -354,33 +354,20 @@ export default function AdminCatalogRoute() {
     }));
   };
 
-  const syncDiscussionLink = async (contentId: string) => {
-    const previous = editingMovie
-      ? discussions.filter((d) => d.contentId === editingMovie.id).map((d) => d.id)
-      : [];
-    const removed = previous.filter((id) => !linkedDiscussionIds.includes(id));
-    const added = linkedDiscussionIds.filter((id) => !previous.includes(id));
-    if (removed.length === 0 && added.length === 0) return;
-
-    const patch = (id: string, body: { contentId: string | null }) =>
-      fetch(`/api/admin/discussions/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      }).then((response) => jsonResponse(response));
-
+  const syncDiscussionLink = async (contentId: string): Promise<boolean> => {
     try {
-      const results = await Promise.all([
-        ...removed.map((id) => patch(id, { contentId: null })),
-        ...added.map((id) => patch(id, { contentId })),
-      ]);
-      const failed = results.find((result) => !result.success);
-      if (failed) {
-        toast.error(failed.error || "Content saved, but linking the discussions failed");
-      }
+      const response = await fetch(`/api/admin/movies/${contentId}/discussions`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ discussionIds: linkedDiscussionIds }),
+      });
+      const result = await jsonResponse(response);
+      if (result.success) return true;
+      toast.error(result.error || "Content saved, but linking the discussions failed");
     } catch {
       toast.error("Content saved, but linking the discussions failed");
     }
+    return false;
   };
 
   const createLinkedDiscussion = async (contentId: string): Promise<boolean> => {
@@ -391,7 +378,7 @@ export default function AdminCatalogRoute() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: discussionDraft.title.trim() || formData.title,
-          contentId,
+          contentIds: [contentId],
           spaceUrl: discussionDraft.spaceUrl.trim() || null,
           episodeNumber: discussionDraft.episodeNumber
             ? parseInt(discussionDraft.episodeNumber, 10)
@@ -414,7 +401,7 @@ export default function AdminCatalogRoute() {
     } catch {
       toast.error("Content saved, but creating the discussion failed");
     }
-    return true;
+    return false;
   };
 
   const addCastMember = (role: CastMember["role"]) => {
@@ -456,7 +443,12 @@ export default function AdminCatalogRoute() {
         const savedContentId: string | undefined = result.data?.id ?? editingMovie?.id;
         const wasAdding = !editingMovie;
         if (savedContentId) {
-          await syncDiscussionLink(savedContentId);
+          const linksSaved = await syncDiscussionLink(savedContentId);
+          if (!linksSaved) {
+            await fetchMovies();
+            if (wasAdding && result.data) setEditingMovie(mapRow(result.data));
+            return;
+          }
           const discussionSaved = await createLinkedDiscussion(savedContentId);
           if (!discussionSaved) {
             await fetchMovies();
@@ -510,7 +502,7 @@ export default function AdminCatalogRoute() {
     setJwResults([]);
     setImportedPosterUrl(null);
     setLinkedDiscussionIds(
-      discussions.filter((d) => d.contentId === movie.id).map((d) => d.id),
+      discussions.filter((d) => d.contentIds.includes(movie.id)).map((d) => d.id),
     );
     setAddingNewDiscussion(false);
     setDiscussionDraft(emptyDiscussionDraft);

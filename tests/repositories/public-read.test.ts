@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
-import { readFile, rm, mkdtemp } from "node:fs/promises";
+import { rm, mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
+import { applySqliteMigrations } from "../helpers/sqlite-migrations";
 import { createNodeSqliteDatabase } from "../../src/services/node";
 import {
   getHomepageData,
@@ -26,12 +27,7 @@ test("public reads preserve catalog, aggregate, and discussion behavior", async 
   const setup = new DatabaseSync(databasePath);
 
   try {
-    setup.exec(
-      await readFile(
-        resolve("drizzle-sqlite/0000_secret_iron_monger.sql"),
-        "utf8",
-      ),
-    );
+    await applySqliteMigrations(setup);
     const contentInsert = setup.prepare(`
       INSERT INTO content (
         id, title, content_type, genre, is_movie_of_the_week,
@@ -102,23 +98,27 @@ test("public reads preserve catalog, aggregate, and discussion behavior", async 
 
     const discussionInsert = setup.prepare(`
       INSERT INTO discussions (
-        id, title, content_id, podcast_links, episode_number,
+        id, title, podcast_links, episode_number,
         discussion_date, created_at, updated_at
-      ) VALUES (?, ?, ?, '[]', ?, ?, ?, ?)
+      ) VALUES (?, ?, '[]', ?, ?, ?, ?)
     `);
-    discussionInsert.run("future", "Future", "top", 3, 3000, 3000, 3000);
-    discussionInsert.run("past", "Past", "top", 2, 1000, 1000, 1000);
-    discussionInsert.run("undated", "Undated", "top", 1, null, 2000, 2000);
+    discussionInsert.run("future", "Future", 3, 3000, 3000, 3000);
+    discussionInsert.run("past", "Past", 2, 1000, 1000, 1000);
+    discussionInsert.run("undated", "Undated", 1, null, 2000, 2000);
     discussionInsert.run(
       "standalone",
       "Standalone",
-      null,
       4,
       1000,
       1000,
       1000,
     );
     setup.exec(`
+      INSERT INTO discussion_content (discussion_id, content_id) VALUES
+        ('future', 'top'),
+        ('past', 'top'),
+        ('past', 'zero'),
+        ('undated', 'top');
       UPDATE discussions
       SET space_url = 'https://space.example/past',
           podcast_links = '["https://podcast.example/past"]'
@@ -206,13 +206,39 @@ test("public reads preserve catalog, aggregate, and discussion behavior", async 
       visible.map((discussion) => discussion.id),
       ["standalone", "past", "undated"],
     );
-    assert.equal(visible[0].content, null);
+    assert.deepEqual(visible[0].contents, []);
+    assert.deepEqual(
+      visible
+        .find((discussion) => discussion.id === "past")
+        ?.contents.map(({ id }) => id),
+      ["top", "zero"],
+    );
     assert.equal(await database.publicReads.countDiscussions(new Date(2000)), 3);
     assert.deepEqual(
       (
-        await database.publicReads.getDiscussionsForContent("top")
+        await database.publicReads.getDiscussionsForContent("top", new Date(2000))
       ).map((discussion) => discussion.id),
-      ["undated", "past", "future"],
+      ["undated", "past"],
+    );
+    assert.deepEqual(
+      (
+        await database.publicReads.getDiscussionsForContent("zero", new Date(2000))
+      ).map((discussion) => discussion.id),
+      ["past"],
+    );
+    const firstDiscussionPage = await database.publicReads.getDiscussions({
+      limit: 2,
+      offset: 0,
+      now: new Date(2000),
+    });
+    const secondDiscussionPage = await database.publicReads.getDiscussions({
+      limit: 2,
+      offset: 2,
+      now: new Date(2000),
+    });
+    assert.deepEqual(
+      [...firstDiscussionPage, ...secondDiscussionPage].map(({ id }) => id),
+      ["standalone", "past", "undated"],
     );
 
     const now = new Date(36_000_000);

@@ -70,7 +70,7 @@ export class NodeSqliteDatabase implements Database {
     this.adminModeration = new AdminModerationRepository(instance);
     this.adminReports = new AdminReportsRepository(instance);
     this.adminReviews = new AdminReviewsRepository(instance);
-    this.adminDiscussions = new AdminDiscussionsRepository(instance, this.catalog);
+    this.adminDiscussions = new AdminDiscussionsRepository(instance, this);
     this.adminBlog = new AdminBlogRepository(instance);
     this.adminContent = new AdminContentRepository(instance, this.catalog);
     this.media = new MediaRepository(instance);

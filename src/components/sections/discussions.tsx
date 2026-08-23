@@ -4,7 +4,7 @@ import { Card, CardTitle, CardHeader, CardContent, CardDescription, CardFooter }
 import { Badge } from "../ui/badge";
 import type { Discussion } from "../../repositories/public-read";
 import { useCardScroller } from "../../lib/hooks/use-card-scroller";
-import { contentTypeLabel } from "../../lib/utils";
+import { contentPath, contentTypeLabel } from "../../lib/utils";
 import { Link } from "react-router";
 import { CalendarBlankIcon, MicrophoneStageIcon, BroadcastIcon, YoutubeLogoIcon, ArrowSquareOutIcon, ArrowRightIcon, CaretLeftIcon, CaretRightIcon } from "@phosphor-icons/react";
 import {
@@ -79,14 +79,16 @@ export default function Discussions({ discussions }: DiscussionsProps) {
                             <CardHeader className="p-0 mb-4">
                                 <div className="flex flex-col gap-2 mb-2">
                                     <Badge className="w-fit text-xs text-black bg-transparent border border-black">
-                                        {discussion.content
-                                            ? `${contentTypeLabel(discussion.content.contentType)} Discussion`
-                                            : 'Club Discussion'}
+                                        {discussion.contents.length === 1
+                                            ? `${contentTypeLabel(discussion.contents[0].contentType)} Discussion`
+                                            : discussion.contents.length > 1
+                                                ? `${discussion.contents.length} Titles`
+                                                : 'Club Discussion'}
                                     </Badge>
-                                    {(discussion.discussionDate || discussion.content?.releaseDate) && (
+                                    {discussion.discussionDate && (
                                         <div className="flex items-center gap-1 text-xs text-black/60">
                                             <CalendarBlankIcon className="w-3 h-3" />
-                                            {new Date(discussion.discussionDate || discussion.content!.releaseDate!).toLocaleDateString('en-US', {
+                                            {new Date(discussion.discussionDate).toLocaleDateString('en-US', {
                                                 month: 'short',
                                                 day: 'numeric',
                                                 year: 'numeric'
@@ -97,11 +99,20 @@ export default function Discussions({ discussions }: DiscussionsProps) {
                                 <CardTitle className="text-base font-bold line-clamp-2">
                                     {discussion.title}
                                 </CardTitle>
+                                {discussion.contents.length > 0 && (
+                                    <div className="mt-2 flex flex-wrap gap-x-2 gap-y-1 text-xs text-black/55">
+                                        {discussion.contents.map((item) => (
+                                            <Link key={item.id} to={contentPath(item)} className="break-words hover:text-black hover:underline">
+                                                {item.title}
+                                            </Link>
+                                        ))}
+                                    </div>
+                                )}
                             </CardHeader>
 
                             <CardContent className="p-0 mb-6">
                                 <CardDescription className="text-sm font-light text-black/70 line-clamp-3">
-                                    {discussion.description || discussion.content?.synopsis || "“Masterpiece” is a strong word. Come and hear what we actually thought."}
+                                    {discussion.description || "“Masterpiece” is a strong word. Come and hear what we actually thought."}
                                 </CardDescription>
                             </CardContent>
                         </div>

@@ -27,12 +27,14 @@ const databaseFiles = (await readdir(stateDirectory)).filter(
 );
 assert.equal(databaseFiles.length, 1, "Expected one local D1 database file");
 
-const [neonManifest, hexclave, claims, sourceRatings] = await Promise.all([
-  readJson<NeonManifest>("data/migration/neon/manifest.json"),
-  readJson<HexclaveExport>("data/migration/hexclave/users.json"),
-  readJson<ClaimsExport>("data/migration/account-claims.json"),
-  readJson<JsonObject[]>("data/migration/neon/user_ratings.json"),
-]);
+const [neonManifest, hexclave, claims, sourceRatings, sourceDiscussions] =
+  await Promise.all([
+    readJson<NeonManifest>("data/migration/neon/manifest.json"),
+    readJson<HexclaveExport>("data/migration/hexclave/users.json"),
+    readJson<ClaimsExport>("data/migration/account-claims.json"),
+    readJson<JsonObject[]>("data/migration/neon/user_ratings.json"),
+    readJson<JsonObject[]>("data/migration/neon/discussions.json"),
+  ]);
 const database = new DatabaseSync(resolve(stateDirectory, databaseFiles[0]), {
   readOnly: true,
 });
@@ -71,6 +73,32 @@ try {
     );
   }
 
+  const expectedDiscussionContent = sourceDiscussions
+    .filter((row) => row.content_id !== null && row.content_id !== undefined)
+    .map((row) => `${String(row.id)}:${String(row.content_id)}`);
+  const importedDiscussionContent = database
+    .prepare(
+      `SELECT discussion_id, content_id
+       FROM discussion_content
+       ORDER BY discussion_id, content_id`,
+    )
+    .all() as Array<{ discussion_id: string; content_id: string }>;
+  rowCounts.discussion_content = importedDiscussionContent.length;
+  assert.equal(
+    importedDiscussionContent.length,
+    expectedDiscussionContent.length,
+    "discussion_content count",
+  );
+  assert.equal(
+    idChecksum(
+      importedDiscussionContent.map(
+        (row) => `${row.discussion_id}:${row.content_id}`,
+      ),
+    ),
+    idChecksum(expectedDiscussionContent),
+    "discussion_content key checksum",
+  );
+
   const importedUsers = database
     .prepare("SELECT id FROM users ORDER BY id")
     .all() as Array<{ id: string }>;
@@ -107,10 +135,12 @@ try {
       `SELECT count(*) AS count
        FROM content
        WHERE catalog_number IS NOT (
-         SELECT MIN(episode_number)
-         FROM discussions
-         WHERE discussions.content_id = content.id
-       )`,
+          SELECT MIN(episode_number)
+          FROM discussion_content
+          INNER JOIN discussions
+            ON discussions.id = discussion_content.discussion_id
+          WHERE discussion_content.content_id = content.id
+        )`,
     )
     .get() as { count: number };
   assert.equal(catalogMismatches.count, 0);

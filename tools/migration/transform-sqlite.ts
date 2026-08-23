@@ -105,7 +105,6 @@ const DISCUSSION_COLUMNS = [
   "id",
   "title",
   "description",
-  "content_id",
   "space_url",
   "podcast_links",
   "episode_number",
@@ -113,6 +112,7 @@ const DISCUSSION_COLUMNS = [
   "created_at",
   "updated_at",
 ] as const;
+const DISCUSSION_CONTENT_COLUMNS = ["discussion_id", "content_id"] as const;
 const RATING_COLUMNS = [
   "id",
   "content_id",
@@ -420,7 +420,6 @@ export function mapDiscussionRow(row: NeonRow): Record<string, unknown> {
     id: stringValue(required(row, "id")),
     title: stringValue(required(row, "title")),
     description: nullableString(row.description),
-    content_id: nullableString(row.content_id),
     space_url: nullableString(row.space_url),
     podcast_links: jsonText(row.podcast_links, []),
     episode_number: nullableInteger(row.episode_number),
@@ -428,6 +427,18 @@ export function mapDiscussionRow(row: NeonRow): Record<string, unknown> {
     created_at: timestampMilliseconds(required(row, "created_at")),
     updated_at: timestampMilliseconds(required(row, "updated_at")),
   };
+}
+
+export function mapDiscussionContentRow(
+  row: NeonRow,
+): Record<string, unknown> | null {
+  const contentId = nullableString(row.content_id);
+  return contentId
+    ? {
+        discussion_id: stringValue(required(row, "id")),
+        content_id: contentId,
+      }
+    : null;
 }
 
 export function mapRatingRow(row: NeonRow): Record<string, unknown> {
@@ -573,6 +584,13 @@ export function planSqliteImport(input: SqliteImportInput): SqliteImportPlan {
       rows: input.discussions.map(mapDiscussionRow),
     },
     {
+      table: "discussion_content",
+      columns: [...DISCUSSION_CONTENT_COLUMNS],
+      rows: input.discussions
+        .map(mapDiscussionContentRow)
+        .filter((row): row is Record<string, unknown> => row !== null),
+    },
+    {
       table: "user_ratings",
       columns: [...RATING_COLUMNS],
       rows: input.ratings.map(mapRatingRow),
@@ -668,6 +686,7 @@ const DELETE_ORDER = [
   "reports",
   "reviews",
   "user_ratings",
+  "discussion_content",
   "discussions",
   "content",
   "contact_messages",
@@ -690,8 +709,10 @@ export function renderImportSql(definitions: TableDefinition[]): string {
     `UPDATE content
      SET catalog_number = (
        SELECT MIN(episode_number)
-       FROM discussions
-       WHERE discussions.content_id = content.id
+       FROM discussion_content
+       INNER JOIN discussions
+         ON discussions.id = discussion_content.discussion_id
+       WHERE discussion_content.content_id = content.id
      );`,
     "COMMIT;",
   ];
@@ -723,10 +744,10 @@ export function buildImportManifest(
   };
 }
 
-async function readNeonTable(directory: string, table: string) {
+async function readNeonTable<T = NeonRow>(directory: string, table: string) {
   return JSON.parse(
     await readFile(resolve(directory, `${table}.json`), "utf8"),
-  ) as NeonRow[];
+  ) as T[];
 }
 
 async function main() {
@@ -750,7 +771,7 @@ async function main() {
     sourceBlogPosts,
     hexclaveUsers,
   ] = await Promise.all([
-    readNeonTable(neonDirectory, "users"),
+    readNeonTable<ExistingUser>(neonDirectory, "users"),
     readNeonTable(neonDirectory, "content"),
     readNeonTable(neonDirectory, "discussions"),
     readNeonTable(neonDirectory, "user_ratings"),

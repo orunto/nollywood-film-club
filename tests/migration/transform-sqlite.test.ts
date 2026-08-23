@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
-import { readFile, rm, mkdtemp } from "node:fs/promises";
+import { rm, mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import {
@@ -13,6 +13,7 @@ import {
   mapCommentRow,
   mapContactRow,
   mapContentRow,
+  mapDiscussionContentRow,
   mapDiscussionRow,
   mapRatingRow,
   mapReportRow,
@@ -22,6 +23,7 @@ import {
   renderImportSql,
   type SqliteImportInput,
 } from "../../tools/migration/transform-sqlite";
+import { applySqliteMigrations } from "../helpers/sqlite-migrations";
 
 function hexclaveUser(
   overrides: Partial<HexclaveExportUser> = {},
@@ -162,6 +164,7 @@ test("claims and row counts are reported for every table", () => {
     media: 0,
     content: 1,
     discussions: 0,
+    discussion_content: 0,
     user_ratings: 0,
     reviews: 0,
     comments: 0,
@@ -289,7 +292,7 @@ test("media references are deterministic and shared by imported rows", () => {
   assert.equal(mediaRows[0]?.original_provider, "cloudinary");
 });
 
-test("discussion rows keep podcast links and nullable episodes", () => {
+test("legacy discussion content links become join rows", () => {
   const row = mapDiscussionRow({
     id: "d1",
     title: "Episode 12",
@@ -305,6 +308,12 @@ test("discussion rows keep podcast links and nullable episodes", () => {
   assert.equal(row.podcast_links, '["https://podcast/1"]');
   assert.equal(row.episode_number, 12);
   assert.equal(row.discussion_date, null);
+  assert.equal("content_id" in row, false);
+  assert.deepEqual(
+    mapDiscussionContentRow({ id: "d1", content_id: "c1" }),
+    { discussion_id: "d1", content_id: "c1" },
+  );
+  assert.equal(mapDiscussionContentRow({ id: "d2", content_id: null }), null);
 });
 
 test("rating rows convert booleans and keep the canonical rating scale", () => {
@@ -453,6 +462,10 @@ test("rendered SQL is transactional, clears in FK-safe order, and recomputes cat
   assert.ok(
     sql.indexOf('DELETE FROM "comments"') < sql.indexOf('DELETE FROM "users"'),
   );
+  assert.ok(
+    sql.indexOf('DELETE FROM "discussion_content"') <
+      sql.indexOf('DELETE FROM "discussions"'),
+  );
   assert.match(sql, /catalog_number = \(/);
   assert.ok(sql.includes('INSERT INTO "users"'));
 });
@@ -472,12 +485,7 @@ test("the rendered SQL applies cleanly to a fresh canonical schema database", as
   const databasePath = join(directory, "test.sqlite");
   const setup = new DatabaseSync(databasePath);
   try {
-    setup.exec(
-      await readFile(
-        resolve("drizzle-sqlite/0000_secret_iron_monger.sql"),
-        "utf8",
-      ),
-    );
+    await applySqliteMigrations(setup);
   } finally {
     setup.close();
   }
@@ -587,6 +595,15 @@ test("the rendered SQL applies cleanly to a fresh canonical schema database", as
       assert.equal(
         (database.prepare("SELECT count(*) AS count FROM user_ratings").get() as { count: number }).count,
         1,
+      );
+      assert.deepEqual(
+        database
+          .prepare(
+            "SELECT discussion_id, content_id FROM discussion_content",
+          )
+          .all()
+          .map((row) => ({ ...row })),
+        [{ discussion_id: "d1", content_id: "c1" }],
       );
       const rating = database.prepare("SELECT rating FROM user_ratings").get() as {
         rating: number;

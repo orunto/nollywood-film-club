@@ -59,7 +59,7 @@ export async function loader({ context, request }: Route.LoaderArgs) {
       id: discussion.id,
       title: discussion.title,
       description: discussion.description ?? null,
-      contentId: discussion.contentId ?? null,
+      contentIds: discussion.contentIds,
       spaceUrl: discussion.spaceUrl ?? null,
       podcastLinks: discussion.podcastLinks ?? [],
       episodeNumber: discussion.episodeNumber ?? null,
@@ -91,7 +91,6 @@ export async function loader({ context, request }: Route.LoaderArgs) {
 // ---------------------------------------------------------------------------
 
 const fieldClass = "flex flex-col gap-2";
-const NO_CONTENT = "none";
 
 interface ContentOption {
   id: string;
@@ -123,6 +122,58 @@ function ContentPicker({
         ))}
       </SelectContent>
     </Select>
+  );
+}
+
+function MultiContentPicker({
+  value,
+  onChange,
+  options,
+}: {
+  value: string[];
+  onChange: (value: string[]) => void;
+  options: ContentOption[];
+}) {
+  const [query, setQuery] = useState("");
+  const filtered = options.filter((item) =>
+    item.title.toLowerCase().includes(query.trim().toLowerCase()),
+  );
+  const toggle = (id: string) => {
+    onChange(value.includes(id) ? value.filter((item) => item !== id) : [...value, id]);
+  };
+
+  return (
+    <div className="overflow-hidden rounded-sm border border-black/15">
+      <div className="border-b border-black/10 p-2">
+        <Input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          className={inputClass}
+          placeholder="Search the catalog"
+          aria-label="Search catalog titles"
+        />
+      </div>
+      <div className="max-h-56 overflow-y-auto p-2">
+        {filtered.length > 0 ? filtered.map((item) => (
+          <label key={item.id} className="flex cursor-pointer items-start gap-3 rounded-sm px-2 py-2 hover:bg-black/5">
+            <Checkbox
+              checked={value.includes(item.id)}
+              onCheckedChange={() => toggle(item.id)}
+              className="mt-0.5"
+            />
+            <span className="min-w-0 text-sm">
+              <span className="block break-words font-medium">{item.title}</span>
+              <span className="text-xs text-black/55">{contentTypeLabel(item.contentType)}</span>
+            </span>
+          </label>
+        )) : (
+          <p className="px-2 py-4 text-sm text-black/55">No catalog titles match this search.</p>
+        )}
+      </div>
+      <p className="border-t border-black/10 px-3 py-2 text-xs text-black/55">
+        {value.length === 0 ? "No titles selected. This will be a standalone discussion." : `${value.length} selected`}
+      </p>
+    </div>
   );
 }
 
@@ -433,7 +484,7 @@ interface DiscussionRow {
   id: string;
   title: string;
   description: string | null;
-  contentId: string | null;
+  contentIds: string[];
   spaceUrl: string | null;
   podcastLinks: string[];
   episodeNumber: number | null;
@@ -451,7 +502,7 @@ function DiscussionsSection({ initial, content }: { initial: DiscussionRow[]; co
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    contentId: NO_CONTENT,
+    contentIds: [] as string[],
     spaceUrl: "",
     podcastLinks: "",
     episodeNumber: "",
@@ -490,7 +541,7 @@ function DiscussionsSection({ initial, content }: { initial: DiscussionRow[]; co
       const discussionData = {
         title: formData.title,
         description: formData.description || null,
-        contentId: formData.contentId === NO_CONTENT ? null : formData.contentId,
+        contentIds: formData.contentIds,
         spaceUrl: formData.spaceUrl || null,
         podcastLinks: formData.podcastLinks
           ? formData.podcastLinks.split("\n").map((l) => l.trim()).filter(Boolean)
@@ -533,7 +584,7 @@ function DiscussionsSection({ initial, content }: { initial: DiscussionRow[]; co
     setFormData({
       title: discussion.title,
       description: discussion.description ?? "",
-      contentId: discussion.contentId ?? NO_CONTENT,
+      contentIds: discussion.contentIds,
       spaceUrl: discussion.spaceUrl ?? "",
       podcastLinks: discussion.podcastLinks.join("\n"),
       episodeNumber: discussion.episodeNumber?.toString() ?? "",
@@ -564,7 +615,7 @@ function DiscussionsSection({ initial, content }: { initial: DiscussionRow[]; co
     setFormData({
       title: "",
       description: "",
-      contentId: NO_CONTENT,
+      contentIds: [],
       spaceUrl: "",
       podcastLinks: "",
       episodeNumber: "",
@@ -576,7 +627,7 @@ function DiscussionsSection({ initial, content }: { initial: DiscussionRow[]; co
   const sortAccessors: SortAccessors<DiscussionRow> = {
     sn: (d) => d.episodeNumber,
     title: (d) => d.title,
-    content: (d) => (d.contentId ? contentTitleById.get(d.contentId) ?? null : null),
+    content: (d) => d.contentIds.map((id) => contentTitleById.get(id) ?? "").join(", "),
     date: (d) => (d.discussionDate ? new Date(d.discussionDate) : null),
     links: (d) => (d.spaceUrl ? 1 : 0) + (d.podcastLinks?.length ?? 0),
   };
@@ -584,8 +635,8 @@ function DiscussionsSection({ initial, content }: { initial: DiscussionRow[]; co
   const filtered = discussions.filter((d) => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return true;
-    const contentTitle = d.contentId ? contentTitleById.get(d.contentId) ?? "" : "";
-    return d.title.toLowerCase().includes(q) || contentTitle.toLowerCase().includes(q);
+    const contentTitles = d.contentIds.map((id) => contentTitleById.get(id) ?? "").join(" ");
+    return d.title.toLowerCase().includes(q) || contentTitles.toLowerCase().includes(q);
   });
   const discussionBeingDeleted = discussions.find((d) => d.id === isDeleting);
   const { sorted, sortKey, direction, toggleSort } = useTableSort(filtered, sortAccessors);
@@ -627,9 +678,9 @@ function DiscussionsSection({ initial, content }: { initial: DiscussionRow[]; co
             </TableHeader>
             <TableBody>
               {sorted.map((discussion) => {
-                const contentTitle = discussion.contentId
-                  ? contentTitleById.get(discussion.contentId)
-                  : null;
+                const contentTitles = discussion.contentIds
+                  .map((id) => contentTitleById.get(id))
+                  .filter((title): title is string => Boolean(title));
                 const podcastCount = discussion.podcastLinks?.length ?? 0;
                 return (
                   <TableRow key={discussion.id} className="border-black/10 hover:bg-black/5">
@@ -638,8 +689,8 @@ function DiscussionsSection({ initial, content }: { initial: DiscussionRow[]; co
                       {episodeLabel(discussion.episodeNumber, discussion.title)}
                     </TableCell>
                     <TableCell className="whitespace-normal">
-                      {contentTitle ? (
-                        <span className="text-black/60">{contentTitle}</span>
+                      {contentTitles.length > 0 ? (
+                        <span className="break-words text-black/60">{contentTitles.join(", ")}</span>
                       ) : (
                         <Badge className={adminOutlineBadgeClass}>Standalone</Badge>
                       )}
@@ -698,12 +749,11 @@ function DiscussionsSection({ initial, content }: { initial: DiscussionRow[]; co
                 <Input id="disc-title" className={inputClass} value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required />
               </div>
               <div className={fieldClass}>
-                <Label htmlFor="disc-contentId">Movie/TV Show (optional)</Label>
-                <ContentPicker
-                  value={formData.contentId}
-                  onChange={(value) => setFormData({ ...formData, contentId: value })}
+                <Label>Catalog titles (optional)</Label>
+                <MultiContentPicker
+                  value={formData.contentIds}
+                  onChange={(contentIds) => setFormData({ ...formData, contentIds })}
                   options={content}
-                  placeholder="None (standalone topic)"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
