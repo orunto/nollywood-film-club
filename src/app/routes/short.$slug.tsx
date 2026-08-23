@@ -3,6 +3,7 @@ import { useLoaderData } from "react-router";
 import { redirect } from "react-router";
 import { appServicesContext } from "../context";
 import { getContentDetailData, isCanonicalFor } from "../../services/content-detail";
+import { posterUrl } from "../../lib/media";
 import ContentDetailsClient from "../../components/sections/content-details-client";
 import Footer from "../../components/site/footer";
 
@@ -20,28 +21,24 @@ export const meta: Route.MetaFunction = ({ matches }) => {
 
   const year = item.releaseDate ? new Date(item.releaseDate).getUTCFullYear() : null;
   const title = `${item.title}${year ? ` (${year})` : ""} — Nollywood Film Club`;
+  const description =
+    item.synopsis ?? `${item.title} — ${item.contentType} on Nollywood Film Club.`;
 
   return [
     { title },
-    {
-      name: "description",
-      content:
-        item.synopsis ??
-        `${item.title} — ${item.contentType} on Nollywood Film Club.`,
-    },
+    { name: "description", content: description },
     { tagName: "link", rel: "canonical", href: data.canonicalUrl },
+    { property: "og:description", content: description },
     { property: "og:url", content: data.canonicalUrl },
     { property: "og:title", content: title },
-    { property: "og:type", content: "video.movie" },
     {
       property: "og:image",
       content: data.openGraphImageUrl,
     },
-    { property: "og:image:type", content: "image/png" },
-    { property: "og:image:width", content: "1200" },
-    { property: "og:image:height", content: "630" },
     { name: "twitter:card", content: "summary_large_image" },
+    { name: "twitter:description", content: description },
     { name: "twitter:image", content: data.openGraphImageUrl },
+    { name: "twitter:title", content: title },
   ];
 };
 
@@ -59,14 +56,13 @@ export async function loader({ params, context, request }: Route.LoaderArgs) {
   }
 
   const canonicalUrl = new URL(data.canonicalPath, request.url).href;
-  const openGraphImageUrl = new URL(`${data.canonicalPath}/opengraph-image`, request.url);
-  if (data.item.posterVersion) {
-    openGraphImageUrl.searchParams.set("v", String(data.item.posterVersion));
-  }
+  const imagePath = data.item.posterImage
+    ? posterUrl(data.item.posterImage, { version: data.item.posterVersion })
+    : `${data.canonicalPath}/opengraph-image`;
   return {
     ...data,
     canonicalUrl,
-    openGraphImageUrl: openGraphImageUrl.href,
+    openGraphImageUrl: new URL(imagePath, request.url).href,
   };
 }
 
