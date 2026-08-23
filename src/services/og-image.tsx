@@ -1,9 +1,10 @@
 import { initWasm, Resvg } from "@resvg/resvg-wasm";
 import resvgWasm from "#resvg-wasm";
 import { NFC_LOGO_SVG } from "../lib/nfc-logo";
+import { mediaObjectKey } from "../lib/media";
 import type { PublicReadRepository } from "../repositories/public-read";
+import type { ImageTransformer, ObjectStore } from "./contracts";
 import { resolveContent } from "./content-detail";
-import { posterUrl } from "../lib/media";
 
 export const OG_SIZE = { width: 1200, height: 630 };
 
@@ -53,28 +54,27 @@ async function svgToPng(svg: string): Promise<Uint8Array> {
 // Mirrors lib/og-image.tsx on the legacy side.
 export async function contentOgImage(
   repository: PublicReadRepository,
+  objects: ObjectStore,
+  images: ImageTransformer,
   rawSlug: string,
-  request?: Request,
 ): Promise<Response> {
   const item = await resolveContent(repository, rawSlug);
 
   let posterDataUri: string | null = null;
-  if (item?.posterImage && request) {
+  const objectKey = mediaObjectKey(item?.posterImage);
+  if (objectKey) {
     try {
-      const src = posterUrl(item.posterImage, {
-        version: item.posterVersion ?? undefined,
-        width: OG_SIZE.width,
-        height: OG_SIZE.height,
-        format: "jpg",
-        gravity: "auto",
-      });
-      const url = new URL(src, request.url);
-      if (url.protocol === "http:" || url.protocol === "https:") {
-        const res = await fetch(url);
-        if (res.ok) {
-          const bytes = new Uint8Array(await res.arrayBuffer());
-          const contentType = res.headers.get("content-type") ?? "image/jpeg";
-          posterDataUri = `data:${contentType};base64,${bytesToBase64(bytes)}`;
+      const object = await objects.get(objectKey);
+      if (object) {
+        const transformed = await images.transform(object.body, {
+          width: OG_SIZE.width,
+          height: OG_SIZE.height,
+          fit: "cover",
+          format: "jpeg",
+        });
+        if (transformed.ok) {
+          const bytes = new Uint8Array(await transformed.arrayBuffer());
+          posterDataUri = `data:image/jpeg;base64,${bytesToBase64(bytes)}`;
         }
       }
     } catch {
@@ -83,7 +83,7 @@ export async function contentOgImage(
   }
 
   const png = await svgToPng(svgFor(posterDataUri));
-  return new Response(png as unknown as BodyInit, {
+  return new Response(new Uint8Array(png).buffer, {
     headers: {
       "Content-Type": "image/png",
       "Cache-Control": "public, max-age=31536000, immutable",
