@@ -1,6 +1,8 @@
 import type { Route } from "./+types/media";
 import { appServicesContext } from "../context";
 
+// Cloudflare production serves /media/* directly from R2 in workers/app.ts
+// (serveMedia) before SSR runs; this route remains for the node runtime.
 export async function loader({ context, params, request }: Route.LoaderArgs) {
   const key = params["*"];
   if (!key || key.includes("..") || key.includes("\\")) {
