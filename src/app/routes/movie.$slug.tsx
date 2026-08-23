@@ -3,7 +3,7 @@ import { useLoaderData } from "react-router";
 import { redirect } from "react-router";
 import { appServicesContext } from "../context";
 import { getContentDetailData, isCanonicalFor } from "../../services/content-detail";
-import { posterUrl } from "../../lib/media";
+import { contentOpenGraphObjectKey, posterUrl } from "../../lib/media";
 import ContentDetailsClient from "../../components/sections/content-details-client";
 import Footer from "../../components/site/footer";
 
@@ -57,9 +57,13 @@ export async function loader({ params, context, request }: Route.LoaderArgs) {
   }
 
   const canonicalUrl = new URL(data.canonicalPath, request.url).href;
-  const imagePath = data.item.posterImage
-    ? posterUrl(data.item.posterImage, { version: data.item.posterVersion })
-    : `${data.canonicalPath}/opengraph-image`;
+  const openGraphObjectKey = contentOpenGraphObjectKey(data.item.id);
+  const hasOpenGraphImage = await services.objects.exists(openGraphObjectKey);
+  const imagePath = hasOpenGraphImage
+    ? `/media/${openGraphObjectKey}?v=${data.item.posterVersion ?? data.item.updatedAt}`
+    : data.item.posterImage
+      ? posterUrl(data.item.posterImage, { version: data.item.posterVersion })
+      : `${data.canonicalPath}/opengraph-image`;
   return {
     ...data,
     canonicalUrl,

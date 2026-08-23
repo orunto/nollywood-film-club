@@ -59,6 +59,7 @@ export interface AuthService {
 
 export interface ObjectStore {
   check(): Promise<void>;
+  exists(key: string): Promise<boolean>;
   get(key: string): Promise<ObjectValue | null>;
   put(
     key: string,

@@ -2,10 +2,18 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   catalogPosterIdentity,
+  contentOpenGraphObjectKey,
   isCatalogPosterUrl,
   mediaObjectKey,
   posterUrl,
 } from "../../src/lib/media";
+
+test("Open Graph images use a deterministic content key", () => {
+  assert.equal(
+    contentOpenGraphObjectKey("content-id"),
+    "opengraph/content/content-id.jpg",
+  );
+});
 
 test("catalog poster URLs only include media/nfc R2 objects", () => {
   assert.equal(isCatalogPosterUrl("/media/media/nfc/king_of_boys/v42.jpg"), true);

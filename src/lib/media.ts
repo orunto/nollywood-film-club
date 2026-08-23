@@ -11,6 +11,10 @@ export interface PosterUrlOptions {
 
 const CATALOG_MEDIA_PREFIX = "/media/media/nfc/";
 
+export function contentOpenGraphObjectKey(contentId: string): string {
+  return `opengraph/content/${contentId}.jpg`;
+}
+
 export function isCatalogPosterUrl(value: string | null | undefined): value is string {
   return value?.startsWith(CATALOG_MEDIA_PREFIX) === true;
 }

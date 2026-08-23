@@ -81,6 +81,22 @@ The command uses `wrangler r2 object put` with eight concurrent uploads,
 preserves every `media/...` key, and is safe to rerun. Remote mode requires a
 Cloudflare API token or an authenticated Wrangler session.
 
+## Open Graph backfill
+
+After deploying the write-time Open Graph generator, backfill branded JPEGs for
+all existing production content into the remote production R2 bucket:
+
+```text
+bun run migration:backfill-opengraph
+```
+
+The command reads production content from remote D1, calls each deployed image
+generator, and stores the result at `opengraph/content/<content-id>.jpg`. It
+checkpoints successful uploads in `data/migration/opengraph-backfill.json` and
+is safe to rerun. Pass `--force` to regenerate every image. Override
+`OG_BACKFILL_BASE_URL`, `D1_DATABASE`, or `R2_BUCKET` only when the production
+resource names differ from `wrangler.jsonc`.
+
 ## Cutover and rollback
 
 1. Lower DNS TTL and freeze legacy writes.

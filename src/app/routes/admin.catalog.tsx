@@ -458,6 +458,7 @@ export default function AdminCatalogRoute() {
           }
         }
         await fetchMovies();
+        if (result.warning) toast.warning(result.warning);
         toast.success(`Content ${wasAdding ? "added" : "updated"} successfully`);
         setIsFormOpen(false);
         setEditingMovie(null);

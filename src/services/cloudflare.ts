@@ -98,6 +98,10 @@ class R2ObjectStore implements ObjectStore {
     await this.binding.list({ limit: 1 });
   }
 
+  async exists(key: string) {
+    return (await this.binding.head(key)) !== null;
+  }
+
   async get(key: string): Promise<ObjectValue | null> {
     const object = await this.binding.get(key);
     if (!object) return null;

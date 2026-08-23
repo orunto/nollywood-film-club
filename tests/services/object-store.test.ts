@@ -22,6 +22,8 @@ describe("FileSystemObjectStore", () => {
     const store = new FileSystemObjectStore(root);
 
     await store.put("media/poster.jpg", new Uint8Array([1, 2, 3]));
+    assert.equal(await store.exists("media/poster.jpg"), true);
+    assert.equal(await store.exists("media/missing.jpg"), false);
     const object = await store.get("media/poster.jpg");
 
     assert.ok(object);
@@ -40,5 +42,6 @@ describe("FileSystemObjectStore", () => {
 
     await assert.rejects(store.put("../outside.txt", "unsafe"), /Invalid object key/);
     await assert.rejects(store.get("nested\\outside.txt"), /Invalid object key/);
+    await assert.rejects(store.exists("../outside.txt"), /Invalid object key/);
   });
 });

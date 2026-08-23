@@ -1,12 +1,13 @@
 import { initWasm, Resvg } from "@resvg/resvg-wasm";
 import resvgWasm from "#resvg-wasm";
 import { NFC_LOGO_SVG } from "../lib/nfc-logo";
-import { mediaObjectKey } from "../lib/media";
+import { contentOpenGraphObjectKey, mediaObjectKey } from "../lib/media";
 import type { PublicReadRepository } from "../repositories/public-read";
 import type { ImageTransformer, ObjectStore } from "./contracts";
 import { resolveContent } from "./content-detail";
 
 export const OG_SIZE = { width: 1200, height: 630 };
+export const OG_CONTENT_TYPE = "image/jpeg";
 
 // The badge is the vector logo (text as paths) inlined as a nested <svg>, so
 // no font loading is needed at runtime — @vercel/og's font fetch is what broke
@@ -48,6 +49,70 @@ async function svgToPng(svg: string): Promise<Uint8Array> {
   return png;
 }
 
+async function renderContentOgImage(
+  objects: ObjectStore,
+  images: ImageTransformer,
+  posterImage: string | null | undefined,
+): Promise<ArrayBuffer> {
+  let posterDataUri: string | null = null;
+  const objectKey = mediaObjectKey(posterImage);
+  if (objectKey) {
+    const object = await objects.get(objectKey);
+    if (object) {
+      const transformed = await images.transform(object.body, {
+        width: OG_SIZE.width,
+        height: OG_SIZE.height,
+        fit: "cover",
+        format: "jpeg",
+      });
+      if (!transformed.ok) {
+        throw new Error(`Poster transformation failed with status ${transformed.status}`);
+      }
+      const bytes = new Uint8Array(await transformed.arrayBuffer());
+      posterDataUri = `data:image/jpeg;base64,${bytesToBase64(bytes)}`;
+    }
+  }
+
+  const png = await svgToPng(svgFor(posterDataUri));
+  const pngBuffer = new Uint8Array(png).buffer;
+  const jpeg = await images.transform(
+    new Blob([pngBuffer], { type: "image/png" }).stream(),
+    {
+      width: OG_SIZE.width,
+      height: OG_SIZE.height,
+      fit: "contain",
+      format: "jpeg",
+    },
+  );
+  if (!jpeg.ok) {
+    throw new Error(`Open Graph image encoding failed with status ${jpeg.status}`);
+  }
+  return jpeg.arrayBuffer();
+}
+
+export async function generateAndStoreContentOgImage(
+  objects: ObjectStore,
+  images: ImageTransformer,
+  content: {
+    id: string;
+    posterImage?: string | null;
+    posterObjectKey?: string | null;
+  },
+): Promise<string> {
+  const bytes = await renderContentOgImage(
+    objects,
+    images,
+    content.posterObjectKey ?? content.posterImage,
+  );
+  const objectKey = contentOpenGraphObjectKey(content.id);
+  await objects.put(objectKey, bytes, {
+    contentType: OG_CONTENT_TYPE,
+    contentLength: bytes.byteLength,
+    cacheControl: "public, max-age=31536000, immutable",
+  });
+  return objectKey;
+}
+
 // Shared generator behind the OG routes of /movie/:slug, /tv/:slug and
 // /short/:slug — the poster full-bleed with the NFC badge in the bottom-right
 // corner. When the poster can't be resolved the badge is centered on black.
@@ -59,33 +124,11 @@ export async function contentOgImage(
   rawSlug: string,
 ): Promise<Response> {
   const item = await resolveContent(repository, rawSlug);
-
-  let posterDataUri: string | null = null;
-  const objectKey = mediaObjectKey(item?.posterImage);
-  if (objectKey) {
-    try {
-      const object = await objects.get(objectKey);
-      if (object) {
-        const transformed = await images.transform(object.body, {
-          width: OG_SIZE.width,
-          height: OG_SIZE.height,
-          fit: "cover",
-          format: "jpeg",
-        });
-        if (transformed.ok) {
-          const bytes = new Uint8Array(await transformed.arrayBuffer());
-          posterDataUri = `data:image/jpeg;base64,${bytesToBase64(bytes)}`;
-        }
-      }
-    } catch {
-      // Fall back to the badge-only layout.
-    }
-  }
-
-  const png = await svgToPng(svgFor(posterDataUri));
-  return new Response(new Uint8Array(png).buffer, {
+  const jpeg = await renderContentOgImage(objects, images, item?.posterImage);
+  return new Response(jpeg, {
     headers: {
-      "Content-Type": "image/png",
+      "Content-Type": OG_CONTENT_TYPE,
+      "Content-Length": String(jpeg.byteLength),
       "Cache-Control": "public, max-age=31536000, immutable",
     },
   });

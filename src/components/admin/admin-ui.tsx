@@ -16,6 +16,7 @@ export async function jsonResponse<T = unknown>(response: Response) {
     data?: T;
     error?: string;
     message?: string;
+    warning?: string;
     field?: string;
   };
 }

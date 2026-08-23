@@ -28,6 +28,7 @@
     "migration:restore-sqlite": "tsx tools/migration/restore-sqlite.ts",
     "migration:copy-objects": "tsx tools/migration/copy-objects.ts",
     "migration:seed-r2": "tsx tools/migration/seed-r2.ts",
+    "migration:backfill-opengraph": "tsx tools/migration/backfill-opengraph.ts",
     "test:characterization": "playwright test",
     "test:runtime": "bun run test:runtime:cloudflare && bun run test:runtime:node",
     "test:runtime:cloudflare": "cross-env RUNTIME_TARGET=cloudflare playwright test --config playwright.runtime.config.ts",

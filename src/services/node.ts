@@ -112,6 +112,15 @@ export class FileSystemObjectStore implements ObjectStore {
     await access(this.root);
   }
 
+  async exists(key: string) {
+    try {
+      return (await stat(this.pathFor(key))).isFile();
+    } catch (error) {
+      if (isMissingFile(error)) return false;
+      throw error;
+    }
+  }
+
   async get(key: string): Promise<ObjectValue | null> {
     const path = this.pathFor(key);
     try {
