@@ -29,15 +29,23 @@ export const meta: Route.MetaFunction = ({ matches }) => {
         item.synopsis ??
         `${item.title} — ${item.contentType} on Nollywood Film Club.`,
     },
-    { tagName: "link", rel: "canonical", href: data.canonicalPath },
+    { tagName: "link", rel: "canonical", href: data.canonicalUrl },
+    { property: "og:url", content: data.canonicalUrl },
+    { property: "og:title", content: title },
+    { property: "og:type", content: "video.movie" },
     {
       property: "og:image",
-      content: `${data.canonicalPath}/opengraph-image`,
+      content: data.openGraphImageUrl,
     },
+    { property: "og:image:type", content: "image/png" },
+    { property: "og:image:width", content: "1200" },
+    { property: "og:image:height", content: "630" },
+    { name: "twitter:card", content: "summary_large_image" },
+    { name: "twitter:image", content: data.openGraphImageUrl },
   ];
 };
 
-export async function loader({ params, context }: Route.LoaderArgs) {
+export async function loader({ params, context, request }: Route.LoaderArgs) {
   const services = context.get(appServicesContext);
   const rawParam = params.slug ?? "";
 
@@ -50,7 +58,16 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     throw redirect(data.canonicalPath);
   }
 
-  return data;
+  const canonicalUrl = new URL(data.canonicalPath, request.url).href;
+  const openGraphImageUrl = new URL(`${data.canonicalPath}/opengraph-image`, request.url);
+  if (data.item.posterVersion) {
+    openGraphImageUrl.searchParams.set("v", String(data.item.posterVersion));
+  }
+  return {
+    ...data,
+    canonicalUrl,
+    openGraphImageUrl: openGraphImageUrl.href,
+  };
 }
 
 export default function ShortFilmPage() {
