@@ -5,10 +5,14 @@ import { getHomepageData } from "../../services/homepage";
 import Footer from "../../components/site/footer";
 import { Hero, MovieOfTheWeek, MoviesAndTVSeries, Reviews, Discussions } from "../../components/sections";
 import { isCatalogPosterUrl } from "../../lib/media";
+import { pageMeta } from "../../lib/meta";
 
-export const meta: Route.MetaFunction = () => [
-  { title: "Nollywood Film Club" },
-];
+export const meta: Route.MetaFunction = () =>
+  pageMeta({
+    title: "Nollywood Film Club",
+    description: "Discover, watch, rate, and discuss Nollywood films.",
+    path: "/",
+  });
 
 export async function loader({ context }: Route.LoaderArgs) {
   const services = context.get(appServicesContext);

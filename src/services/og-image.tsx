@@ -113,6 +113,25 @@ export async function generateAndStoreContentOgImage(
   return objectKey;
 }
 
+function jpegResponse(jpeg: ArrayBuffer): Response {
+  return new Response(jpeg, {
+    headers: {
+      "Content-Type": OG_CONTENT_TYPE,
+      "Content-Length": String(jpeg.byteLength),
+      "Cache-Control": "public, max-age=31536000, immutable",
+    },
+  });
+}
+
+// Site-default OG image for routes without a poster of their own (homepage,
+// catalog, reviews, ...) — the NFC badge centered on black.
+export async function defaultOgImage(
+  objects: ObjectStore,
+  images: ImageTransformer,
+): Promise<Response> {
+  return jpegResponse(await renderContentOgImage(objects, images, null));
+}
+
 // Shared generator behind the OG routes of /movie/:slug, /tv/:slug and
 // /short/:slug — the poster full-bleed with the NFC badge in the bottom-right
 // corner. When the poster can't be resolved the badge is centered on black.
@@ -125,11 +144,5 @@ export async function contentOgImage(
 ): Promise<Response> {
   const item = await resolveContent(repository, rawSlug);
   const jpeg = await renderContentOgImage(objects, images, item?.posterImage);
-  return new Response(jpeg, {
-    headers: {
-      "Content-Type": OG_CONTENT_TYPE,
-      "Content-Length": String(jpeg.byteLength),
-      "Cache-Control": "public, max-age=31536000, immutable",
-    },
-  });
+  return jpegResponse(jpeg);
 }

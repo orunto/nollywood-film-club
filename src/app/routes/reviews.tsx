@@ -4,6 +4,7 @@ import { appServicesContext } from "../context";
 import Footer from "../../components/site/footer";
 import ReviewCard from "../../components/custom/review-card";
 import { EmptyReviewsIllustration } from "../../components/graphics/empty-states";
+import { pageMeta } from "../../lib/meta";
 import {
   Pagination,
   PaginationContent,
@@ -14,14 +15,13 @@ import {
 } from "../../components/ui/pagination";
 import { getReviewsPage } from "../../services/review-thread";
 
-export const meta: Route.MetaFunction = () => [
-  { title: "Reviews | Nollywood Film Club" },
-  {
-    name: "description",
-    content:
+export const meta: Route.MetaFunction = () =>
+  pageMeta({
+    title: "Reviews | Nollywood Film Club",
+    description:
       "What the club actually thinks, ranked by how much argument it started. Members review, members comment, nobody agrees.",
-  },
-];
+    path: "/reviews",
+  });
 
 const PAGE_SIZE = 12;
 

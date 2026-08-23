@@ -7,8 +7,9 @@ import ReviewCard from "../../components/custom/review-card";
 import CommentThread from "../../components/custom/comment-thread";
 import { getReviewPermalinkData } from "../../services/review-thread";
 import { markdownToPlainText } from "../../lib/utils";
+import { pageMeta } from "../../lib/meta";
 
-export const meta: Route.MetaFunction = ({ matches }) => {
+export const meta: Route.MetaFunction = ({ matches, params }) => {
   let self: { loaderData?: Route.ComponentProps["loaderData"] } | undefined;
   for (const m of matches) {
     if (m && m.id === "routes/reviews.$id") {
@@ -19,12 +20,13 @@ export const meta: Route.MetaFunction = ({ matches }) => {
   const data = self?.loaderData;
   if (!data) return [{ title: "Review | Nollywood Film Club" }];
   const film = data.review.film?.title ?? "a film";
-  return [
-    { title: `${data.review.username} on ${film} | Nollywood Film Club` },
-    ...(data.review.review
-      ? [{ name: "description", content: markdownToPlainText(data.review.review).slice(0, 160) }]
-      : []),
-  ];
+  return pageMeta({
+    title: `${data.review.username} on ${film} | Nollywood Film Club`,
+    description: data.review.review
+      ? markdownToPlainText(data.review.review).slice(0, 160)
+      : undefined,
+    path: `/reviews/${params.id ?? ""}`,
+  });
 };
 
 export async function loader({ params, context }: Route.LoaderArgs) {

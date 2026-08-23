@@ -4,15 +4,15 @@ import { useLoaderData } from "react-router";
 import { appServicesContext } from "../context";
 import Footer from "../../components/site/footer";
 import BrowseContent from "../../components/catalog/browse-content";
+import { pageMeta } from "../../lib/meta";
 
-export const meta: Route.MetaFunction = () => [
-  { title: "Movies & TV | Nollywood Film Club" },
-  {
-    name: "description",
-    content:
+export const meta: Route.MetaFunction = () =>
+  pageMeta({
+    title: "Movies & TV | Nollywood Film Club",
+    description:
       "Every movie, TV series, and short film Nollywood Film Club has discussed. Filter by year, streaming service, genre, and the score it earned. The catalogue remembers everything, even the ones we'd rather forget.",
-  },
-];
+    path: "/movies-and-tv",
+  });
 
 export async function loader({ context }: Route.LoaderArgs) {
   const services = context.get(appServicesContext);

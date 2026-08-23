@@ -6,6 +6,7 @@ import Footer from "../../components/site/footer";
 import { Sparkle, Starburst, EmptyListIllustration } from "../../components/graphics";
 import SpotifyEmbed from "../../components/sections/spotify-embed";
 import EpisodeRow from "../../components/site/episode-row";
+import { pageMeta } from "../../lib/meta";
 import {
   Pagination,
   PaginationContent,
@@ -16,14 +17,13 @@ import {
 } from "../../components/ui/pagination";
 import { episodeLabel, toSpotifyEmbedUrl } from "../../lib/utils";
 
-export const meta: Route.MetaFunction = () => [
-  { title: "Discussions | Nollywood Film Club" },
-  {
-    name: "description",
-    content:
+export const meta: Route.MetaFunction = () =>
+  pageMeta({
+    title: "Discussions | Nollywood Film Club",
+    description:
       "Every Space, every episode. The full record of what the club talked about and when.",
-  },
-];
+    path: "/discussions",
+  });
 
 const PAGE_SIZE = 24;
 

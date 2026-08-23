@@ -10,15 +10,15 @@ import {
 import { appServicesContext } from "../context";
 import Footer from "../../components/site/footer";
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
+import { pageMeta } from "../../lib/meta";
 
-export const meta: Route.MetaFunction = () => [
-  { title: "About | Nollywood Film Club" },
-  {
-    name: "description",
-    content:
+export const meta: Route.MetaFunction = () =>
+  pageMeta({
+    title: "About | Nollywood Film Club",
+    description:
       "What Nollywood Film Club is, how Sundays work, and the people who keep showing up. One Nollywood film a week, live on X Spaces every Sunday at 6PM WAT.",
-  },
-];
+    path: "/about",
+  });
 
 export async function loader({ context }: Route.LoaderArgs) {
   const services = context.get(appServicesContext);

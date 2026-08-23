@@ -1,15 +1,15 @@
 import { Link } from "react-router";
 import type { Route } from "./+types/terms";
 import LegalDocument, { type LegalSection } from "../../components/site/legal-document";
+import { pageMeta } from "../../lib/meta";
 
-export const meta: Route.MetaFunction = () => [
-  { title: "Terms of Service | Nollywood Film Club" },
-  {
-    name: "description",
-    content:
+export const meta: Route.MetaFunction = () =>
+  pageMeta({
+    title: "Terms of Service | Nollywood Film Club",
+    description:
       "The rules for using Nollywood Film Club, creating an account, and taking part in community ratings and discussions.",
-  },
-];
+    path: "/terms",
+  });
 
 const sections: LegalSection[] = [
   {

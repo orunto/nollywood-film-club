@@ -3,14 +3,15 @@ import { useLoaderData } from "react-router";
 import { appServicesContext } from "../context";
 import Footer from "../../components/site/footer";
 import ScoreboardTable from "../../components/site/scoreboard-table";
+import { pageMeta } from "../../lib/meta";
 
-export const meta: Route.MetaFunction = () => [
-  { title: "NFC Scoreboard | Nollywood Film Club" },
-  {
-    name: "description",
-    content: "Every movie, TV show, and short film the club has rated, with its NFC score.",
-  },
-];
+export const meta: Route.MetaFunction = () =>
+  pageMeta({
+    title: "NFC Scoreboard | Nollywood Film Club",
+    description:
+      "Every movie, TV show, and short film the club has rated, with its NFC score.",
+    path: "/scoreboard",
+  });
 
 export async function loader({ context }: Route.LoaderArgs) {
   const services = context.get(appServicesContext);

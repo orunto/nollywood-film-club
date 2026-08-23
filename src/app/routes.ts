@@ -3,6 +3,7 @@ import { index, layout, route, type RouteConfig } from "@react-router/dev/routes
 export default [
   route("health", "routes/health.ts"),
   route("media/*", "routes/media.tsx"),
+  route("opengraph-image", "routes/og.default.ts"),
   route("auth", "routes/auth.tsx"),
   route("auth/callback", "routes/auth.callback.tsx"),
   route("onboarding", "routes/onboarding.tsx"),

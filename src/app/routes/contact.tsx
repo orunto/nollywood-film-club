@@ -6,15 +6,15 @@ import {
 } from "@phosphor-icons/react";
 import Footer from "../../components/site/footer";
 import ContactForm from "../../components/site/contact-form";
+import { pageMeta } from "../../lib/meta";
 
-export const meta: Route.MetaFunction = () => [
-    { title: "Contact | Nollywood Film Club" },
-    {
-        name: "description",
-        content:
+export const meta: Route.MetaFunction = () =>
+    pageMeta({
+        title: "Contact | Nollywood Film Club",
+        description:
             "Found a bug on the site, or have an idea for how it should work? Tell the Nollywood Film Club team.",
-    },
-];
+        path: "/contact",
+    });
 
 const WHAT_TO_SEND = [
     {

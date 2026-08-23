@@ -1,15 +1,15 @@
 import { Link } from "react-router";
 import type { Route } from "./+types/privacy";
 import LegalDocument, { type LegalSection } from "../../components/site/legal-document";
+import { pageMeta } from "../../lib/meta";
 
-export const meta: Route.MetaFunction = () => [
-  { title: "Privacy Policy | Nollywood Film Club" },
-  {
-    name: "description",
-    content:
+export const meta: Route.MetaFunction = () =>
+  pageMeta({
+    title: "Privacy Policy | Nollywood Film Club",
+    description:
       "How Nollywood Film Club collects, uses, shares, and protects account, community, contact, and analytics data.",
-  },
-];
+    path: "/privacy",
+  });
 
 const sections: LegalSection[] = [
   {

@@ -16,8 +16,9 @@ import {
   PaginationPrevious,
 } from "../../components/ui/pagination";
 import { getMemberProfileData } from "../../services/member-profile";
+import { pageMeta } from "../../lib/meta";
 
-export const meta: Route.MetaFunction = ({ matches }) => {
+export const meta: Route.MetaFunction = ({ matches, params }) => {
   let self: { loaderData?: Route.ComponentProps["loaderData"] } | undefined;
   for (const m of matches) {
     if (m && m.id === "routes/members.$username") {
@@ -28,10 +29,11 @@ export const meta: Route.MetaFunction = ({ matches }) => {
   const data = self?.loaderData;
   if (!data) return [{ title: "Member not found | Nollywood Film Club" }];
   const label = data.profile.displayName || data.profile.username;
-  return [
-    { title: `${label} | Nollywood Film Club` },
-    { name: "description", content: `${label}'s reviews on Nollywood Film Club.` },
-  ];
+  return pageMeta({
+    title: `${label} | Nollywood Film Club`,
+    description: `${label}'s reviews on Nollywood Film Club.`,
+    path: `/members/${params.username ?? ""}`,
+  });
 };
 
 export async function loader({ request, params, context }: Route.LoaderArgs) {

@@ -8,15 +8,15 @@ import {
 } from "react-router";
 import type { Route } from "./+types/root";
 import { Toaster } from "../components/ui/sonner";
+import { pageMeta } from "../lib/meta";
 import "./styles.css";
 
-export const meta: Route.MetaFunction = () => [
-  { title: "Nollywood Film Club" },
-  {
-    name: "description",
-    content: "Discover, watch, rate, and discuss Nollywood films.",
-  },
-];
+export const meta: Route.MetaFunction = () =>
+  pageMeta({
+    title: "Nollywood Film Club",
+    description: "Discover, watch, rate, and discuss Nollywood films.",
+    path: "/",
+  });
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
