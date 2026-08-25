@@ -6,8 +6,8 @@ import { contentOpenGraphObjectKey } from "../../src/lib/media";
 import { readJsonIfExists, writeJsonAtomic } from "./media-manifest";
 
 const BASE_URL = process.env.OG_BACKFILL_BASE_URL ?? "https://nollywoodfilm.club";
-const DATABASE = process.env.D1_DATABASE ?? "nollywood-film-club-production";
-const BUCKET = process.env.R2_BUCKET ?? "nollywood-film-club-media-production";
+const DATABASE = process.env.D1_DATABASE ?? "nollywood-film-club";
+const BUCKET = process.env.R2_BUCKET ?? "nollywood-film-club-media";
 const CHECKPOINT = resolve("data/migration/opengraph-backfill.json");
 const force = process.argv.includes("--force");
 const wranglerBin = resolve("node_modules/wrangler/bin/wrangler.js");
@@ -67,32 +67,45 @@ function routePath(row: ContentRow): string {
   return `/${base}/${row.id}/opengraph-image`;
 }
 
-const checkpoint = await readJsonIfExists<Checkpoint>(CHECKPOINT) ?? {
-  completed: [],
-  failures: {},
-};
-const completed = new Set(force ? [] : checkpoint.completed);
-const directory = await mkdtemp(join(tmpdir(), "nfc-opengraph-"));
+const delay = (milliseconds: number) => new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds));
 
-try {
-  const rows = await contentRows();
-  for (const [index, row] of rows.entries()) {
-    if (completed.has(row.id)) continue;
+async function fetchImage(row: ContentRow): Promise<Uint8Array> {
+  const url = new URL(routePath(row), BASE_URL);
+  for (let attempt = 1; attempt <= 6; attempt++) {
+    let response: Response;
     try {
-      const response = await fetch(new URL(routePath(row), BASE_URL), {
+      response = await fetch(url, {
         headers: { "User-Agent": "NFC OpenGraph Backfill/1.0" },
       });
-      if (!response.ok) {
-        throw new Error(`Generator returned ${response.status}`);
-      }
+    } catch (error) {
+      if (attempt === 6) throw error;
+      const delayMs = attempt * 10_000;
+      console.warn(JSON.stringify({ contentId: row.id, error: "fetch failed", attempt, delayMs }));
+      await delay(delayMs);
+      continue;
+    }
+    if (response.ok) {
       if (response.headers.get("content-type")?.split(";", 1)[0] !== "image/jpeg") {
         throw new Error("Generator did not return JPEG; deploy the write-time generator first");
       }
+      return new Uint8Array(await response.arrayBuffer());
+    }
+    if ((response.status !== 429 && response.status !== 503) || attempt === 6) {
+      throw new Error(`Generator returned ${response.status}`);
+    }
+    const retryAfter = Number(response.headers.get("retry-after"));
+    const delayMs = Number.isFinite(retryAfter) && retryAfter > 0
+      ? retryAfter * 1_000
+      : attempt * 10_000;
+    console.warn(JSON.stringify({ contentId: row.id, status: response.status, attempt, delayMs }));
+    await delay(delayMs);
+  }
+  throw new Error("Generator retries exhausted");
+}
 
-      const bytes = new Uint8Array(await response.arrayBuffer());
-      const file = join(directory, `${row.id}.jpg`);
-      await writeFile(file, bytes);
-      const objectKey = contentOpenGraphObjectKey(row.id);
+async function uploadImage(file: string, objectKey: string): Promise<void> {
+  for (let attempt = 1; attempt <= 4; attempt++) {
+    try {
       await wrangler([
         "r2",
         "object",
@@ -107,6 +120,33 @@ try {
         "--cache-control",
         "public, max-age=31536000, immutable",
       ]);
+      return;
+    } catch (error) {
+      if (attempt === 4) throw error;
+      const delayMs = attempt * 10_000;
+      console.warn(JSON.stringify({ objectKey, error: "upload failed", attempt, delayMs }));
+      await delay(delayMs);
+    }
+  }
+}
+
+const checkpoint = await readJsonIfExists<Checkpoint>(CHECKPOINT) ?? {
+  completed: [],
+  failures: {},
+};
+const completed = new Set(force ? [] : checkpoint.completed);
+const directory = await mkdtemp(join(tmpdir(), "nfc-opengraph-"));
+
+try {
+  const rows = await contentRows();
+  for (const [index, row] of rows.entries()) {
+    if (completed.has(row.id)) continue;
+    try {
+      const bytes = await fetchImage(row);
+      const file = join(directory, `${row.id}.jpg`);
+      await writeFile(file, bytes);
+      const objectKey = contentOpenGraphObjectKey(row.id);
+      await uploadImage(file, objectKey);
 
       completed.add(row.id);
       delete checkpoint.failures[row.id];
