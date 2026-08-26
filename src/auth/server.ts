@@ -24,6 +24,37 @@ type DrizzleInstance =
   | DrizzleD1Database<typeof schema>
   | SqliteRemoteDatabase<typeof schema>;
 
+function authEmail(options: {
+  title: string;
+  message: string;
+  action: string;
+  url: string;
+  footer: string;
+}) {
+  const safeUrl = options.url.replaceAll("&", "&amp;").replaceAll('"', "&quot;");
+  return {
+    text: [
+      options.message,
+      "",
+      options.url,
+      "",
+      options.footer,
+    ].join("\n"),
+    html: `<!doctype html>
+<html lang="en">
+  <body style="margin:0;background:#f6f5f2;color:#171717;font-family:Arial,sans-serif;">
+    <main style="max-width:560px;margin:32px auto;padding:40px;background:#ffffff;border:1px solid #e4e1dc;">
+      <p style="margin:0 0 28px;font-size:14px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">Nollywood Film Club</p>
+      <h1 style="margin:0 0 16px;font-size:28px;line-height:1.15;">${options.title}</h1>
+      <p style="margin:0 0 28px;font-size:16px;line-height:1.55;">${options.message}</p>
+      <p style="margin:0 0 28px;"><a href="${safeUrl}" style="display:inline-block;padding:13px 20px;background:#d1416d;color:#ffffff;font-weight:700;text-decoration:none;">${options.action}</a></p>
+      <p style="margin:0;color:#5c5c5c;font-size:13px;line-height:1.5;">${options.footer}</p>
+    </main>
+  </body>
+</html>`,
+  };
+}
+
 export function createBetterAuthService(
   db: DrizzleInstance,
   options: BetterAuthServiceOptions,
@@ -48,13 +79,13 @@ export function createBetterAuthService(
         await options.mail.send({
           to: user.email,
           subject: "Reset your Nollywood Film Club password",
-          text: [
-            "You asked to reset your Nollywood Film Club password.",
-            "",
+          ...authEmail({
+            title: "Reset your password",
+            message: "You asked to reset your Nollywood Film Club password.",
+            action: "Reset password",
             url,
-            "",
-            "If you did not ask for this, you can safely ignore this email.",
-          ].join("\n"),
+            footer: "If you did not ask for this, you can safely ignore this email.",
+          }),
         });
       },
       // A stolen session should not survive a password reset: the legitimate
@@ -68,13 +99,13 @@ export function createBetterAuthService(
         await options.mail.send({
           to: user.email,
           subject: "Verify your Nollywood Film Club email",
-          text: [
-            "Verify your Nollywood Film Club email address to finish setting up your account.",
-            "",
+          ...authEmail({
+            title: "Verify your email",
+            message: "Confirm your email address to finish setting up your Nollywood Film Club account.",
+            action: "Verify email",
             url,
-            "",
-            "If you did not create this account, you can safely ignore this email.",
-          ].join("\n"),
+            footer: "If you did not create this account, you can safely ignore this email.",
+          }),
         });
       },
     },

@@ -98,6 +98,8 @@ test("email sign-up creates a user with server-owned defaults", async () => {
     assert.equal(user.username, null);
     assert.equal(user.role, "user");
     assert.equal(user.regular, 0);
+    assert.match(t.messages[0].html ?? "", /Verify email/);
+    assert.match(t.messages[0].html ?? "", /verify-email/);
 
     const accountCount = readOnlyRow(
       t.databasePath,
