@@ -39,7 +39,9 @@ export function createBetterAuthService(
     appName: "Nollywood Film Club",
     emailAndPassword: {
       enabled: true,
-      requireEmailVerification: true,
+      // New credential users receive a session immediately so the client can
+      // complete onboarding; verification still runs asynchronously by email.
+      requireEmailVerification: false,
       autoSignIn: true,
       // Reset and verification links use the same portable MailService seam.
       sendResetPassword: async ({ user, url }) => {
@@ -88,6 +90,7 @@ export function createBetterAuthService(
         ? {
             clientId: options.twitter.clientId,
             clientSecret: options.twitter.clientSecret,
+            scope: ["user.email"],
           }
         : undefined,
     },

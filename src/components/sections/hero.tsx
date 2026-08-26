@@ -43,7 +43,7 @@ export default function Hero({ latestEpisode, posters = [] }: HeroProps) {
                 fades into the solid-black nav above. */}
             <div aria-hidden className="absolute inset-0 bg-black">
                 {columns.length > 0 && (
-                    <div className="absolute -inset-[18%] flex gap-4 opacity-50 -rotate-6">
+                    <div className="absolute inset-[-18%] flex gap-4 opacity-50 -rotate-6">
                         {columns.map((col, i) => {
                             const goingUp = i % 2 === 0;
                             const duration = 1200 + i * 60;

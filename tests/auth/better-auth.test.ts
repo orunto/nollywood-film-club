@@ -111,17 +111,18 @@ test("email sign-up creates a user with server-owned defaults", async () => {
   }
 });
 
-test("unverified sign-up does not issue an authenticated session", async () => {
+test("credential sign-up issues an authenticated session for onboarding", async () => {
   const t = await createTestAuth();
   try {
     const response = await signUp(t);
     const cookies = cookieHeader(response);
-    assert.equal(cookies, "");
+    assert.notEqual(cookies, "");
 
     const session = await t.auth.getSession(
       new Request(`${BASE_URL}/`, { headers: { Cookie: cookies } }),
     );
-    assert.equal(session, null);
+    assert.equal(typeof session?.userId, "string");
+    assert.equal(session?.username, null);
   } finally {
     t.database.close();
     await rm(t.directory, { recursive: true, force: true });
@@ -160,7 +161,7 @@ test("email sign-in with correct credentials yields a session", async () => {
   }
 });
 
-test("unverified email sign-in is rejected and sends a verification link", async () => {
+test("unverified email sign-in yields a session", async () => {
   const t = await createTestAuth();
   try {
     await signUp(t);
@@ -172,9 +173,14 @@ test("unverified email sign-in is rejected and sends a verification link", async
         password: "correct-horse-battery",
       }),
     );
-    assert.equal(signIn.status, 403);
-    assert.equal(t.messages.length, 1);
-    assert.match(t.messages[0].subject, /verify/i);
+    assert.equal(signIn.status, 200);
+    assert.equal(t.messages.length, 0);
+    const session = await t.auth.getSession(
+      new Request(`${BASE_URL}/`, {
+        headers: { Cookie: cookieHeader(signIn) },
+      }),
+    );
+    assert.equal(typeof session?.userId, "string");
   } finally {
     t.database.close();
     await rm(t.directory, { recursive: true, force: true });
