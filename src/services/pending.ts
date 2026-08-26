@@ -69,20 +69,32 @@ export class HttpMailService implements MailService {
   ) {}
 
   async send(message: MailMessage) {
-    const response = await fetch(this.endpoint, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: this.from,
-        to: message.to,
-        subject: message.subject,
-        text: message.text,
-      }),
-    });
+    let response: Response;
+    try {
+      response = await fetch(this.endpoint, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: this.from,
+          to: message.to,
+          subject: message.subject,
+          text: message.text,
+        }),
+      });
+    } catch (error) {
+      console.error("Mail delivery request failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
     if (!response.ok) {
+      console.error("Mail delivery rejected", {
+        status: response.status,
+        statusText: response.statusText,
+      });
       throw new Error(`Mail delivery failed with status ${response.status}`);
     }
   }
