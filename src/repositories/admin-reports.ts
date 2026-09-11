@@ -28,12 +28,16 @@ export interface AdminReport {
 export class AdminReportsRepository {
   constructor(private readonly database: Database) {}
 
-  async list(): Promise<AdminReport[]> {
+  async list(options: { limit?: number; offset?: number } = {}): Promise<AdminReport[]> {
+    const limit = options.limit ?? 50;
+    const offset = options.offset ?? 0;
     const rows = await this.database
       .select({ report: reports, reporter: users })
       .from(reports)
       .leftJoin(users, eq(reports.reporterId, users.id))
-      .orderBy(asc(sql`CASE WHEN ${reports.status} = 'open' THEN 0 ELSE 1 END`), desc(reports.createdAt));
+      .orderBy(asc(sql`CASE WHEN ${reports.status} = 'open' THEN 0 ELSE 1 END`), desc(reports.createdAt))
+      .limit(limit)
+      .offset(offset);
     const reviewIds = rows.filter(({ report }) => report.targetType === "review").map(({ report }) => report.targetId);
     const commentIds = rows.filter(({ report }) => report.targetType === "comment").map(({ report }) => report.targetId);
     const reviewRows = reviewIds.length
@@ -68,6 +72,11 @@ export class AdminReportsRepository {
         reviewId: report.targetType === "review" ? report.targetId : commentMap.get(report.targetId)?.reviewId ?? null,
       };
     });
+  }
+
+  async count(): Promise<number> {
+    const [row] = await this.database.select({ total: sql<number>`count(*)` }).from(reports);
+    return Number(row?.total ?? 0);
   }
 
   async setStatus(id: string, status: Status, resolvedBy: string) {

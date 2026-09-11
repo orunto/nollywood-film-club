@@ -29,14 +29,23 @@ export class ContactMessageRepository {
     });
   }
 
-  async listForAdmin() {
+  async listForAdmin(options: { limit?: number; offset?: number } = {}) {
+    const limit = options.limit ?? 50;
+    const offset = options.offset ?? 0;
     return this.database
       .select()
       .from(contactMessages)
       .orderBy(
         asc(sql`CASE WHEN ${contactMessages.status} = 'open' THEN 0 ELSE 1 END`),
         desc(contactMessages.createdAt),
-      );
+      )
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async count() {
+    const [row] = await this.database.select({ total: sql<number>`count(*)` }).from(contactMessages);
+    return Number(row?.total ?? 0);
   }
 
   async setStatus(id: string, status: "open" | "actioned" | "dismissed", resolvedBy: string) {

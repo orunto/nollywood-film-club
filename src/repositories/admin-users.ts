@@ -24,13 +24,17 @@ export type AdminRoleResult =
 export class AdminUsersRepository {
   constructor(private readonly database: Database) {}
 
-  async list(): Promise<AdminUser[]> {
+  async list(options: { limit?: number; offset?: number } = {}): Promise<AdminUser[]> {
+    const limit = options.limit ?? 50;
+    const offset = options.offset ?? 0;
     const rows = await this.database
       .select({ user: users, reviewCount: count(userRatings.id) })
       .from(users)
       .leftJoin(userRatings, eq(users.id, userRatings.userId))
       .groupBy(users.id)
-      .orderBy(desc(users.createdAt));
+      .orderBy(desc(users.createdAt))
+      .limit(limit)
+      .offset(offset);
 
     return rows.map(({ user, reviewCount }) => ({
       id: user.id,
@@ -75,6 +79,11 @@ export class AdminUsersRepository {
       status: "ok",
       message: regular ? "User marked as a regular" : "Regular status removed",
     };
+  }
+
+  async count(): Promise<number> {
+    const [row] = await this.database.select({ total: count() }).from(users);
+    return Number(row?.total ?? 0);
   }
 
   private async find(id: string) {

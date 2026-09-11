@@ -3,7 +3,7 @@ import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 import * as schema from "../db/schema";
 import { content, discussionContent, discussions } from "../db/schema";
 import type { AtomicCommand, AtomicResult } from "../services/contracts";
-import { allCatalogNumbersSyncCommand } from "./catalog-write";
+import { catalogNumberSyncCommand } from "./catalog-write";
 
 type Database = BaseSQLiteDatabase<"async", unknown, typeof schema>;
 const MAX_CONTENT_LINKS = 40;
@@ -32,17 +32,23 @@ export class AdminDiscussionsRepository {
     private readonly access: DiscussionWriteAccess,
   ) {}
 
-  async list(): Promise<AdminDiscussion[]> {
-    const [rows, links] = await Promise.all([
-      this.database
-        .select()
-        .from(discussions)
-        .orderBy(
-          sql`${discussions.episodeNumber} DESC NULLS LAST`,
-          desc(discussions.createdAt),
-        ),
-      this.database.select().from(discussionContent),
-    ]);
+  async list(options: { limit?: number; offset?: number } = {}): Promise<AdminDiscussion[]> {
+    const limit = options.limit ?? 50;
+    const offset = options.offset ?? 0;
+    const rows = await this.database
+      .select()
+      .from(discussions)
+      .orderBy(
+        sql`${discussions.episodeNumber} DESC NULLS LAST`,
+        desc(discussions.createdAt),
+      )
+      .limit(limit)
+      .offset(offset);
+    if (rows.length === 0) return [];
+    const links = await this.database
+      .select()
+      .from(discussionContent)
+      .where(inArray(discussionContent.discussionId, rows.map((r) => r.id)));
     const contentIdsByDiscussion = new Map<string, string[]>();
     for (const link of links) {
       const ids = contentIdsByDiscussion.get(link.discussionId) ?? [];
@@ -55,12 +61,19 @@ export class AdminDiscussionsRepository {
     }));
   }
 
+  async count(): Promise<number> {
+    const [row] = await this.database.select({ total: sql<number>`count(*)` }).from(discussions);
+    return Number(row?.total ?? 0);
+  }
+
   async create(input: DiscussionInput): Promise<AdminDiscussion> {
     const contentIds = await this.validContentIds(input.contentIds);
     const id = crypto.randomUUID();
     const now = Date.now();
     const commands = this.writeCommands(id, input, contentIds, now, true);
-    commands.push(allCatalogNumbersSyncCommand(now));
+    const catalogSync = catalogNumberSyncCommand(contentIds, now);
+    if (catalogSync) commands.push(catalogSync);
+    commands.push(...this.cacheBumpCommands(now));
     await this.access.atomic(commands);
     return (await this.find(id))!;
   }
@@ -71,7 +84,10 @@ export class AdminDiscussionsRepository {
     const contentIds = await this.validContentIds(input.contentIds);
     const now = Date.now();
     const commands = this.writeCommands(id, input, contentIds, now, false);
-    commands.push(allCatalogNumbersSyncCommand(now));
+    const affected = [...new Set([...existing.contentIds, ...contentIds])];
+    const catalogSync = catalogNumberSyncCommand(affected, now);
+    if (catalogSync) commands.push(catalogSync);
+    commands.push(...this.cacheBumpCommands(now));
     await this.access.atomic(commands);
     return this.find(id);
   }
@@ -86,7 +102,10 @@ export class AdminDiscussionsRepository {
       ...this.linkCommands(id, contentIds),
       { sql: "UPDATE discussions SET updated_at = ? WHERE id = ?", params: [now, id] },
     ];
-    commands.push(allCatalogNumbersSyncCommand(now));
+    const affected = [...new Set([...existing.contentIds, ...contentIds])];
+    const catalogSync = catalogNumberSyncCommand(affected, now);
+    if (catalogSync) commands.push(catalogSync);
+    commands.push(...this.cacheBumpCommands(now));
     await this.access.atomic(commands);
     return this.find(id);
   }
@@ -94,10 +113,13 @@ export class AdminDiscussionsRepository {
   async delete(id: string): Promise<AdminDiscussion | null> {
     const existing = await this.find(id);
     if (!existing) return null;
+    const now = Date.now();
     const commands: AtomicCommand[] = [
       { sql: "DELETE FROM discussions WHERE id = ?", params: [id] },
     ];
-    commands.push(allCatalogNumbersSyncCommand());
+    const catalogSync = catalogNumberSyncCommand(existing.contentIds, now);
+    if (catalogSync) commands.push(catalogSync);
+    commands.push(...this.cacheBumpCommands(now));
     await this.access.atomic(commands);
     return existing;
   }
@@ -126,7 +148,8 @@ export class AdminDiscussionsRepository {
       }
     }
     const now = Date.now();
-    await this.access.atomic([
+    const catalogSync = catalogNumberSyncCommand([contentId], now);
+    const commands: AtomicCommand[] = [
       { sql: "DELETE FROM discussion_content WHERE content_id = ?", params: [contentId] },
       ...discussionIds.map((discussionId) => ({
         sql: "INSERT INTO discussion_content (discussion_id, content_id) VALUES (?, ?)",
@@ -136,8 +159,10 @@ export class AdminDiscussionsRepository {
         sql: "UPDATE discussions SET updated_at = ? WHERE id = ?",
         params: [now, discussionId],
       })),
-      allCatalogNumbersSyncCommand(now),
-    ]);
+    ];
+    if (catalogSync) commands.push(catalogSync);
+    commands.push(...this.cacheBumpCommands(now));
+    await this.access.atomic(commands);
     return true;
   }
 
@@ -185,6 +210,13 @@ export class AdminDiscussionsRepository {
     return contentIds.map((contentId) => ({
       sql: "INSERT INTO discussion_content (discussion_id, content_id) VALUES (?, ?)",
       params: [discussionId, contentId],
+    }));
+  }
+
+  private cacheBumpCommands(now: number): AtomicCommand[] {
+    return ["discussions", "catalog", "content"].map((tag) => ({
+      sql: "INSERT INTO cache_versions (key, version, updated_at) VALUES (?, 1, ?) ON CONFLICT(key) DO UPDATE SET version = version + 1, updated_at = excluded.updated_at",
+      params: [tag, now],
     }));
   }
 

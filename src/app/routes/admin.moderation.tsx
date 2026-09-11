@@ -35,11 +35,14 @@ export async function loader({ context, request }: Route.LoaderArgs) {
   const authorization = await requireAdmin(services, request);
   if (authorization instanceof Response) return authorization;
 
+  const url = new URL(request.url);
+  const activeTab = url.searchParams.get("tab") ?? "reports";
+
   const [reports, ratings, comments, contacts] = await Promise.all([
-    services.db.adminReports.list(),
-    services.db.adminModeration.listRatings(),
-    services.db.adminModeration.listComments(),
-    services.db.contacts.listForAdmin(),
+    activeTab === "reports" ? services.db.adminReports.list({ limit: 50 }) : Promise.resolve([]),
+    activeTab === "reviews" ? services.db.adminModeration.listRatings({ limit: 50 }) : Promise.resolve([]),
+    activeTab === "comments" ? services.db.adminModeration.listComments({ limit: 50 }) : Promise.resolve([]),
+    activeTab === "contact" ? services.db.contacts.listForAdmin({ limit: 50 }) : Promise.resolve([]),
   ]);
 
   return {

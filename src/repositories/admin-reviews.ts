@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 import * as schema from "../db/schema";
 import { reviews } from "../db/schema";
@@ -24,8 +24,15 @@ function scoreTenths(score: number | null) {
 export class AdminReviewsRepository {
   constructor(private readonly database: Database) {}
 
-  async list() {
-    return this.database.select().from(reviews).orderBy(asc(reviews.publishedAt));
+  async list(options: { limit?: number; offset?: number } = {}) {
+    const limit = options.limit ?? 50;
+    const offset = options.offset ?? 0;
+    return this.database.select().from(reviews).orderBy(asc(reviews.publishedAt)).limit(limit).offset(offset);
+  }
+
+  async count() {
+    const [row] = await this.database.select({ total: sql<number>`count(*)` }).from(reviews);
+    return Number(row?.total ?? 0);
   }
 
   async create(input: ReviewInput) {

@@ -1,10 +1,16 @@
 import type { AppServices, AuthSession } from "../services/contracts";
 
+const sessionCache = new WeakMap<Request, AuthSession | null>();
+
 export async function requireAdmin(
   services: AppServices,
   request: Request,
 ): Promise<{ session: AuthSession } | Response> {
-  const session = await services.auth.getSession(request);
+  let session: AuthSession | null | undefined = sessionCache.get(request);
+  if (session === undefined) {
+    session = await services.auth.getSession(request);
+    sessionCache.set(request, session);
+  }
   if (!session) {
     return Response.json(
       { success: false, error: "Authentication required" },
