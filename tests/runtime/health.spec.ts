@@ -28,5 +28,6 @@ test("homepage loader runs through the selected database adapter", async ({
   const response = await request.get("/");
 
   expect(response.status()).toBe(200);
-  expect(await response.text()).toContain("Nollywood, one film at a time.");
+  expect(response.headers()["cache-control"]).toContain("s-maxage=300");
+  expect(await response.text()).toContain("Hello and welcome to Nollywood Film Club");
 });
