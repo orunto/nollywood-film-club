@@ -24,6 +24,7 @@
     {
       "binding": "DB",
       "database_name": "nollywood-film-club",
+      "database_id": "5118a5b3-d3bc-4b2d-bb1d-373722bf89c2",
       "migrations_dir": "./drizzle-sqlite"
     }
   ],
@@ -46,7 +47,8 @@
       "d1_databases": [
         {
           "binding": "DB",
-          "database_name": "nollywood-film-club-staging",
+          "database_name": "nollywood-film-club",
+          "database_id": "5118a5b3-d3bc-4b2d-bb1d-373722bf89c2",
           "migrations_dir": "./drizzle-sqlite"
         }
       ],
@@ -69,7 +71,8 @@
       "d1_databases": [
         {
           "binding": "DB",
-          "database_name": "nollywood-film-club-production",
+          "database_name": "nollywood-film-club",
+          "database_id": "5118a5b3-d3bc-4b2d-bb1d-373722bf89c2",
           "migrations_dir": "./drizzle-sqlite"
         }
       ],
