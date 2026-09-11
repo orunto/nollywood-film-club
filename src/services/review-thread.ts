@@ -69,7 +69,7 @@ export async function getReviewsPage(
   const requested = Number.isNaN(parsed) ? 1 : Math.max(parsed, 1);
   let total = 0;
   try {
-    total = await repository.countTrendingReviews();
+    total = await repository.countTrendingReviews(now);
   } catch {
     // Preserve the legacy empty-feed fallback when the count query fails.
   }

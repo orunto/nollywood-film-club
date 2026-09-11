@@ -4,7 +4,6 @@ import { appServicesContext } from "../context";
 import { getHomepageData } from "../../services/homepage";
 import Footer from "../../components/site/footer";
 import { Hero, MovieOfTheWeek, MoviesAndTVSeries, Reviews, Discussions } from "../../components/sections";
-import { isCatalogPosterUrl } from "../../lib/media";
 import { pageMeta } from "../../lib/meta";
 
 export const meta: Route.MetaFunction = () =>
@@ -16,10 +15,10 @@ export const meta: Route.MetaFunction = () =>
 
 export async function loader({ context }: Route.LoaderArgs) {
   const services = context.get(appServicesContext);
-  const [{ movieOfTheWeek, movieOfTheWeekDiscussion, moviesAndTVSeries, reviews, discussions }, allContent] =
+  const [{ movieOfTheWeek, movieOfTheWeekDiscussion, moviesAndTVSeries, reviews, discussions }, posters] =
     await Promise.all([
       getHomepageData(services.db.publicReads),
-      services.db.publicReads.getAllContent(),
+      services.db.publicReads.getContentPosters(),
     ]);
 
   // Feature the newest episode that has a Spotify link in the hero player,
@@ -31,10 +30,6 @@ export async function loader({ context }: Route.LoaderArgs) {
 
   // Only migrated catalogue posters in R2 feed the hero's poster wall. This
   // excludes legacy Cloudinary IDs and media stored outside media/nfc/.
-  const posters = allContent
-    .map((item) => item.posterImage)
-    .filter(isCatalogPosterUrl);
-
   return {
     movieOfTheWeek,
     movieOfTheWeekDiscussion,

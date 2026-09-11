@@ -1,4 +1,4 @@
-import { relations, sql } from "drizzle-orm";
+import { desc, relations, sql } from "drizzle-orm";
 import {
   check,
   index,
@@ -115,6 +115,7 @@ export const users = sqliteTable(
       sql`${table.emailVerified} IN (0, 1)`,
     ),
     check("users_regular_check", sql`${table.regular} IN (0, 1)`),
+    index("users_regular_created_at_idx").on(table.regular, table.createdAt),
   ],
 );
 
@@ -386,6 +387,16 @@ export const userRatings = sqliteTable(
       table.contentId,
       table.userId,
     ),
+    index("user_ratings_user_visible_created_at_idx").on(
+      table.userId,
+      table.restricted,
+      desc(table.createdAt),
+    ),
+    index("user_ratings_visible_review_created_at_idx")
+      .on(desc(table.createdAt))
+      .where(
+        sql`${table.restricted} = 0 AND ${table.review} IS NOT NULL AND ${table.review} <> ''`,
+      ),
     check("user_ratings_rating_check", sql`${table.rating} IN (0, 5, 10)`),
     check("user_ratings_edited_check", sql`${table.edited} IN (0, 1)`),
     check("user_ratings_flagged_check", sql`${table.flagged} IN (0, 1)`),
@@ -452,6 +463,11 @@ export const comments = sqliteTable(
   (table) => [
     index("comments_review_id_idx").on(table.reviewId),
     index("comments_parent_id_idx").on(table.parentId),
+    index("comments_review_visible_created_at_idx").on(
+      table.reviewId,
+      table.restricted,
+      table.createdAt,
+    ),
     check("comments_depth_check", sql`${table.depth} BETWEEN 0 AND 5`),
     check("comments_flagged_check", sql`${table.flagged} IN (0, 1)`),
     check(

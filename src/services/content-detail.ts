@@ -141,7 +141,7 @@ export async function getContentDetailData(
     withFallback(repository.getUserRatingsForContent(item.id), []),
     withFallback(repository.getDiscussionsForContent(item.id), []),
     withFallback(repository.getCriticReviewsForContent(item.id), []),
-    withFallback(repository.getAllContent(), []),
+    withFallback(repository.getRelatedContentCandidates(), []),
   ]);
 
   return {

@@ -5,6 +5,7 @@ import {
   count,
   desc,
   eq,
+  gte,
   inArray,
   isNull,
   isNotNull,
@@ -144,6 +145,9 @@ export interface DiscussionPageOptions {
   offset?: number;
   now?: Date;
 }
+
+const TRENDING_REVIEW_CANDIDATE_LIMIT = 250;
+const TRENDING_REVIEW_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1_000;
 
 export interface PublicProfile {
   id: string;
@@ -370,15 +374,58 @@ export class PublicReadRepository {
   }
 
   async getMoviesAndTVSeries(limit = 20): Promise<Content[]> {
-    const rows = await this.contentWithRatings(
-      eq(content.isMovieOfTheWeek, false),
-      limit,
+    const rows = await this.database
+      .select({ ...contentSelection })
+      .from(content)
+      .leftJoin(media, eq(content.posterMediaId, media.id))
+      .where(eq(content.isMovieOfTheWeek, false))
+      .orderBy(
+        sql`${content.catalogNumber} IS NULL`,
+        desc(content.catalogNumber),
+        desc(content.createdAt),
+      )
+      .limit(limit);
+    if (rows.length === 0) return [];
+
+    const ratings = await this.database
+      .select({ contentId: userRatings.contentId, userRating: avg(userRatings.rating) })
+      .from(userRatings)
+      .where(inArray(userRatings.contentId, rows.map((row) => row.id)))
+      .groupBy(userRatings.contentId);
+    const ratingsByContent = new Map(
+      ratings.map((row) => [row.contentId, row.userRating]),
     );
-    return rows.map(mapContent);
+
+    return rows.map((row) =>
+      mapContent({ ...row, userRating: ratingsByContent.get(row.id) ?? null }),
+    );
   }
 
   async getAllContent(): Promise<Content[]> {
     const rows = await this.contentWithRatings();
+    return rows.map(mapContent);
+  }
+
+  async getContentPosters(): Promise<string[]> {
+    const rows = await this.database
+      .select({
+        posterImage: content.legacyPosterImage,
+        posterObjectKey: media.objectKey,
+      })
+      .from(content)
+      .leftJoin(media, eq(content.posterMediaId, media.id));
+
+    return rows.flatMap(({ posterImage, posterObjectKey }) =>
+      posterObjectKey ? [`/media/${posterObjectKey}`] : posterImage ? [posterImage] : [],
+    );
+  }
+
+  async getRelatedContentCandidates(): Promise<Content[]> {
+    const rows = await this.database
+      .select({ ...contentSelection })
+      .from(content)
+      .leftJoin(media, eq(content.posterMediaId, media.id));
+
     return rows.map(mapContent);
   }
 
@@ -450,6 +497,18 @@ export class PublicReadRepository {
     offset?: number;
     now?: Date;
   } = {}): Promise<FeedReview[]> {
+    const oldestCandidate = new Date(now.getTime() - TRENDING_REVIEW_MAX_AGE_MS);
+    const candidateLimit = Math.max(
+      TRENDING_REVIEW_CANDIDATE_LIMIT,
+      offset + limit,
+    );
+    const candidates = this.database
+      .select({ id: userRatings.id })
+      .from(userRatings)
+      .where(and(visibleFeedReviews, gte(userRatings.createdAt, oldestCandidate)))
+      .orderBy(desc(userRatings.createdAt))
+      .limit(candidateLimit)
+      .as("trending_review_candidates");
     const rows = await this.database
       .select({
         rating: userRatings,
@@ -462,6 +521,7 @@ export class PublicReadRepository {
         user: users,
       })
       .from(userRatings)
+      .innerJoin(candidates, eq(userRatings.id, candidates.id))
       .leftJoin(content, eq(userRatings.contentId, content.id))
       .leftJoin(media, eq(content.posterMediaId, media.id))
       .leftJoin(
@@ -472,7 +532,6 @@ export class PublicReadRepository {
         ),
       )
       .leftJoin(users, eq(userRatings.userId, users.id))
-      .where(visibleFeedReviews)
       .groupBy(userRatings.id, content.id, users.id);
 
     return rows
@@ -493,13 +552,22 @@ export class PublicReadRepository {
       .map(({ review }) => review);
   }
 
-  async countTrendingReviews(): Promise<number> {
-    const [row] = await this.database
-      .select({ total: count() })
+  async countTrendingReviews(now?: Date): Promise<number> {
+    const oldestCandidate = now
+      ? new Date(now.getTime() - TRENDING_REVIEW_MAX_AGE_MS)
+      : undefined;
+    const rows = await this.database
+      .select({ id: userRatings.id })
       .from(userRatings)
-      .where(visibleFeedReviews);
+      .where(
+        oldestCandidate
+          ? and(visibleFeedReviews, gte(userRatings.createdAt, oldestCandidate))
+          : visibleFeedReviews,
+      )
+      .orderBy(desc(userRatings.createdAt))
+      .limit(TRENDING_REVIEW_CANDIDATE_LIMIT);
 
-    return Number(row?.total ?? 0);
+    return rows.length;
   }
 
   async getFeedReviewById(id: string): Promise<FeedReview | null> {
@@ -920,16 +988,23 @@ export class PublicReadRepository {
   }
 
   private contentWithRatings(where?: SQL, limit?: number) {
+    const ratings = this.database
+      .select({
+        contentId: userRatings.contentId,
+        userRating: avg(userRatings.rating).as("user_rating"),
+      })
+      .from(userRatings)
+      .groupBy(userRatings.contentId)
+      .as("content_ratings");
     const query = this.database
       .select({
         ...contentSelection,
-        userRating: avg(userRatings.rating),
+        userRating: ratings.userRating,
       })
       .from(content)
-      .leftJoin(userRatings, eq(content.id, userRatings.contentId))
+      .leftJoin(ratings, eq(content.id, ratings.contentId))
       .leftJoin(media, eq(content.posterMediaId, media.id))
       .where(where)
-      .groupBy(content.id)
       .orderBy(
         sql`${content.catalogNumber} IS NULL`,
         desc(content.catalogNumber),
