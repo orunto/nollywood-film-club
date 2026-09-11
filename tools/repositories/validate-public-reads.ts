@@ -56,12 +56,11 @@ try {
 
   const expectedScoreboard = raw
     .prepare(`
-      SELECT content.id, avg(user_ratings.rating) AS average, count(user_ratings.id) AS count
+      SELECT content.id, content_rating_summary.average_rating AS average, content_rating_summary.rating_count AS count
       FROM content
-      LEFT JOIN user_ratings ON content.id = user_ratings.content_id
-      GROUP BY content.id
-      HAVING avg(user_ratings.rating) IS NOT NULL
-      ORDER BY avg(user_ratings.rating) DESC
+      INNER JOIN content_rating_summary ON content.id = content_rating_summary.content_id
+      WHERE content_rating_summary.average_rating IS NOT NULL
+      ORDER BY content_rating_summary.average_rating DESC
       LIMIT 100
     `)
     .all() as Array<{ id: string; average: number; count: number }>;

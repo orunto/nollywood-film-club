@@ -4,6 +4,7 @@ import {
   index,
   integer,
   primaryKey,
+  real,
   sqliteTable,
   text,
   uniqueIndex,
@@ -360,6 +361,19 @@ export const discussionContent = sqliteTable(
     primaryKey({ columns: [table.discussionId, table.contentId] }),
     index("discussion_content_content_id_idx").on(table.contentId),
   ],
+);
+
+export const contentRatingSummary = sqliteTable(
+  "content_rating_summary",
+  {
+    contentId: text("content_id")
+      .primaryKey()
+      .references(() => content.id, { onDelete: "cascade" }),
+    ratingCount: integer("rating_count").notNull().default(0),
+    ratingTotal: integer("rating_total").notNull().default(0),
+    averageRating: real("average_rating"),
+    updatedAt: timestamp("updated_at").notNull(),
+  },
 );
 
 export const userRatings = sqliteTable(

@@ -21,6 +21,7 @@ import {
   accountClaims,
   comments,
   content,
+  contentRatingSummary,
   discussionContent,
   discussions,
   media,
@@ -375,9 +376,10 @@ export class PublicReadRepository {
 
   async getMoviesAndTVSeries(limit = 20): Promise<Content[]> {
     const rows = await this.database
-      .select({ ...contentSelection })
+      .select({ ...contentSelection, userRating: contentRatingSummary.averageRating })
       .from(content)
       .leftJoin(media, eq(content.posterMediaId, media.id))
+      .leftJoin(contentRatingSummary, eq(content.id, contentRatingSummary.contentId))
       .where(eq(content.isMovieOfTheWeek, false))
       .orderBy(
         sql`${content.catalogNumber} IS NULL`,
@@ -385,20 +387,8 @@ export class PublicReadRepository {
         desc(content.createdAt),
       )
       .limit(limit);
-    if (rows.length === 0) return [];
 
-    const ratings = await this.database
-      .select({ contentId: userRatings.contentId, userRating: avg(userRatings.rating) })
-      .from(userRatings)
-      .where(inArray(userRatings.contentId, rows.map((row) => row.id)))
-      .groupBy(userRatings.contentId);
-    const ratingsByContent = new Map(
-      ratings.map((row) => [row.contentId, row.userRating]),
-    );
-
-    return rows.map((row) =>
-      mapContent({ ...row, userRating: ratingsByContent.get(row.id) ?? null }),
-    );
+    return rows.map(mapContent);
   }
 
   async getAllContent(): Promise<Content[]> {
@@ -433,13 +423,12 @@ export class PublicReadRepository {
     const [row] = await this.database
       .select({
         ...contentSelection,
-        userRating: avg(userRatings.rating),
+        userRating: contentRatingSummary.averageRating,
       })
       .from(content)
-      .leftJoin(userRatings, eq(content.id, userRatings.contentId))
+      .leftJoin(contentRatingSummary, eq(content.id, contentRatingSummary.contentId))
       .leftJoin(media, eq(content.posterMediaId, media.id))
       .where(eq(content.id, id))
-      .groupBy(content.id)
       .limit(1);
 
     return row ? mapContent(row) : null;
@@ -470,16 +459,18 @@ export class PublicReadRepository {
     const rows = await this.database
       .select({
         ...contentSelection,
-        userRating: avg(userRatings.rating),
-        ratingsCount: count(userRatings.id),
+        userRating: contentRatingSummary.averageRating,
+        ratingsCount: contentRatingSummary.ratingCount,
       })
       .from(content)
-      .leftJoin(userRatings, eq(content.id, userRatings.contentId))
+      .innerJoin(contentRatingSummary, eq(content.id, contentRatingSummary.contentId))
       .leftJoin(media, eq(content.posterMediaId, media.id))
-      .where(contentType ? eq(content.contentType, contentType) : undefined)
-      .groupBy(content.id)
-      .having(sql`avg(${userRatings.rating}) IS NOT NULL`)
-      .orderBy(desc(sql`avg(${userRatings.rating})`))
+      .where(
+        contentType
+          ? and(eq(content.contentType, contentType), sql`${contentRatingSummary.averageRating} IS NOT NULL`)
+          : sql`${contentRatingSummary.averageRating} IS NOT NULL`,
+      )
+      .orderBy(desc(contentRatingSummary.averageRating))
       .limit(limit);
 
     return rows.map((row) => ({
@@ -988,21 +979,13 @@ export class PublicReadRepository {
   }
 
   private contentWithRatings(where?: SQL, limit?: number) {
-    const ratings = this.database
-      .select({
-        contentId: userRatings.contentId,
-        userRating: avg(userRatings.rating).as("user_rating"),
-      })
-      .from(userRatings)
-      .groupBy(userRatings.contentId)
-      .as("content_ratings");
     const query = this.database
       .select({
         ...contentSelection,
-        userRating: ratings.userRating,
+        userRating: contentRatingSummary.averageRating,
       })
       .from(content)
-      .leftJoin(ratings, eq(content.id, ratings.contentId))
+      .leftJoin(contentRatingSummary, eq(content.id, contentRatingSummary.contentId))
       .leftJoin(media, eq(content.posterMediaId, media.id))
       .where(where)
       .orderBy(

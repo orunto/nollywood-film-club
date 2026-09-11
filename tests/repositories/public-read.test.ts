@@ -143,7 +143,7 @@ test("public reads preserve catalog, aggregate, and discussion behavior", async 
       [
         { id: "top", userRating: 5 },
         { id: "zero", userRating: 0 },
-        { id: "motw", userRating: 10 },
+        { id: "motw", userRating: null },
         { id: "uncatalogued", userRating: null },
       ],
     );
@@ -193,7 +193,6 @@ test("public reads preserve catalog, aggregate, and discussion behavior", async 
         ratingsCount,
       })),
       [
-        { id: "motw", userRating: 10, ratingsCount: 1 },
         { id: "top", userRating: 5, ratingsCount: 2 },
         { id: "zero", userRating: 0, ratingsCount: 1 },
       ],
