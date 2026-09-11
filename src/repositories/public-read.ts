@@ -6,6 +6,7 @@ import {
   desc,
   eq,
   gte,
+  gt,
   inArray,
   isNull,
   isNotNull,
@@ -435,7 +436,7 @@ export class PublicReadRepository {
     return row ? mapContent(row) : null;
   }
 
-  async getContentBySlug(slug: string): Promise<Content | null> {
+  async getContentBySlug(contentType: ContentType, slug: string): Promise<Content | null> {
     const [row] = await this.database
       .select({
         ...contentSelection,
@@ -444,20 +445,21 @@ export class PublicReadRepository {
       .from(content)
       .leftJoin(contentRatingSummary, eq(content.id, contentRatingSummary.contentId))
       .leftJoin(media, eq(content.posterMediaId, media.id))
-      .where(eq(content.slug, slug))
+       .where(and(eq(content.contentType, contentType), eq(content.slug, slug)))
       .limit(1);
 
     return row ? mapContent(row) : null;
   }
 
-  async getContentSlugIndex(): Promise<ContentSlugEntry[]> {
+  async getContentSlugIndex(contentType: ContentType): Promise<ContentSlugEntry[]> {
     const rows = await this.database
       .select({
         id: content.id,
         title: content.title,
         releaseDate: content.releaseDate,
       })
-      .from(content);
+       .from(content)
+       .where(eq(content.contentType, contentType));
 
     return rows.map((row) => ({
       ...row,
@@ -505,10 +507,7 @@ export class PublicReadRepository {
     now?: Date;
   } = {}): Promise<FeedReview[]> {
     const oldestCandidate = new Date(now.getTime() - TRENDING_REVIEW_MAX_AGE_MS);
-    const candidateLimit = Math.max(
-      TRENDING_REVIEW_CANDIDATE_LIMIT,
-      offset + limit,
-    );
+    const hotScore = sql<number>`(${reviewFeedSummary.commentCount} + 1.0) / power(((${now.getTime()} - ${userRatings.createdAt}) / 3600000.0) + 2, 1.5)`;
     const candidates = this.database
       .select({ id: reviewFeedSummary.reviewId })
       .from(reviewFeedSummary)
@@ -519,7 +518,7 @@ export class PublicReadRepository {
         ),
       )
       .orderBy(desc(reviewFeedSummary.lastActivityAt))
-      .limit(candidateLimit)
+       .limit(TRENDING_REVIEW_CANDIDATE_LIMIT)
       .as("trending_review_candidates");
     const rows = await this.database
       .select({
@@ -538,26 +537,14 @@ export class PublicReadRepository {
         reviewFeedSummary,
         eq(reviewFeedSummary.reviewId, userRatings.id),
       )
-      .leftJoin(content, eq(userRatings.contentId, content.id))
-      .leftJoin(media, eq(content.posterMediaId, media.id))
-      .leftJoin(users, eq(userRatings.userId, users.id));
+       .leftJoin(content, eq(userRatings.contentId, content.id))
+       .leftJoin(media, eq(content.posterMediaId, media.id))
+       .leftJoin(users, eq(userRatings.userId, users.id))
+       .orderBy(desc(hotScore), desc(reviewFeedSummary.lastActivityAt), desc(userRatings.id))
+       .limit(limit)
+       .offset(offset);
 
-    return rows
-      .map((row) => {
-        const commentCount = Number(row.commentCount);
-        const ageHours =
-          (now.getTime() - row.rating.createdAt.getTime()) / 3_600_000;
-        const hotScore =
-          (commentCount + 1) / Math.pow(ageHours + 2, 1.5);
-
-        return {
-          hotScore,
-          review: mapFeedReview({ ...row, commentCount }),
-        };
-      })
-      .sort((left, right) => right.hotScore - left.hotScore)
-      .slice(offset, offset + limit)
-      .map(({ review }) => review);
+    return rows.map(mapFeedReview);
   }
 
   async countTrendingReviews(now?: Date): Promise<number> {
@@ -625,7 +612,7 @@ export class PublicReadRepository {
           eq(comments.restricted, false),
         ),
       )
-      .orderBy(asc(comments.createdAt))
+       .orderBy(asc(comments.createdAt), asc(comments.id))
       .limit(limit)
       .offset(offset) as unknown as typeof this.database.select extends (...args: unknown[]) => infer R ? R : never;
 
@@ -647,7 +634,7 @@ export class PublicReadRepository {
               eq(comments.reviewId, reviewId),
               eq(comments.restricted, false),
               or(
-                sql`${comments.createdAt} > ${cursor.createdAt}`,
+                gt(comments.createdAt, cursor.createdAt),
                 and(
                   eq(comments.createdAt, cursor.createdAt),
                   sql`${comments.id} > ${cursor.id}`,
@@ -810,8 +797,8 @@ export class PublicReadRepository {
       .select({ rating: userRatings, user: users })
       .from(userRatings)
       .leftJoin(users, eq(userRatings.userId, users.id))
-      .where(eq(userRatings.contentId, contentId))
-      .orderBy(asc(userRatings.createdAt))
+       .where(and(eq(userRatings.contentId, contentId), eq(userRatings.restricted, false)))
+       .orderBy(asc(userRatings.createdAt), asc(userRatings.id))
       .limit(limit)
       .offset(offset);
 
@@ -830,8 +817,9 @@ export class PublicReadRepository {
           .where(
             and(
               eq(userRatings.contentId, contentId),
+              eq(userRatings.restricted, false),
               or(
-                sql`${userRatings.createdAt} > ${cursor.createdAt}`,
+                gt(userRatings.createdAt, cursor.createdAt),
                 and(
                   eq(userRatings.createdAt, cursor.createdAt),
                   sql`${userRatings.id} > ${cursor.id}`,

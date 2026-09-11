@@ -46,7 +46,7 @@ export async function loader({ params, context, request }: Route.LoaderArgs) {
   const services = context.get(appServicesContext);
   const rawParam = params.slug ?? "";
 
-  const data = await getContentDetailData(services.db.publicReads, rawParam);
+  const data = await getContentDetailData(services.db.publicReads, rawParam, "tv_show");
   if (!data) {
     throw new Response(null, { status: 404, statusText: "Not Found" });
   }

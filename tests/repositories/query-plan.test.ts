@@ -65,3 +65,34 @@ test("public read indexes support profile, feed, comment, and member lookups", a
     );
   });
 });
+
+test("public detail and summary reads use bounded indexed projections", async () => {
+  await withDatabase((database) => {
+    const slugPlan = planDetails(
+      database,
+      "SELECT id FROM content WHERE content_type = 'movie' AND slug = 'ajakaju-2024' LIMIT 1",
+    );
+    assert.ok(
+      slugPlan.some((detail) => detail.includes("content_type_slug_unique")),
+      slugPlan.join("\n"),
+    );
+
+    const summaryPlan = planDetails(
+      database,
+      "SELECT c.id, s.average_rating FROM content c INNER JOIN content_rating_summary s ON s.content_id = c.id WHERE c.content_type = 'movie' AND s.average_rating IS NOT NULL ORDER BY s.average_rating DESC LIMIT 100",
+    );
+    assert.ok(
+      summaryPlan.every((detail) => !detail.includes("user_ratings")),
+      summaryPlan.join("\n"),
+    );
+
+    const feedPlan = planDetails(
+      database,
+      "SELECT review_id FROM review_feed_summary WHERE visible = 1 AND last_activity_at >= 0 ORDER BY last_activity_at DESC LIMIT 250",
+    );
+    assert.ok(
+      feedPlan.some((detail) => detail.includes("review_feed_summary_visible_last_activity_idx")),
+      feedPlan.join("\n"),
+    );
+  });
+});

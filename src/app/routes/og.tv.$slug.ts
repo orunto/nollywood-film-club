@@ -9,5 +9,6 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     services.objects,
     services.images,
     params.slug ?? "",
+    "tv_show",
   );
 }

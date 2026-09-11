@@ -48,6 +48,8 @@ export default [
   route("api/movie-of-the-week", "routes/api.movie-of-the-week.tsx"),
   route("api/movies-and-tv-series", "routes/api.movies-and-tv-series.tsx"),
   route("api/reviews", "routes/api.reviews.tsx"),
+  route("api/content/:id/ratings", "routes/api.content.$id.ratings.ts"),
+  route("api/reviews/:id/comments", "routes/api.reviews.$id.comments.ts"),
   route("api/admin/justwatch", "routes/api.admin.justwatch.tsx"),
   route("admin", "routes/admin.tsx", [
     index("routes/admin.index.tsx"),

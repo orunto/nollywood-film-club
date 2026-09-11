@@ -2,6 +2,7 @@ import type {
   Content,
   CriticReview,
   Discussion,
+  ContentType,
   PublicReadRepository,
   UserRating,
 } from "../repositories/public-read";
@@ -70,16 +71,17 @@ export function getRelatedContent(
 export async function resolveContent(
   repository: PublicReadRepository,
   rawParam: string,
+  contentType: ContentType,
 ): Promise<Content | null> {
   const param = decodeURIComponent(rawParam);
   if (UUID_PATTERN.test(param)) {
     return repository.getContentById(param);
   }
 
-  const bySlug = await repository.getContentBySlug(param);
+  const bySlug = await repository.getContentBySlug(contentType, param);
   if (bySlug) return bySlug;
 
-  const index = await repository.getContentSlugIndex();
+  const index = await repository.getContentSlugIndex(contentType);
   const match = index.find(
     (entry) => contentSlug(entry.title, entry.releaseDate) === param,
   );
@@ -136,8 +138,9 @@ export function contentMetadata(item: Content | null): {
 export async function getContentDetailData(
   repository: PublicReadRepository,
   rawParam: string,
+  contentType: ContentType,
 ): Promise<ContentDetailData | null> {
-  const item = await withFallback(resolveContent(repository, rawParam), null);
+  const item = await withFallback(resolveContent(repository, rawParam, contentType), null);
   if (!item) return null;
 
   const [userRatings, episodes, criticReviews, catalog] = await Promise.all([

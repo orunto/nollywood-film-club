@@ -283,17 +283,18 @@ test("public reads preserve catalog, aggregate, and discussion behavior", async 
     assert.equal(contentById?.userRating, 5);
     assert.equal(contentSlug("Àjàkájú", new Date("2024-01-01Z")), "ajakaju-2024");
     assert.equal(
-      (await resolveContent(database.publicReads, "top-catalog-title"))?.id,
+      (await resolveContent(database.publicReads, "top-catalog-title", "movie"))?.id,
       "top",
     );
     assert.equal(
-      await resolveContent(database.publicReads, "missing-title"),
+      await resolveContent(database.publicReads, "missing-title", "movie"),
       null,
     );
 
     const detail = await getContentDetailData(
       database.publicReads,
       "top-catalog-title",
+      "movie",
     );
     assert.equal(detail?.canonicalPath, "/movie/top-catalog-title");
     assert.deepEqual(
@@ -303,6 +304,17 @@ test("public reads preserve catalog, aggregate, and discussion behavior", async 
         { id: "rating-top-1", username: "Ada Member" },
       ],
     );
+    const firstRatingsPage = await database.publicReads.getUserRatingsForContent(
+      "top",
+      { limit: 1 },
+    );
+    const secondRatingsPage = await database.publicReads.getUserRatingsForContent(
+      "top",
+      { limit: 1, cursor: firstRatingsPage[0].id },
+    );
+    assert.equal(firstRatingsPage.length, 1);
+    assert.equal(secondRatingsPage.length, 1);
+    assert.notEqual(firstRatingsPage[0].id, secondRatingsPage[0].id);
     assert.deepEqual(
       detail?.criticReviews.map(({ id, score }) => ({ id, score })),
       [
@@ -346,6 +358,17 @@ test("public reads preserve catalog, aggregate, and discussion behavior", async 
         },
       ],
     );
+    const firstCommentsPage = await database.publicReads.getVisibleCommentsForReview(
+      "rating-top-2",
+      { limit: 1 },
+    );
+    const secondCommentsPage = await database.publicReads.getVisibleCommentsForReview(
+      "rating-top-2",
+      { limit: 1, cursor: firstCommentsPage[0].id },
+    );
+    assert.equal(firstCommentsPage.length, 1);
+    assert.equal(secondCommentsPage.length, 1);
+    assert.notEqual(firstCommentsPage[0].id, secondCommentsPage[0].id);
     const permalink = await getReviewPermalinkData(
       database.publicReads,
       "rating-top-2",

@@ -5,6 +5,7 @@ import { contentOpenGraphObjectKey, mediaObjectKey } from "../lib/media";
 import type { PublicReadRepository } from "../repositories/public-read";
 import type { ImageTransformer, ObjectStore } from "./contracts";
 import { resolveContent } from "./content-detail";
+import type { ContentType } from "../repositories/public-read";
 
 export const OG_SIZE = { width: 1200, height: 630 };
 export const OG_CONTENT_TYPE = "image/jpeg";
@@ -141,8 +142,9 @@ export async function contentOgImage(
   objects: ObjectStore,
   images: ImageTransformer,
   rawSlug: string,
+  contentType: ContentType,
 ): Promise<Response> {
-  const item = await resolveContent(repository, rawSlug);
+  const item = await resolveContent(repository, rawSlug, contentType);
   const jpeg = await renderContentOgImage(objects, images, item?.posterImage);
   return jpegResponse(jpeg);
 }

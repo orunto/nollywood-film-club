@@ -29,6 +29,8 @@
     "migration:copy-objects": "tsx tools/migration/copy-objects.ts",
     "migration:seed-r2": "tsx tools/migration/seed-r2.ts",
     "migration:backfill-opengraph": "tsx tools/migration/backfill-opengraph.ts",
+    "migration:backfill-content-slugs": "tsx tools/migration/backfill-content-slugs.ts",
+    "migration:migrate-local-import": "tsx tools/migration/migrate-local-import.ts",
     "test:characterization": "playwright test",
     "test:runtime": "bun run test:runtime:cloudflare && bun run test:runtime:node",
     "test:runtime:cloudflare": "cross-env RUNTIME_TARGET=cloudflare playwright test --config playwright.runtime.config.ts",

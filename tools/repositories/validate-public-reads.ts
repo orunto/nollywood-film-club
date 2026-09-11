@@ -13,10 +13,22 @@ import { getReviewPermalinkData } from "../../src/services/review-thread";
 const stateDirectory = resolve(
   "data/local-d1-import/v3/d1/miniflare-D1DatabaseObject",
 );
-const databaseFiles = (await readdir(stateDirectory)).filter(
-  (name) => name.endsWith(".sqlite") && name !== "metadata.sqlite",
-);
-assert.equal(databaseFiles.length, 1, "Expected one local D1 database file");
+const databaseFiles = (await readdir(stateDirectory)).filter((name) => {
+  if (!name.endsWith(".sqlite") || name === "metadata.sqlite") return false;
+  const database = new DatabaseSync(resolve(stateDirectory, name), { readOnly: true });
+  try {
+    const hasSummary = database
+      .prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'content_rating_summary'")
+      .get() !== undefined;
+    const contentCount = hasSummary
+      ? (database.prepare("SELECT COUNT(*) AS count FROM content").get() as { count: number }).count
+      : 0;
+    return contentCount > 0;
+  } finally {
+    database.close();
+  }
+});
+assert.equal(databaseFiles.length, 1, "Expected one migrated local D1 database file");
 
 const databasePath = resolve(stateDirectory, databaseFiles[0]);
 const raw = new DatabaseSync(databasePath, { readOnly: true });
@@ -89,11 +101,11 @@ try {
 
   const visibleReviewCount = raw
     .prepare(
-      "SELECT count(*) AS count FROM user_ratings WHERE restricted = 0 AND review IS NOT NULL AND review <> ''",
+      "SELECT count(*) AS count FROM user_ratings WHERE restricted = 0 AND review IS NOT NULL AND review <> '' AND created_at >= ?",
     )
-    .get() as { count: number };
+    .get(now.getTime() - 90 * 24 * 60 * 60 * 1_000) as { count: number };
   assert.equal(
-    await database.publicReads.countTrendingReviews(),
+    await database.publicReads.countTrendingReviews(now),
     visibleReviewCount.count,
   );
   assert.equal(trendingReviews.length, Math.min(visibleReviewCount.count, 12));
@@ -106,10 +118,12 @@ try {
   const detailById = await getContentDetailData(
     database.publicReads,
     movieOfTheWeek.id,
+    movieOfTheWeek.contentType,
   );
   const detailBySlug = await getContentDetailData(
     database.publicReads,
     contentSlug(movieOfTheWeek.title, movieOfTheWeek.releaseDate),
+    movieOfTheWeek.contentType,
   );
   assert.equal(detailById?.item.id, movieOfTheWeek.id);
   assert.equal(detailBySlug?.item.id, movieOfTheWeek.id);
