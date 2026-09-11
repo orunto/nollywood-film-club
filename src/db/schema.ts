@@ -665,6 +665,12 @@ export const reviewRelations = relations(reviews, ({ one }) => ({
   }),
 }));
 
+export const cacheVersions = sqliteTable("cache_versions", {
+  key: text("key").primaryKey(),
+  version: integer("version").notNull().default(1),
+  updatedAt: timestamp("updated_at").notNull(),
+});
+
 export const userRelations = relations(users, ({ many }) => ({
   sessions: many(sessions),
   accounts: many(accounts),

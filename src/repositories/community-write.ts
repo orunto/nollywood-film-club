@@ -64,6 +64,13 @@ export interface CommunityWriteAccess {
   atomic(commands: AtomicCommand[]): Promise<AtomicResult[]>;
 }
 
+function cacheBumpCommands(tags: string[], now: number): import("../services/contracts").AtomicCommand[] {
+  return tags.map((tag) => ({
+    sql: "INSERT INTO cache_versions (key, version, updated_at) VALUES (?, 1, ?) ON CONFLICT(key) DO UPDATE SET version = version + 1, updated_at = excluded.updated_at",
+    params: [tag, now],
+  }));
+}
+
 export class CommunityWriteRepository {
   constructor(private readonly access: CommunityWriteAccess) {}
 
@@ -161,17 +168,20 @@ export class CommunityWriteRepository {
           now,
         ],
       },
+      ...cacheBumpCommands(["catalog", "scoreboard", "content", "feed", "members"], now),
     ]);
 
     return { status: existingId ? "updated" : "created", id };
   }
 
   async deleteRating(id: string, userId: string): Promise<boolean> {
+    const now = Date.now();
     const results = await this.access.atomic([
       {
         sql: "DELETE FROM user_ratings WHERE id = ? AND user_id = ?",
         params: [id, userId],
       },
+      ...cacheBumpCommands(["catalog", "scoreboard", "content", "feed", "members"], now),
     ]);
     return results[0].changes > 0;
   }
@@ -194,6 +204,7 @@ export class CommunityWriteRepository {
         `,
         params: [input.rating, input.review, now, id, userId],
       },
+      ...cacheBumpCommands(["catalog", "scoreboard", "content", "feed", "members"], now),
     ]);
     return results[0].changes > 0;
   }
@@ -253,6 +264,7 @@ export class CommunityWriteRepository {
           now,
         ],
       },
+      ...cacheBumpCommands(["feed"], now),
     ]);
 
     return { status: "created", id };
@@ -261,11 +273,13 @@ export class CommunityWriteRepository {
   // Deleting a comment removes its replies too, via the ON DELETE CASCADE on
   // comments.parent_id.
   async deleteComment(id: string, userId: string): Promise<boolean> {
+    const now = Date.now();
     const results = await this.access.atomic([
       {
         sql: "DELETE FROM comments WHERE id = ? AND user_id = ?",
         params: [id, userId],
       },
+      ...cacheBumpCommands(["feed"], now),
     ]);
     return results[0].changes > 0;
   }
