@@ -416,6 +416,12 @@ export const userRatings = sqliteTable(
       .where(
         sql`${table.restricted} = 0 AND ${table.review} IS NOT NULL AND ${table.review} <> ''`,
       ),
+    index("user_ratings_content_created_at_idx").on(table.contentId, table.createdAt),
+    index("user_ratings_content_visible_created_at_idx").on(
+      table.contentId,
+      table.restricted,
+      table.createdAt,
+    ),
     check("user_ratings_rating_check", sql`${table.rating} IN (0, 5, 10)`),
     check("user_ratings_edited_check", sql`${table.edited} IN (0, 1)`),
     check("user_ratings_flagged_check", sql`${table.flagged} IN (0, 1)`),

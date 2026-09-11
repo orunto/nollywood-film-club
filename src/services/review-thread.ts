@@ -32,10 +32,15 @@ export function assembleCommentTree(rows: CommentRecord[]): CommentNode[] {
 export async function getReviewThread(
   repository: PublicReadRepository,
   reviewId: string,
+  options: { limit?: number; offset?: number; cursor?: string } = {},
 ): Promise<CommentNode[]> {
   try {
     return assembleCommentTree(
-      await repository.getVisibleCommentsForReview(reviewId),
+      await repository.getVisibleCommentsForReview(reviewId, {
+        limit: options.limit ?? 100,
+        offset: options.offset,
+        cursor: options.cursor,
+      }),
     );
   } catch {
     return [];

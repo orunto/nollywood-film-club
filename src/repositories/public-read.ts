@@ -608,8 +608,11 @@ export class PublicReadRepository {
 
   async getVisibleCommentsForReview(
     reviewId: string,
+    options: { limit?: number; offset?: number; cursor?: string } = {},
   ): Promise<CommentRecord[]> {
-    const rows = await this.database
+    const limit = options.limit ?? 100;
+    const offset = options.offset ?? 0;
+    let query = this.database
       .select({ comment: comments, user: users })
       .from(comments)
       .leftJoin(users, eq(comments.userId, users.id))
@@ -619,7 +622,42 @@ export class PublicReadRepository {
           eq(comments.restricted, false),
         ),
       )
-      .orderBy(asc(comments.createdAt));
+      .orderBy(asc(comments.createdAt))
+      .limit(limit)
+      .offset(offset) as unknown as typeof this.database.select extends (...args: unknown[]) => infer R ? R : never;
+
+    // Cursor pagination (created_at, id) for stable ordering when needed
+    if (options.cursor) {
+      const cursorRow = await this.database
+        .select({ createdAt: comments.createdAt, id: comments.id })
+        .from(comments)
+        .where(eq(comments.id, options.cursor))
+        .limit(1);
+      if (cursorRow.length > 0) {
+        const cursor = cursorRow[0];
+        query = this.database
+          .select({ comment: comments, user: users })
+          .from(comments)
+          .leftJoin(users, eq(comments.userId, users.id))
+          .where(
+            and(
+              eq(comments.reviewId, reviewId),
+              eq(comments.restricted, false),
+              or(
+                sql`${comments.createdAt} > ${cursor.createdAt}`,
+                and(
+                  eq(comments.createdAt, cursor.createdAt),
+                  sql`${comments.id} > ${cursor.id}`,
+                ),
+              )!,
+            ),
+          )
+          .orderBy(asc(comments.createdAt), asc(comments.id))
+          .limit(limit) as unknown as typeof query;
+      }
+    }
+
+    const rows = await query;
 
     return rows.map(({ comment, user }) => {
       const display = getDisplayUser(comment.userId, user);
@@ -635,6 +673,14 @@ export class PublicReadRepository {
         profileImage: display.profileImage,
       };
     });
+  }
+
+  async countVisibleCommentsForReview(reviewId: string): Promise<number> {
+    const [row] = await this.database
+      .select({ total: count() })
+      .from(comments)
+      .where(and(eq(comments.reviewId, reviewId), eq(comments.restricted, false)));
+    return Number(row?.total ?? 0);
   }
 
   async targetExists(
@@ -751,15 +797,60 @@ export class PublicReadRepository {
     return row ?? null;
   }
 
-  async getUserRatingsForContent(contentId: string): Promise<UserRating[]> {
-    const rows = await this.database
+  async getUserRatingsForContent(
+    contentId: string,
+    options: { limit?: number; offset?: number; cursor?: string } = {},
+  ): Promise<UserRating[]> {
+    const limit = options.limit ?? 50;
+    const offset = options.offset ?? 0;
+    let baseQuery = this.database
       .select({ rating: userRatings, user: users })
       .from(userRatings)
       .leftJoin(users, eq(userRatings.userId, users.id))
       .where(eq(userRatings.contentId, contentId))
-      .orderBy(asc(userRatings.createdAt));
+      .orderBy(asc(userRatings.createdAt))
+      .limit(limit)
+      .offset(offset);
 
+    if (options.cursor) {
+      const cursorRow = await this.database
+        .select({ createdAt: userRatings.createdAt, id: userRatings.id })
+        .from(userRatings)
+        .where(eq(userRatings.id, options.cursor))
+        .limit(1);
+      if (cursorRow.length > 0) {
+        const cursor = cursorRow[0];
+        baseQuery = this.database
+          .select({ rating: userRatings, user: users })
+          .from(userRatings)
+          .leftJoin(users, eq(userRatings.userId, users.id))
+          .where(
+            and(
+              eq(userRatings.contentId, contentId),
+              or(
+                sql`${userRatings.createdAt} > ${cursor.createdAt}`,
+                and(
+                  eq(userRatings.createdAt, cursor.createdAt),
+                  sql`${userRatings.id} > ${cursor.id}`,
+                ),
+              )!,
+            ),
+          )
+          .orderBy(asc(userRatings.createdAt), asc(userRatings.id))
+          .limit(limit) as unknown as typeof baseQuery;
+      }
+    }
+
+    const rows = await baseQuery;
     return rows.map((row) => mapUserRating(row.rating, row.user));
+  }
+
+  async countUserRatingsForContent(contentId: string): Promise<number> {
+    const [row] = await this.database
+      .select({ total: count() })
+      .from(userRatings)
+      .where(eq(userRatings.contentId, contentId));
+    return Number(row?.total ?? 0);
   }
 
   async getCriticReviewsForContent(

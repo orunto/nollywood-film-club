@@ -141,7 +141,7 @@ export async function getContentDetailData(
   if (!item) return null;
 
   const [userRatings, episodes, criticReviews, catalog] = await Promise.all([
-    withFallback(repository.getUserRatingsForContent(item.id), []),
+    withFallback(repository.getUserRatingsForContent(item.id, { limit: 50 }), []),
     withFallback(repository.getDiscussionsForContent(item.id), []),
     withFallback(repository.getCriticReviewsForContent(item.id), []),
     withFallback(repository.getRelatedContentCandidates(), []),
