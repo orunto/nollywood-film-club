@@ -502,6 +502,25 @@ export const comments = sqliteTable(
   ],
 );
 
+export const reviewFeedSummary = sqliteTable(
+  "review_feed_summary",
+  {
+    reviewId: text("review_id")
+      .primaryKey()
+      .references(() => userRatings.id, { onDelete: "cascade" }),
+    commentCount: integer("comment_count").notNull().default(0),
+    lastActivityAt: timestamp("last_activity_at").notNull(),
+    visible: integer("visible", { mode: "boolean" }).notNull(),
+  },
+  (table) => [
+    index("review_feed_summary_visible_last_activity_idx").on(
+      table.visible,
+      desc(table.lastActivityAt),
+    ),
+    check("review_feed_summary_visible_check", sql`${table.visible} IN (0, 1)`),
+  ],
+);
+
 export const reports = sqliteTable(
   "reports",
   {

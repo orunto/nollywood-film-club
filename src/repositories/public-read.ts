@@ -25,6 +25,7 @@ import {
   discussionContent,
   discussions,
   media,
+  reviewFeedSummary,
   reviews,
   userRatings,
   users,
@@ -509,10 +510,15 @@ export class PublicReadRepository {
       offset + limit,
     );
     const candidates = this.database
-      .select({ id: userRatings.id })
-      .from(userRatings)
-      .where(and(visibleFeedReviews, gte(userRatings.createdAt, oldestCandidate)))
-      .orderBy(desc(userRatings.createdAt))
+      .select({ id: reviewFeedSummary.reviewId })
+      .from(reviewFeedSummary)
+      .where(
+        and(
+          eq(reviewFeedSummary.visible, true),
+          gte(reviewFeedSummary.lastActivityAt, oldestCandidate),
+        ),
+      )
+      .orderBy(desc(reviewFeedSummary.lastActivityAt))
       .limit(candidateLimit)
       .as("trending_review_candidates");
     const rows = await this.database
@@ -523,22 +529,18 @@ export class PublicReadRepository {
         releaseDate: content.releaseDate,
         posterImage: content.legacyPosterImage,
         posterObjectKey: media.objectKey,
-        commentCount: count(comments.id),
+        commentCount: reviewFeedSummary.commentCount,
         user: users,
       })
       .from(userRatings)
       .innerJoin(candidates, eq(userRatings.id, candidates.id))
+      .innerJoin(
+        reviewFeedSummary,
+        eq(reviewFeedSummary.reviewId, userRatings.id),
+      )
       .leftJoin(content, eq(userRatings.contentId, content.id))
       .leftJoin(media, eq(content.posterMediaId, media.id))
-      .leftJoin(
-        comments,
-        and(
-          eq(comments.reviewId, userRatings.id),
-          eq(comments.restricted, false),
-        ),
-      )
-      .leftJoin(users, eq(userRatings.userId, users.id))
-      .groupBy(userRatings.id, content.id, users.id);
+      .leftJoin(users, eq(userRatings.userId, users.id));
 
     return rows
       .map((row) => {
@@ -563,14 +565,17 @@ export class PublicReadRepository {
       ? new Date(now.getTime() - TRENDING_REVIEW_MAX_AGE_MS)
       : undefined;
     const rows = await this.database
-      .select({ id: userRatings.id })
-      .from(userRatings)
+      .select({ id: reviewFeedSummary.reviewId })
+      .from(reviewFeedSummary)
       .where(
         oldestCandidate
-          ? and(visibleFeedReviews, gte(userRatings.createdAt, oldestCandidate))
-          : visibleFeedReviews,
+          ? and(
+              eq(reviewFeedSummary.visible, true),
+              gte(reviewFeedSummary.lastActivityAt, oldestCandidate),
+            )
+          : eq(reviewFeedSummary.visible, true),
       )
-      .orderBy(desc(userRatings.createdAt))
+      .orderBy(desc(reviewFeedSummary.lastActivityAt))
       .limit(TRENDING_REVIEW_CANDIDATE_LIMIT);
 
     return rows.length;
@@ -585,22 +590,20 @@ export class PublicReadRepository {
         releaseDate: content.releaseDate,
         posterImage: content.legacyPosterImage,
         posterObjectKey: media.objectKey,
-        commentCount: count(comments.id),
+        commentCount: reviewFeedSummary.commentCount,
         user: users,
       })
       .from(userRatings)
+      .innerJoin(
+        reviewFeedSummary,
+        eq(reviewFeedSummary.reviewId, userRatings.id),
+      )
       .leftJoin(content, eq(userRatings.contentId, content.id))
       .leftJoin(media, eq(content.posterMediaId, media.id))
-      .leftJoin(
-        comments,
-        and(
-          eq(comments.reviewId, userRatings.id),
-          eq(comments.restricted, false),
-        ),
-      )
       .leftJoin(users, eq(userRatings.userId, users.id))
-      .where(and(eq(userRatings.id, id), eq(userRatings.restricted, false)))
-      .groupBy(userRatings.id, content.id, users.id)
+      .where(
+        and(eq(userRatings.id, id), eq(reviewFeedSummary.visible, true)),
+      )
       .limit(1);
 
     return row ? mapFeedReview(row) : null;
@@ -1051,27 +1054,20 @@ export class PublicReadRepository {
         releaseDate: content.releaseDate,
         posterImage: content.legacyPosterImage,
         posterObjectKey: media.objectKey,
-        commentCount: count(comments.id),
+        commentCount: sql<number>`coalesce(${reviewFeedSummary.commentCount}, 0)`,
         user: users,
       })
       .from(userRatings)
       .leftJoin(content, eq(userRatings.contentId, content.id))
       .leftJoin(media, eq(content.posterMediaId, media.id))
-      .leftJoin(
-        comments,
-        and(
-          eq(comments.reviewId, userRatings.id),
-          eq(comments.restricted, false),
-        ),
-      )
+      .leftJoin(reviewFeedSummary, eq(reviewFeedSummary.reviewId, userRatings.id))
       .leftJoin(users, eq(userRatings.userId, users.id))
       .where(and(eq(userRatings.userId, userId), eq(userRatings.restricted, false)))
-      .groupBy(userRatings.id, content.id, users.id)
       .orderBy(desc(userRatings.createdAt))
       .limit(limit)
       .offset(offset);
 
-    return rows.map((row) => mapFeedReview(row));
+    return rows.map((row) => mapFeedReview(row as unknown as FeedReviewRow));
   }
 
   // Total for a member's profile, for pagination.
