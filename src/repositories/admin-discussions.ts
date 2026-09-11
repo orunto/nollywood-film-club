@@ -73,7 +73,6 @@ export class AdminDiscussionsRepository {
     const commands = this.writeCommands(id, input, contentIds, now, true);
     const catalogSync = catalogNumberSyncCommand(contentIds, now);
     if (catalogSync) commands.push(catalogSync);
-    commands.push(...this.cacheBumpCommands(now));
     await this.access.atomic(commands);
     return (await this.find(id))!;
   }
@@ -87,7 +86,6 @@ export class AdminDiscussionsRepository {
     const affected = [...new Set([...existing.contentIds, ...contentIds])];
     const catalogSync = catalogNumberSyncCommand(affected, now);
     if (catalogSync) commands.push(catalogSync);
-    commands.push(...this.cacheBumpCommands(now));
     await this.access.atomic(commands);
     return this.find(id);
   }
@@ -105,7 +103,6 @@ export class AdminDiscussionsRepository {
     const affected = [...new Set([...existing.contentIds, ...contentIds])];
     const catalogSync = catalogNumberSyncCommand(affected, now);
     if (catalogSync) commands.push(catalogSync);
-    commands.push(...this.cacheBumpCommands(now));
     await this.access.atomic(commands);
     return this.find(id);
   }
@@ -119,7 +116,6 @@ export class AdminDiscussionsRepository {
     ];
     const catalogSync = catalogNumberSyncCommand(existing.contentIds, now);
     if (catalogSync) commands.push(catalogSync);
-    commands.push(...this.cacheBumpCommands(now));
     await this.access.atomic(commands);
     return existing;
   }
@@ -161,7 +157,6 @@ export class AdminDiscussionsRepository {
       })),
     ];
     if (catalogSync) commands.push(catalogSync);
-    commands.push(...this.cacheBumpCommands(now));
     await this.access.atomic(commands);
     return true;
   }
@@ -210,13 +205,6 @@ export class AdminDiscussionsRepository {
     return contentIds.map((contentId) => ({
       sql: "INSERT INTO discussion_content (discussion_id, content_id) VALUES (?, ?)",
       params: [discussionId, contentId],
-    }));
-  }
-
-  private cacheBumpCommands(now: number): AtomicCommand[] {
-    return ["discussions", "catalog", "content"].map((tag) => ({
-      sql: "INSERT INTO cache_versions (key, version, updated_at) VALUES (?, 1, ?) ON CONFLICT(key) DO UPDATE SET version = version + 1, updated_at = excluded.updated_at",
-      params: [tag, now],
     }));
   }
 

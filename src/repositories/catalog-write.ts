@@ -52,13 +52,6 @@ export function allCatalogNumbersSyncCommand(now = Date.now()): AtomicCommand {
   };
 }
 
-function cacheBumpCommands(tags: string[], now: number) {
-  return tags.map((tag) => ({
-    sql: "INSERT INTO cache_versions (key, version, updated_at) VALUES (?, 1, ?) ON CONFLICT(key) DO UPDATE SET version = version + 1, updated_at = excluded.updated_at",
-    params: [tag, now],
-  }));
-}
-
 export class CatalogWriteRepository {
   constructor(private readonly access: CatalogWriteAccess) {}
 
@@ -88,7 +81,6 @@ export class CatalogWriteRepository {
         `,
         params: [promote ? 1 : 0, now, id],
       },
-      ...cacheBumpCommands(["catalog", "content"], now),
     ]);
 
     return { status: "ok" };
@@ -99,6 +91,6 @@ export class CatalogWriteRepository {
   ): Promise<void> {
     const now = Date.now();
     const command = catalogNumberSyncCommand(contentIds, now);
-    if (command) await this.access.atomic([...[command], ...cacheBumpCommands(["catalog"], now)]);
+    if (command) await this.access.atomic([command]);
   }
 }

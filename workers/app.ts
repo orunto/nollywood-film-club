@@ -9,9 +9,6 @@ const ANONYMOUS_JSON_CACHE_SECONDS = 300;
 const ANONYMOUS_HTML_CACHE = "nfc-public-html";
 const ANONYMOUS_JSON_CACHE = "nfc-public-json";
 
-const VERSION_TTL_MS = 30_000;
-const versionMemory = new Map<string, { version: number; expires: number }>();
-
 function isCacheableAnonymousHtmlRequest(request: Request) {
   if (request.method !== "GET") return false;
   if (request.headers.get("Cookie")?.includes("nollywood")) return false;
@@ -33,13 +30,13 @@ function isCacheableAnonymousHtmlRequest(request: Request) {
 function isCacheableAnonymousJsonRequest(request: Request) {
   if (request.method !== "GET") return false;
   if (request.headers.get("Cookie")?.includes("nollywood")) return false;
-  const { pathname } = new URL(request.url);
+  const url = new URL(request.url);
+  const { pathname } = url;
   return (
     pathname === "/api/movies-and-tv-series" ||
     pathname === "/api/movie-of-the-week" ||
-    pathname === "/api/reviews" ||
-    pathname.startsWith("/api/movies-and-tv-series") ||
-    pathname.startsWith("/api/reviews")
+    (pathname === "/api/reviews" && !url.searchParams.has("contentId")) ||
+    pathname.startsWith("/api/movies-and-tv-series")
   );
 }
 
@@ -56,17 +53,44 @@ function tagsForPath(pathname: string): string[] {
   return [];
 }
 
-async function getVersion(env: Env, tag: string): Promise<number> {
-  const cached = versionMemory.get(tag);
-  if (cached && cached.expires > Date.now()) return cached.version;
+async function getVersion(env: Env, tag: string): Promise<string> {
   try {
-    const row = await env.DB.prepare("SELECT version FROM cache_versions WHERE key = ?").bind(tag).first<{ version: number }>();
-    const version = row?.version ?? 1;
-    versionMemory.set(tag, { version, expires: Date.now() + VERSION_TTL_MS });
-    return version;
+    return (await env.CACHE_VERSIONS.get(tag)) ?? "1";
   } catch {
-    return 1;
+    return "1";
   }
+}
+
+function tagsForMutation(request: Request): string[] {
+  if (!["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) return [];
+
+  const { pathname } = new URL(request.url);
+  if (
+    pathname.startsWith("/api/user/ratings") ||
+    pathname.startsWith("/api/admin/user-ratings")
+  ) {
+    return ["catalog", "scoreboard", "content", "feed", "members"];
+  }
+  if (
+    pathname.startsWith("/api/user/comments") ||
+    pathname.startsWith("/api/admin/comments")
+  ) {
+    return ["feed"];
+  }
+  if (pathname.startsWith("/api/admin/discussions")) {
+    return ["discussions", "catalog", "content"];
+  }
+  if (
+    pathname.startsWith("/api/admin/movies") ||
+    pathname.startsWith("/api/admin/justwatch")
+  ) {
+    return ["catalog", "scoreboard", "content"];
+  }
+  return [];
+}
+
+async function rotateCacheVersions(env: Env, tags: string[]) {
+  await Promise.all(tags.map((tag) => env.CACHE_VERSIONS.put(tag, crypto.randomUUID())));
 }
 
 async function cacheKeyFor(request: Request, env: Env) {
@@ -135,6 +159,9 @@ export default {
     const context = new RouterContextProvider();
     context.set(appServicesContext, createCloudflareServices(env));
     const response = await requestHandler(request, context);
+
+    const mutationTags = response.ok ? tagsForMutation(request) : [];
+    if (mutationTags.length > 0) await rotateCacheVersions(env, mutationTags);
 
     const cacheSeconds = isJsonCacheable ? ANONYMOUS_JSON_CACHE_SECONDS : ANONYMOUS_HTML_CACHE_SECONDS;
     const contentType = response.headers.get("Content-Type") ?? "";

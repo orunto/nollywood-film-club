@@ -1,7 +1,7 @@
-import { desc, eq, sql } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 import * as schema from "../db/schema";
-import { cacheVersions, comments, content, userRatings, users } from "../db/schema";
+import { comments, content, userRatings, users } from "../db/schema";
 
 type Database = BaseSQLiteDatabase<"async", unknown, typeof schema>;
 
@@ -38,7 +38,6 @@ export class AdminModerationRepository {
       .update(userRatings)
       .set({ flagged, updatedAt: new Date() })
       .where(eq(userRatings.id, id));
-    await this.bumpCache(["content", "feed"]);
     return this.findRating(id);
   }
 
@@ -47,7 +46,6 @@ export class AdminModerationRepository {
       .update(userRatings)
       .set({ restricted, updatedAt: new Date() })
       .where(eq(userRatings.id, id));
-    await this.bumpCache(["catalog", "scoreboard", "content", "feed", "members"]);
     return this.findRating(id);
   }
 
@@ -56,7 +54,6 @@ export class AdminModerationRepository {
       .update(comments)
       .set({ flagged, updatedAt: new Date() })
       .where(eq(comments.id, id));
-    await this.bumpCache(["feed"]);
     return this.findComment(id);
   }
 
@@ -65,21 +62,7 @@ export class AdminModerationRepository {
       .update(comments)
       .set({ restricted, updatedAt: new Date() })
       .where(eq(comments.id, id));
-    await this.bumpCache(["feed"]);
     return this.findComment(id);
-  }
-
-  private async bumpCache(tags: string[]) {
-    const now = new Date();
-    for (const tag of tags) {
-      await this.database
-        .insert(cacheVersions)
-        .values({ key: tag, version: 1, updatedAt: now })
-        .onConflictDoUpdate({
-          target: cacheVersions.key,
-          set: { version: sql`${cacheVersions.version} + 1`, updatedAt: now },
-        });
-    }
   }
 
   private async findRating(id: string) {

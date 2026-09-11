@@ -1,7 +1,7 @@
 import { desc, eq, getTableColumns, sql } from "drizzle-orm";
 import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 import * as schema from "../db/schema";
-import { cacheVersions, content, media, RATINGS, STREAMING_PLATFORMS, VIEWING_CATEGORIES } from "../db/schema";
+import { content, media, RATINGS, STREAMING_PLATFORMS, VIEWING_CATEGORIES } from "../db/schema";
 import { mediaObjectKey } from "../lib/media";
 import { contentSlug } from "../lib/utils";
 import type { CatalogWriteRepository } from "./catalog-write";
@@ -29,32 +29,17 @@ export class AdminContentRepository {
   async create(input: ContentInput) {
     if (input.isMovieOfTheWeek) await this.database.update(content).set({ isMovieOfTheWeek: false, updatedAt: new Date() }).where(eq(content.isMovieOfTheWeek, true));
     const [row] = await this.database.insert(content).values({ id: crypto.randomUUID(), ...await this.values(input) }).returning();
-    await this.bumpCache(["catalog", "content"]);
     return (await this.find(row.id))!;
   }
   async update(id: string, input: ContentInput) {
     if (input.isMovieOfTheWeek) await this.catalog.setMovieOfTheWeek(id, true);
     const [row] = await this.database.update(content).set({ ...await this.values(input), updatedAt: new Date() }).where(eq(content.id, id)).returning();
-    await this.bumpCache(["catalog", "content", "scoreboard"]);
     return row ? this.find(row.id) : null;
   }
   async setMovieOfTheWeek(id: string, promote: boolean) { return this.catalog.setMovieOfTheWeek(id, promote); }
   async delete(id: string) {
     const [row] = await this.database.delete(content).where(eq(content.id, id)).returning({ id: content.id });
-    await this.bumpCache(["catalog", "content", "scoreboard"]);
     return row !== undefined;
-  }
-  private async bumpCache(tags: string[]) {
-    const now = new Date();
-    for (const tag of tags) {
-      await this.database
-        .insert(cacheVersions)
-        .values({ key: tag, version: 1, updatedAt: now })
-        .onConflictDoUpdate({
-          target: cacheVersions.key,
-          set: { version: sql`${cacheVersions.version} + 1`, updatedAt: now },
-        });
-    }
   }
   private async find(id: string) { const [row] = await this.database.select({ ...getTableColumns(content), posterObjectKey: media.objectKey }).from(content).leftJoin(media, eq(content.posterMediaId, media.id)).where(eq(content.id, id)).limit(1); return row ?? null; }
   private async values(input: ContentInput) { const objectKey = mediaObjectKey(input.posterImage); let posterMediaId: string | null = null; if (objectKey) { const [poster] = await this.database.select({ id: media.id }).from(media).where(eq(media.objectKey, objectKey)).limit(1); if (!poster) throw new Error("Uploaded poster media was not found"); posterMediaId = poster.id; } const slug = contentSlug(input.title, input.releaseDate); return { title: input.title, contentType: input.contentType, runtime: input.runtime, releaseDate: input.releaseDate ? new Date(input.releaseDate) : null, rating: input.rating || null, synopsis: input.synopsis, genre: input.genre, posterMediaId, legacyPosterImage: posterMediaId ? null : input.posterImage || null, legacyPosterVersion: posterMediaId ? null : input.posterVersion, trailerUrl: input.trailerUrl, streamingUrl: input.streamingUrl, streamingPlatform: input.streamingPlatform || null, otherPlatform: input.otherPlatform, viewingCategory: input.viewingCategory || null, castMembers: input.castMembers as schema.CastMember[] | null, isMovieOfTheWeek: input.isMovieOfTheWeek, slug }; }

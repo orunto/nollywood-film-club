@@ -28,6 +28,12 @@
       "migrations_dir": "./drizzle-sqlite"
     }
   ],
+  "kv_namespaces": [
+    {
+      "binding": "CACHE_VERSIONS",
+      "id": "85f39890ac2c49399ba6c5c00788f6dc"
+    }
+  ],
   "r2_buckets": [
     {
       "binding": "OBJECTS",
@@ -52,6 +58,12 @@
           "migrations_dir": "./drizzle-sqlite"
         }
       ],
+      "kv_namespaces": [
+        {
+          "binding": "CACHE_VERSIONS",
+          "id": "041bb972ae4b4c94ba570da5054aba48"
+        }
+      ],
       "r2_buckets": [
         {
           "binding": "OBJECTS",
@@ -74,6 +86,12 @@
           "database_name": "nollywood-film-club",
           "database_id": "5118a5b3-d3bc-4b2d-bb1d-373722bf89c2",
           "migrations_dir": "./drizzle-sqlite"
+        }
+      ],
+      "kv_namespaces": [
+        {
+          "binding": "CACHE_VERSIONS",
+          "id": "38fad37452a247268389441513f01425"
         }
       ],
       "r2_buckets": [
