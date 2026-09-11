@@ -281,6 +281,7 @@ export const content = sqliteTable(
       .notNull()
       .default(false),
     catalogNumber: integer("catalog_number"),
+    slug: text("slug"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -289,6 +290,10 @@ export const content = sqliteTable(
       .on(table.isMovieOfTheWeek)
       .where(sql`${table.isMovieOfTheWeek} = 1`),
     index("content_poster_media_id_idx").on(table.posterMediaId),
+    uniqueIndex("content_type_slug_unique")
+      .on(table.contentType, table.slug)
+      .where(sql`${table.slug} IS NOT NULL`),
+    index("content_slug_idx").on(table.slug),
     check(
       "content_type_check",
       sql`${table.contentType} IN ('movie', 'tv_show', 'short_film')`,

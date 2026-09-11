@@ -76,6 +76,9 @@ export async function resolveContent(
     return repository.getContentById(param);
   }
 
+  const bySlug = await repository.getContentBySlug(param);
+  if (bySlug) return bySlug;
+
   const index = await repository.getContentSlugIndex();
   const match = index.find(
     (entry) => contentSlug(entry.title, entry.releaseDate) === param,

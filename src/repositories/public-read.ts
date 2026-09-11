@@ -434,6 +434,21 @@ export class PublicReadRepository {
     return row ? mapContent(row) : null;
   }
 
+  async getContentBySlug(slug: string): Promise<Content | null> {
+    const [row] = await this.database
+      .select({
+        ...contentSelection,
+        userRating: contentRatingSummary.averageRating,
+      })
+      .from(content)
+      .leftJoin(contentRatingSummary, eq(content.id, contentRatingSummary.contentId))
+      .leftJoin(media, eq(content.posterMediaId, media.id))
+      .where(eq(content.slug, slug))
+      .limit(1);
+
+    return row ? mapContent(row) : null;
+  }
+
   async getContentSlugIndex(): Promise<ContentSlugEntry[]> {
     const rows = await this.database
       .select({
