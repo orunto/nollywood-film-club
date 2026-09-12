@@ -507,7 +507,9 @@ export class PublicReadRepository {
     now?: Date;
   } = {}): Promise<FeedReview[]> {
     const oldestCandidate = new Date(now.getTime() - TRENDING_REVIEW_MAX_AGE_MS);
-    const hotScore = sql<number>`(${reviewFeedSummary.commentCount} + 1.0) / power(((${now.getTime()} - ${userRatings.createdAt}) / 3600000.0) + 2, 1.5)`;
+    // D1 does not authorize SQLite's optional math functions (such as power).
+    // This linear time decay keeps recent, discussed reviews ahead without them.
+    const hotScore = sql<number>`(${reviewFeedSummary.commentCount} + 1.0) / (((${now.getTime()} - ${userRatings.createdAt}) / 3600000.0) + 2)`;
     const candidates = this.database
       .select({ id: reviewFeedSummary.reviewId })
       .from(reviewFeedSummary)
