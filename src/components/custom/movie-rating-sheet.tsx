@@ -23,7 +23,7 @@ import { useNavigate } from "react-router";
 import { REVIEW_MAX } from "../../lib/reviews";
 import { useIsDesktop } from "../../lib/hooks/use-media-query";
 import MarkdownEditor from "./markdown-editor";
-import RatingRadios from "./rating-radios";
+import RatingSlider from "./rating-slider";
 
 interface MovieRatingSheetProps {
   movieId: string;
@@ -39,7 +39,7 @@ export default function MovieRatingSheet({
   onRatingSubmit
 }: MovieRatingSheetProps) {
   const [open, setOpen] = useState(false);
-  // null = no selection yet; 0 is a valid rating ("didn't like it")
+  // null = no selection yet; existing legacy zeroes remain valid when editing.
   const [rating, setRating] = useState<number | null>(null);
   const [review, setReview] = useState("");
   // Submitting before the existing rating has loaded could silently wipe a
@@ -155,7 +155,7 @@ export default function MovieRatingSheet({
 
   const form = (
     <div className="space-y-6">
-      <RatingRadios value={rating} onChange={setRating} disabled={loading} />
+      <RatingSlider value={rating} onChange={setRating} disabled={loading || loadFailed} />
 
       <div>
         <h3 className="lg:text-base text-sm font-medium mb-2">Your Review (Optional)</h3>

@@ -4,20 +4,29 @@ import { useLoaderData } from "react-router";
 import { appServicesContext } from "../context";
 import Footer from "../../components/site/footer";
 import BrowseContent from "../../components/catalog/browse-content";
-import { pageMeta } from "../../lib/meta";
+import { pageMeta, routeLoaderData } from "../../lib/meta";
+import { applyFilters, PAGE_SIZE, parseBrowseParams, searchContent } from "../../lib/browse";
+import { paginatedPath } from "../../lib/seo";
 
-export const meta: Route.MetaFunction = () =>
-  pageMeta({
-    title: "Movies & TV | Nollywood Film Club",
+export const meta: Route.MetaFunction = ({ matches }) => {
+  const data = routeLoaderData<Route.ComponentProps["loaderData"]>(matches, "routes/movies-and-tv");
+  return pageMeta({
+    title: `Nollywood Movies & TV Reviews${data && data.page > 1 ? ` — Page ${data.page}` : ""} | Nollywood Film Club`,
     description:
-      "Every movie, TV series, and short film Nollywood Film Club has discussed. Filter by year, streaming service, genre, and the score it earned. The catalogue remembers everything, even the ones we'd rather forget.",
-    path: "/movies-and-tv",
+      "Browse Nollywood movies, TV series and short films. Compare NFC ratings, read reviews, find streaming links and revisit the club's discussions.",
+    path: data?.canonicalPath ?? "/movies-and-tv",
   });
+};
 
-export async function loader({ context }: Route.LoaderArgs) {
+export async function loader({ context, request }: Route.LoaderArgs) {
   const services = context.get(appServicesContext);
   const allContent = await services.db.publicReads.getAllContent();
-  return { allContent };
+  const url = new URL(request.url);
+  const state = parseBrowseParams(url.searchParams);
+  const matching = searchContent(applyFilters(allContent, state.filters), state.query);
+  const totalPages = Math.max(Math.ceil(matching.length / PAGE_SIZE), 1);
+  const page = Math.min(state.page, totalPages);
+  return { allContent, page, canonicalPath: paginatedPath("/movies-and-tv", page, url.search) };
 }
 
 export default function MoviesAndTVPage() {

@@ -19,6 +19,7 @@ import type { Content } from "../../repositories/public-read";
 import { cn, toYoutubeEmbedUrl, contentPath, viewingCategoryLabel, isUpcomingSpace, isStreamable, spaceDateLabel, isRatingOpen } from "../../lib/utils";
 import { posterUrl } from "../../lib/media";
 import ScoreBox from "../custom/score-box";
+import { NfcCertificationBadge } from "../site/nfc-certification-badge";
 
 export const STREAMING_PLATFORMS: Record<string, {
     label: string;
@@ -151,6 +152,7 @@ export default function MovieHero({ movie, title, showRating = true, spaceUrl, p
                     }
 
                 <div className="flex flex-col gap-1">
+                    {movie.nfcCertified && <NfcCertificationBadge className="w-fit" />}
                     {showRating && (
                       <Link to={contentPath(movie)}>
                         <h2 className="text-xl hover:text-primary font-medium flex items-center gap-2">

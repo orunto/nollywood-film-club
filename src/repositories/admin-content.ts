@@ -7,7 +7,7 @@ import { contentSlug } from "../lib/utils";
 import type { CatalogWriteRepository } from "./catalog-write";
 
 type Database = BaseSQLiteDatabase<"async", unknown, typeof schema>;
-export interface ContentInput { title: string; contentType: "movie" | "tv_show" | "short_film"; runtime: number | null; releaseDate: string | null; rating: (typeof RATINGS)[number] | null; synopsis: string | null; genre: string[]; posterImage: string | null; posterVersion: number | null; trailerUrl: string | null; streamingUrl: string | null; streamingPlatform: (typeof STREAMING_PLATFORMS)[number] | null; otherPlatform: string | null; viewingCategory: (typeof VIEWING_CATEGORIES)[number] | null; castMembers: unknown; isMovieOfTheWeek: boolean; }
+export interface ContentInput { title: string; contentType: "movie" | "tv_show" | "short_film"; runtime: number | null; releaseDate: string | null; rating: (typeof RATINGS)[number] | null; synopsis: string | null; genre: string[]; posterImage: string | null; posterVersion: number | null; trailerUrl: string | null; streamingUrl: string | null; streamingPlatform: (typeof STREAMING_PLATFORMS)[number] | null; otherPlatform: string | null; viewingCategory: (typeof VIEWING_CATEGORIES)[number] | null; castMembers: unknown; isMovieOfTheWeek: boolean; nfcCertified?: boolean; }
 
 export class AdminContentRepository {
   constructor(private readonly database: Database, private readonly catalog: CatalogWriteRepository) {}
@@ -28,12 +28,12 @@ export class AdminContentRepository {
   }
   async create(input: ContentInput) {
     if (input.isMovieOfTheWeek) await this.database.update(content).set({ isMovieOfTheWeek: false, updatedAt: new Date() }).where(eq(content.isMovieOfTheWeek, true));
-    const [row] = await this.database.insert(content).values({ id: crypto.randomUUID(), ...await this.values(input) }).returning();
+    const [row] = await this.database.insert(content).values({ id: crypto.randomUUID(), ...await this.values(input), nfcCertified: input.nfcCertified ?? false }).returning();
     return (await this.find(row.id))!;
   }
   async update(id: string, input: ContentInput) {
     if (input.isMovieOfTheWeek) await this.catalog.setMovieOfTheWeek(id, true);
-    const [row] = await this.database.update(content).set({ ...await this.values(input), updatedAt: new Date() }).where(eq(content.id, id)).returning();
+    const [row] = await this.database.update(content).set({ ...await this.values(input), nfcCertified: input.nfcCertified, updatedAt: new Date() }).where(eq(content.id, id)).returning();
     return row ? this.find(row.id) : null;
   }
   async setMovieOfTheWeek(id: string, promote: boolean) { return this.catalog.setMovieOfTheWeek(id, promote); }

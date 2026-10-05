@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { calculateNfcRating } from "./nfc-rating";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -13,38 +14,23 @@ export const RATING_OPTIONS = {
 } as const;
 
 export function getRatingLabel(rating: number | null): string {
-  if (rating === null) return "No rating";
-
-  switch (rating) {
-    case 10:
-      return RATING_OPTIONS.LIKED.label;
-    case 5:
-      return RATING_OPTIONS.OKAY.label;
-    case 0:
-      return RATING_OPTIONS.DISLIKED.label;
-    default:
-      return "Unknown rating";
-  }
+  if (rating === null) return "I don't know";
+  if (rating >= 7) return RATING_OPTIONS.LIKED.label;
+  if (rating >= 5) return RATING_OPTIONS.OKAY.label;
+  return RATING_OPTIONS.DISLIKED.label;
 }
 
 export function calculateAverageRating(
-  ratings: Array<{ rating: number | null }>,
-): number {
-  const validRatings = ratings
-    .filter((r) => r.rating !== null)
-    .map((r) => r.rating as number);
-
-  if (validRatings.length === 0) return 0;
-
-  const sum = validRatings.reduce((acc, rating) => acc + rating, 0);
-  return Math.round((sum / validRatings.length) * 10) / 10; // Round to 1 decimal place
+  ratings: Array<{ rating: number | null; restricted?: boolean; userId?: string }>,
+): number | null {
+  return calculateNfcRating(ratings);
 }
 
-export function getAverageRatingLabel(average: number): string {
-  if (average === 0) return "No ratings yet";
+export function getAverageRatingLabel(average: number | null): string {
+  if (average === null) return "No ratings yet";
   if (average >= 8) return "Highly liked";
-  if (average >= 6) return "Generally liked";
-  if (average >= 3) return "Mixed reviews";
+  if (average > 5) return "Generally liked";
+  if (average >= 4) return "Mixed reviews";
   return "Generally disliked";
 }
 
@@ -87,11 +73,8 @@ export function toSpotifyEmbedUrl(rawUrl: string): string | null {
   }
 }
 
-// The NFC score is stored and averaged on the 0-10 scale the ratings use, but
-// it is *displayed* as a percentage everywhere: "86%" reads as a share of the
-// room that liked it, which is what the average of a like/okay/dislike vote
-// actually measures. Only the presentation changes — every threshold below,
-// every filter band, and the SQL AVG() all still speak 0-10.
+// Convert the average to a percentage for views that use percentage display.
+// This is not the percentage of members who liked a title.
 export function nfcPercent(userRating: number | string | null): number | null {
   if (userRating === null) return null;
   const score = Number(userRating);

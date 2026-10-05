@@ -199,7 +199,7 @@ test("upserting a rating creates an unedited review, then updates it", async () 
     const updated = await database.writes.upsertRating({
       contentId: "film",
       userId: "member-9",
-      rating: 5,
+      rating: 8,
       review: null,
     });
     assert.equal(updated.status, "updated");
@@ -210,7 +210,8 @@ test("upserting a rating creates an unedited review, then updates it", async () 
       "SELECT rating, review, edited FROM user_ratings WHERE id = ?",
       created.id,
     );
-    assert.equal(row?.rating, 5);
+    assert.equal(row?.rating, 8);
+    assert.equal((await database.publicReads.getUserRating("film", "member-9"))?.rating, 8);
     assert.equal(row?.review, null);
     assert.equal(row?.edited, 1);
 

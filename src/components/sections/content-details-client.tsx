@@ -1,4 +1,5 @@
 "use client";
+import { NfcCertificationBadge } from "../site/nfc-certification-badge";
 import { useState } from "react";
 import { Link, useNavigate, useRevalidator } from "react-router";
 import {
@@ -31,7 +32,7 @@ import ReviewText from "../custom/review-text";
 import RegularBadge from "../custom/regular-badge";
 import MovieRatingSheet from "../custom/movie-rating-sheet";
 import { STREAMING_PLATFORMS } from "./movie-hero";
-import type { Content, Discussion, UserRating } from "../../repositories/public-read";
+import type { Content, Discussion, UserRating, RatingDistribution } from "../../repositories/public-read";
 import type { CriticReview } from "../../repositories/public-read";
 import {
   cn,
@@ -47,10 +48,12 @@ import {
   viewingCategoryNote,
 } from "../../lib/utils";
 import { posterUrl } from "../../lib/media";
+import { MIN_NFC_RATINGS } from "../../lib/nfc-rating";
 
 interface ContentDetailsClientProps {
   movie: Content;
   userRatings: UserRating[];
+  ratingDistribution: RatingDistribution;
   criticReviews: CriticReview[];
   related: Content[];
   spaceUrl?: string | null;
@@ -74,17 +77,8 @@ const formatDate = (value: string | null) =>
 const formatRuntime = (runtime: number | null) =>
   runtime ? `${Math.floor(runtime / 60)} h ${runtime % 60} m` : null;
 
-// Positive / mixed / negative split of member ratings (10 / 5 / 0)
-function ratingCounts(ratings: UserRating[]) {
-  return {
-    positive: ratings.filter((r) => r.rating === 10).length,
-    mixed: ratings.filter((r) => r.rating === 5).length,
-    negative: ratings.filter((r) => r.rating === 0).length,
-  };
-}
-
-function DistributionBar({ ratings }: { ratings: UserRating[] }) {
-  const { positive, mixed, negative } = ratingCounts(ratings);
+function DistributionBar({ distribution }: { distribution: RatingDistribution }) {
+  const { positive, mixed, negative } = distribution;
   const total = positive + mixed + negative;
 
   if (total === 0) {
@@ -116,6 +110,7 @@ const USER_REVIEW_TABS = [
 export default function ContentDetailsClient({
   movie,
   userRatings,
+  ratingDistribution,
   criticReviews,
   related,
   spaceUrl,
@@ -155,6 +150,7 @@ export default function ContentDetailsClient({
   // Rating opens once the club has discussed the film: the podcast episode is
   // out, or 24h have passed since the space (discussion_date).
   const isRatingEnabled = isRatingOpen(discussionDate, hasPodcastLink);
+  const hasEnoughRatings = movie.ratingsCount >= MIN_NFC_RATINGS;
 
   // Restricted reviews (moderator-hidden, or legacy-poll rows with no author to
   // show) stay out of the rendered card list even though they still count
@@ -163,7 +159,7 @@ export default function ContentDetailsClient({
   const visibleUserReviews =
     reviewFilter === "all"
       ? ratingsWithReview
-      : ratingsWithReview.filter((r) => String(r.rating) === reviewFilter);
+       : ratingsWithReview.filter((r) => r.rating !== null && (reviewFilter === "10" ? r.rating >= 7 : reviewFilter === "5" ? r.rating >= 5 && r.rating < 7 : r.rating < 5));
 
   const year = movie.releaseDate
     ? new Date(movie.releaseDate).getUTCFullYear()
@@ -272,19 +268,20 @@ export default function ContentDetailsClient({
               <span className="text-xs font-semibold tracking-[0.2em] text-black/60">
                 NFC SCORE
               </span>
+              {movie.nfcCertified && <NfcCertificationBadge className="w-fit" />}
               <div className="flex items-center justify-between gap-4">
                 <div className="flex flex-col">
                   <span className="font-semibold">
-                    {getAverageRatingLabel(movie.userRating ?? 0)}
+                    {movie.userRating === null ? `Score available after ${MIN_NFC_RATINGS} ratings` : getAverageRatingLabel(movie.userRating)}
                   </span>
                   <span className="text-sm text-black/60 underline underline-offset-2">
-                    Based on {userRatings.length}{" "}
-                    {userRatings.length === 1 ? "member rating" : "member ratings"}
+                    {movie.ratingsCount}{" "}
+                    {movie.ratingsCount === 1 ? "rating" : "ratings"}
                   </span>
                 </div>
                 <ScoreBox score={movie.userRating} className="h-16 w-16 shrink-0" />
               </div>
-              <DistributionBar ratings={userRatings} />
+              {hasEnoughRatings && <DistributionBar distribution={ratingDistribution} />}
             </div>
 
             {/* My score */}
@@ -483,12 +480,12 @@ export default function ContentDetailsClient({
           <div className="pb-3 border-b border-black flex items-end justify-between">
             <h2 className="text-2xl font-semibold">Member Reviews</h2>
             <span className="text-sm text-black/60">
-              {userRatings.length}{" "}
-              {userRatings.length === 1 ? "rating" : "ratings"}
+              {movie.ratingsCount}{" "}
+              {movie.ratingsCount === 1 ? "rating" : "ratings"}
             </span>
           </div>
 
-          {userRatings.length > 0 && (
+          {movie.ratingsCount > 0 && (
             <div className="flex items-center gap-4 pt-6 max-w-xl">
               <ScoreBox
                 score={movie.userRating}
@@ -496,13 +493,13 @@ export default function ContentDetailsClient({
               />
               <div className="flex flex-col gap-2 grow">
                 <span className="text-sm font-semibold">
-                  {getAverageRatingLabel(movie.userRating ?? 0)}
+                  {movie.userRating === null ? `Score available after ${MIN_NFC_RATINGS} ratings` : getAverageRatingLabel(movie.userRating)}
                 </span>
-                <DistributionBar ratings={userRatings} />
+                {hasEnoughRatings && <DistributionBar distribution={ratingDistribution} />}
                 <div className="flex gap-4 text-xs text-black/60">
-                  <span>{ratingCounts(userRatings).positive} liked it</span>
-                  <span>{ratingCounts(userRatings).mixed} thought it was okay</span>
-                  <span>{ratingCounts(userRatings).negative} didn&apos;t like it</span>
+                  <span>{ratingDistribution.positive} liked it</span>
+                  <span>{ratingDistribution.mixed} thought it was okay</span>
+                  <span>{ratingDistribution.negative} didn&apos;t like it</span>
                 </div>
               </div>
             </div>

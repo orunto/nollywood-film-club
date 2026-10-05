@@ -132,11 +132,12 @@ export default function AboutPage() {
               The NFC score
             </h2>
             <p className="pt-6 text-sm font-light text-black/70 max-w-2xl">
-              After the discussion, members say whether they liked the film,
-              thought it was okay, or did not like it. The average becomes the
+              After the discussion, members rate the film from 1 to 10.
+              The average becomes the
               NFC score, and we show it as a percentage. No weighting, no secret
               formula. Everybody&apos;s rating counts exactly the same. Equally
               worse than Mr C&apos;s, obviously, but it counts.
+              Scores appear once a title has at least 25 ratings.
             </p>
           </section>
 

@@ -5,20 +5,23 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useLocation,
 } from "react-router";
 import type { Route } from "./+types/root";
 import { Toaster } from "../components/ui/sonner";
-import { pageMeta } from "../lib/meta";
+import { pageMeta, SITE_TITLE, SITE_DESCRIPTION } from "../lib/meta";
+import { shouldNoIndex } from "../lib/seo";
 import "./styles.css";
 
 export const meta: Route.MetaFunction = () =>
   pageMeta({
-    title: "Nollywood Film Club",
-    description: "Discover, watch, rate, and discuss Nollywood films.",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
     path: "/",
   });
 
 export function Layout({ children }: { children: React.ReactNode }) {
+  const { pathname, search } = useLocation();
   return (
     <html lang="en">
       <head>
@@ -26,6 +29,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
         <Meta />
+        {shouldNoIndex(pathname, search) && <meta name="robots" content="noindex, follow" />}
         <Links />
       </head>
       <body className="min-h-screen antialiased">

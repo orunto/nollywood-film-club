@@ -11,7 +11,7 @@ import {
 import { getReviewPermalinkData } from "../../src/services/review-thread";
 
 const stateDirectory = resolve(
-  "data/local-d1-import/v3/d1/miniflare-D1DatabaseObject",
+  process.argv[2] ?? "data/local-d1-import/v3/d1/miniflare-D1DatabaseObject",
 );
 const databaseFiles = (await readdir(stateDirectory)).filter((name) => {
   if (!name.endsWith(".sqlite") || name === "metadata.sqlite") return false;
@@ -63,17 +63,27 @@ try {
     count: number;
   };
   assert.equal(catalog.length, contentCount.count);
+  for (const item of catalog) {
+    const distribution = await database.publicReads.getRatingDistribution(item.id);
+    const expected = raw.prepare(`
+      SELECT COALESCE(SUM(rating >= 7), 0) AS positive,
+        COALESCE(SUM(rating >= 5 AND rating < 7), 0) AS mixed,
+        COALESCE(SUM(rating < 5), 0) AS negative
+      FROM user_ratings WHERE content_id = ? AND (restricted = 0 OR user_id LIKE 'legacy-poll:%')
+    `).get(item.id);
+    assert.deepEqual(distribution, { ...expected });
+    assert.equal(distribution.positive + distribution.mixed + distribution.negative, item.ratingsCount);
+  }
   assert.equal(homepageCatalog.length, Math.min(contentCount.count - 1, 20));
   assert.ok(homepageCatalog.every((item) => !item.isMovieOfTheWeek));
 
   const expectedScoreboard = raw
     .prepare(`
-      SELECT content.id, content_rating_summary.average_rating AS average, content_rating_summary.rating_count AS count
+      SELECT content.id, content_rating_summary.average_rating AS average, COALESCE(content_rating_summary.rating_count, 0) AS count
       FROM content
-      INNER JOIN content_rating_summary ON content.id = content_rating_summary.content_id
-      WHERE content_rating_summary.average_rating IS NOT NULL
-      ORDER BY content_rating_summary.average_rating DESC
-      LIMIT 100
+      LEFT JOIN content_rating_summary ON content.id = content_rating_summary.content_id
+      WHERE content_rating_summary.rating_count >= 25 AND content_rating_summary.average_rating IS NOT NULL
+      ORDER BY content_rating_summary.average_rating DESC, content.catalog_number DESC, content.id ASC
     `)
     .all() as Array<{ id: string; average: number; count: number }>;
   assert.deepEqual(

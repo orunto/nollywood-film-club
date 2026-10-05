@@ -16,6 +16,9 @@ import {
   sql,
   type SQL,
 } from "drizzle-orm";
+import { MIN_NFC_RATINGS } from "../lib/nfc-rating";
+import { contentPath } from "../lib/utils";
+import type { SitemapEntry } from "../lib/seo";
 import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 import {
   CONTENT_TYPES,
@@ -54,14 +57,22 @@ export interface Content {
   viewingCategory: string | null;
   castMembers: CastMember[] | null;
   isMovieOfTheWeek: boolean;
+  nfcCertified: boolean;
   catalogNumber: number | null;
   createdAt: string;
   updatedAt: string;
   userRating: number | null;
+  ratingsCount: number;
 }
 
 export interface ScoreboardEntry extends Content {
   ratingsCount: number;
+}
+
+export interface RatingDistribution {
+  positive: number;
+  mixed: number;
+  negative: number;
 }
 
 export interface UserRating {
@@ -186,7 +197,9 @@ const contentSelection = {
   viewingCategory: content.viewingCategory,
   castMembers: content.castMembers,
   isMovieOfTheWeek: content.isMovieOfTheWeek,
+  nfcCertified: content.nfcCertified,
   catalogNumber: content.catalogNumber,
+  ratingsCount: sql<number>`COALESCE((SELECT ${contentRatingSummary.ratingCount} FROM ${contentRatingSummary} WHERE ${contentRatingSummary.contentId} = ${content.id}), 0)`,
   createdAt: content.createdAt,
   updatedAt: content.updatedAt,
 };
@@ -197,7 +210,7 @@ function toIsoString(value: Date | null) {
 
 type ContentRow = Omit<
   typeof content.$inferSelect,
-  "legacyPosterImage" | "legacyPosterVersion" | "posterMediaId"
+  "legacyPosterImage" | "legacyPosterVersion" | "posterMediaId" | "slug"
 > & {
     legacyPosterImage?: string | null;
     legacyPosterVersion?: number | null;
@@ -205,6 +218,7 @@ type ContentRow = Omit<
     posterVersion?: number | null;
     posterObjectKey?: string | null;
     userRating?: string | number | null;
+    ratingsCount?: string | number | null;
   };
 
 function mapContent(item: ContentRow): Content {
@@ -228,11 +242,13 @@ function mapContent(item: ContentRow): Content {
     viewingCategory: item.viewingCategory,
     castMembers: item.castMembers,
     isMovieOfTheWeek: item.isMovieOfTheWeek,
+    nfcCertified: item.nfcCertified,
+    ratingsCount: Number(item.ratingsCount ?? 0),
     catalogNumber: item.catalogNumber,
     createdAt: item.createdAt.toISOString(),
     updatedAt: item.updatedAt.toISOString(),
     userRating:
-      item.userRating === null || item.userRating === undefined
+      Number(item.ratingsCount ?? 0) < MIN_NFC_RATINGS || item.userRating === null || item.userRating === undefined
         ? null
         : Number(item.userRating),
   };
@@ -365,6 +381,36 @@ function mapFeedReview(row: FeedReviewRow): FeedReview {
 export class PublicReadRepository {
   constructor(private readonly database: AsyncSQLiteDatabase) {}
 
+  async getSitemapCounts(): Promise<{ content: number; reviews: number }> {
+    const [[catalog], [writtenReviews]] = await Promise.all([
+      this.database.select({ total: count() }).from(content),
+      this.database.select({ total: count() }).from(userRatings)
+        .innerJoin(reviewFeedSummary, eq(reviewFeedSummary.reviewId, userRatings.id))
+        .innerJoin(content, eq(userRatings.contentId, content.id))
+        .where(and(eq(reviewFeedSummary.visible, true), eq(userRatings.restricted, false),
+          sql`trim(COALESCE(${userRatings.review}, '')) <> ''`)),
+    ]);
+    return { content: Number(catalog?.total ?? 0), reviews: Number(writtenReviews?.total ?? 0) };
+  }
+
+  async getSitemapEntries(kind: "content" | "reviews", limit: number, offset: number): Promise<SitemapEntry[]> {
+    if (kind === "content") {
+      const rows = await this.database.select({
+        title: content.title, contentType: content.contentType,
+        releaseDate: content.releaseDate, updatedAt: content.updatedAt,
+      }).from(content).orderBy(asc(content.id)).limit(limit).offset(offset);
+      return rows.map((row) => ({ path: contentPath(row), lastModified: row.updatedAt.toISOString() }));
+    }
+    const rows = await this.database.select({ id: userRatings.id, updatedAt: userRatings.updatedAt })
+      .from(userRatings)
+      .innerJoin(reviewFeedSummary, eq(reviewFeedSummary.reviewId, userRatings.id))
+      .innerJoin(content, eq(userRatings.contentId, content.id))
+      .where(and(eq(reviewFeedSummary.visible, true), eq(userRatings.restricted, false),
+        sql`trim(COALESCE(${userRatings.review}, '')) <> ''`))
+      .orderBy(asc(userRatings.id)).limit(limit).offset(offset);
+    return rows.map((row) => ({ path: `/reviews/${encodeURIComponent(row.id)}`, lastModified: row.updatedAt.toISOString() }));
+  }
+
   async getMovieOfTheWeek(): Promise<Content | null> {
     const [row] = await this.database
       .select({ ...contentSelection })
@@ -469,31 +515,34 @@ export class PublicReadRepository {
 
   async getScoreboard({
     contentType,
-    limit = 100,
+    limit,
   }: {
     contentType?: ContentType;
     limit?: number;
   } = {}): Promise<ScoreboardEntry[]> {
-    const rows = await this.database
+    const query = this.database
       .select({
         ...contentSelection,
         userRating: contentRatingSummary.averageRating,
         ratingsCount: contentRatingSummary.ratingCount,
       })
       .from(content)
-      .innerJoin(contentRatingSummary, eq(content.id, contentRatingSummary.contentId))
+      .leftJoin(contentRatingSummary, eq(content.id, contentRatingSummary.contentId))
       .leftJoin(media, eq(content.posterMediaId, media.id))
       .where(
-        contentType
-          ? and(eq(content.contentType, contentType), sql`${contentRatingSummary.averageRating} IS NOT NULL`)
-          : sql`${contentRatingSummary.averageRating} IS NOT NULL`,
+        and(
+          gte(contentRatingSummary.ratingCount, MIN_NFC_RATINGS),
+          isNotNull(contentRatingSummary.averageRating),
+          contentType ? eq(content.contentType, contentType) : undefined,
+        ),
       )
-      .orderBy(desc(contentRatingSummary.averageRating))
-      .limit(limit);
+      .orderBy(desc(contentRatingSummary.averageRating), desc(content.catalogNumber), asc(content.id));
+
+    const rows = await (limit === undefined ? query : query.limit(limit));
 
     return rows.map((row) => ({
       ...mapContent(row),
-      ratingsCount: Number(row.ratingsCount),
+      ratingsCount: Number(row.ratingsCount ?? 0),
     }));
   }
 
@@ -616,7 +665,7 @@ export class PublicReadRepository {
       )
        .orderBy(asc(comments.createdAt), asc(comments.id))
       .limit(limit)
-      .offset(offset) as unknown as typeof this.database.select extends (...args: unknown[]) => infer R ? R : never;
+      .offset(offset).$dynamic();
 
     // Cursor pagination (created_at, id) for stable ordering when needed
     if (options.cursor) {
@@ -645,7 +694,7 @@ export class PublicReadRepository {
             ),
           )
           .orderBy(asc(comments.createdAt), asc(comments.id))
-          .limit(limit) as unknown as typeof query;
+          .limit(limit).offset(0).$dynamic();
       }
     }
 
@@ -838,6 +887,26 @@ export class PublicReadRepository {
     return rows.map((row) => mapUserRating(row.rating, row.user));
   }
 
+  async getRatingDistribution(contentId: string): Promise<RatingDistribution> {
+    const [row] = await this.database
+      .select({
+        positive: sql<number>`COALESCE(SUM(CASE WHEN ${userRatings.rating} >= 7 THEN 1 ELSE 0 END), 0)`,
+        mixed: sql<number>`COALESCE(SUM(CASE WHEN ${userRatings.rating} >= 5 AND ${userRatings.rating} < 7 THEN 1 ELSE 0 END), 0)`,
+        negative: sql<number>`COALESCE(SUM(CASE WHEN ${userRatings.rating} < 5 THEN 1 ELSE 0 END), 0)`,
+      })
+      .from(userRatings)
+      .where(and(
+        eq(userRatings.contentId, contentId),
+        or(eq(userRatings.restricted, false), sql`${userRatings.userId} LIKE 'legacy-poll:%'`),
+      ));
+
+    return {
+      positive: Number(row?.positive ?? 0),
+      mixed: Number(row?.mixed ?? 0),
+      negative: Number(row?.negative ?? 0),
+    };
+  }
+
   async countUserRatingsForContent(contentId: string): Promise<number> {
     const [row] = await this.database
       .select({ total: count() })
@@ -1022,9 +1091,9 @@ export class PublicReadRepository {
     for (const row of rows) {
       const n = Number(row.n);
       stats.total += n;
-      if (row.rating === 10) stats.liked += n;
-      else if (row.rating === 5) stats.okay += n;
-      else if (row.rating === 0) stats.disliked += n;
+      if (row.rating >= 7) stats.liked += n;
+      else if (row.rating >= 5) stats.okay += n;
+      else stats.disliked += n;
     }
     return stats;
   }

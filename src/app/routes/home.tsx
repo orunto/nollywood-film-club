@@ -4,12 +4,14 @@ import { appServicesContext } from "../context";
 import { getHomepageData } from "../../services/homepage";
 import Footer from "../../components/site/footer";
 import { Hero, MovieOfTheWeek, MoviesAndTVSeries, Reviews, Discussions } from "../../components/sections";
-import { pageMeta } from "../../lib/meta";
+import { pageMeta, SITE_TITLE, SITE_DESCRIPTION } from "../../lib/meta";
+import JsonLd from "../../components/site/json-ld";
+import { organizationStructuredData } from "../../lib/structured-data";
 
 export const meta: Route.MetaFunction = () =>
   pageMeta({
-    title: "Nollywood Film Club",
-    description: "Discover, watch, rate, and discuss Nollywood films.",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
     path: "/",
   });
 
@@ -54,6 +56,7 @@ export default function Home() {
 
   return (
     <>
+      <JsonLd data={organizationStructuredData()} />
       <main className="min-h-screen">
         <Hero latestEpisode={latestEpisode} posters={posters} />
         <div className="w-full flex flex-col lg:px-10 lg:py-8 py-10 px-6 gap-15">

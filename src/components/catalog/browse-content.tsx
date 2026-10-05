@@ -39,6 +39,7 @@ import {
   applyFilters,
   deriveFilterOptions,
   sortContent,
+  searchContent,
 } from "../../lib/browse";
 import FilterSidebar from "./filter-sidebar";
 import { useBrowseParams } from "./use-browse-params";
@@ -108,7 +109,7 @@ export default function BrowseContent({
   );
 
   const filteredBySearch = useMemo(
-    () => filtered.filter((item) => item.title.toLowerCase().includes(debouncedSearch.toLowerCase())),
+    () => searchContent(filtered, debouncedSearch),
     [filtered, debouncedSearch],
   );
 

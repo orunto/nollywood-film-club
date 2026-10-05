@@ -5,8 +5,10 @@ import type {
   ContentType,
   PublicReadRepository,
   UserRating,
+  RatingDistribution,
 } from "../repositories/public-read";
-import { contentTypeLabel } from "../lib/utils";
+import { contentTypeLabel, markdownToPlainText, nfcPercent } from "../lib/utils";
+import { metaDescription } from "../lib/meta";
 import { mergeDiscussions } from "./homepage";
 
 const UUID_PATTERN =
@@ -100,6 +102,7 @@ export interface ContentDetailData {
   item: Content;
   canonicalPath: string;
   userRatings: UserRating[];
+  ratingDistribution: RatingDistribution;
   episodes: Discussion[];
   criticReviews: CriticReview[];
   related: Content[];
@@ -127,10 +130,11 @@ export function contentMetadata(item: Content | null): {
   }
 
   const year = item.releaseDate ? new Date(item.releaseDate).getUTCFullYear() : null;
-  const title = `${item.title}${year ? ` (${year})` : ""} — Nollywood Film Club`;
-  const description =
-    item.synopsis ??
-    `${item.title} — ${contentTypeLabel(item.contentType)} on Nollywood Film Club.`;
+  const title = `${item.title}${year ? ` (${year})` : ""} Reviews & Ratings | Nollywood Film Club`;
+  const score = nfcPercent(item.userRating);
+  const details = `${score !== null ? `NFC score: ${score}%. ` : ""}${contentTypeLabel(item.contentType)} reviews${item.streamingUrl ? ", streaming links" : ""} and club discussions.`;
+  const synopsis = item.synopsis ? markdownToPlainText(item.synopsis) : item.title;
+  const description = `${metaDescription(synopsis, 159 - details.length)} ${details}`;
 
   return { title, description, canonical: contentPath(item) };
 }
@@ -143,17 +147,19 @@ export async function getContentDetailData(
   const item = await withFallback(resolveContent(repository, rawParam, contentType), null);
   if (!item) return null;
 
-  const [userRatings, episodes, criticReviews, catalog] = await Promise.all([
+  const [userRatings, episodes, criticReviews, catalog, ratingDistribution] = await Promise.all([
     withFallback(repository.getUserRatingsForContent(item.id, { limit: 50 }), []),
     withFallback(repository.getDiscussionsForContent(item.id), []),
     withFallback(repository.getCriticReviewsForContent(item.id), []),
     withFallback(repository.getRelatedContentCandidates(), []),
+    repository.getRatingDistribution(item.id),
   ]);
 
   return {
     item,
     canonicalPath: contentPath(item),
     userRatings,
+    ratingDistribution,
     episodes,
     criticReviews,
     related: getRelatedContent(item, catalog),
