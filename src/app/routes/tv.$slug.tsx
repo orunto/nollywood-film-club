@@ -79,6 +79,7 @@ export default function TvPage() {
         <ContentDetailsClient
           movie={data.item}
           userRatings={data.userRatings}
+          ratingDistribution={data.ratingDistribution}
           criticReviews={data.criticReviews}
           related={data.related}
           spaceUrl={data.discussion.spaceUrl}

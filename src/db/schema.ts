@@ -281,6 +281,7 @@ export const content = sqliteTable(
       .notNull()
       .default(false),
     catalogNumber: integer("catalog_number"),
+    nfcCertified: integer("nfc_certified", { mode: "boolean" }).notNull().default(false),
     slug: text("slug"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -322,6 +323,7 @@ export const content = sqliteTable(
       "content_motw_check",
       sql`${table.isMovieOfTheWeek} IN (0, 1)`,
     ),
+    check("content_nfc_certified_check", sql`${table.nfcCertified} IN (0, 1)`),
   ],
 );
 
@@ -422,7 +424,7 @@ export const userRatings = sqliteTable(
       table.restricted,
       table.createdAt,
     ),
-    check("user_ratings_rating_check", sql`${table.rating} IN (0, 5, 10)`),
+    check("user_ratings_rating_check", sql`${table.rating} BETWEEN 0 AND 10 AND typeof(${table.rating}) = 'integer'`),
     check("user_ratings_edited_check", sql`${table.edited} IN (0, 1)`),
     check("user_ratings_flagged_check", sql`${table.flagged} IN (0, 1)`),
     check(

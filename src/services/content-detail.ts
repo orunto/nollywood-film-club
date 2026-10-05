@@ -5,6 +5,7 @@ import type {
   ContentType,
   PublicReadRepository,
   UserRating,
+  RatingDistribution,
 } from "../repositories/public-read";
 import { contentTypeLabel } from "../lib/utils";
 import { mergeDiscussions } from "./homepage";
@@ -100,6 +101,7 @@ export interface ContentDetailData {
   item: Content;
   canonicalPath: string;
   userRatings: UserRating[];
+  ratingDistribution: RatingDistribution;
   episodes: Discussion[];
   criticReviews: CriticReview[];
   related: Content[];
@@ -143,17 +145,19 @@ export async function getContentDetailData(
   const item = await withFallback(resolveContent(repository, rawParam, contentType), null);
   if (!item) return null;
 
-  const [userRatings, episodes, criticReviews, catalog] = await Promise.all([
+  const [userRatings, episodes, criticReviews, catalog, ratingDistribution] = await Promise.all([
     withFallback(repository.getUserRatingsForContent(item.id, { limit: 50 }), []),
     withFallback(repository.getDiscussionsForContent(item.id), []),
     withFallback(repository.getCriticReviewsForContent(item.id), []),
     withFallback(repository.getRelatedContentCandidates(), []),
+    repository.getRatingDistribution(item.id),
   ]);
 
   return {
     item,
     canonicalPath: contentPath(item),
     userRatings,
+    ratingDistribution,
     episodes,
     criticReviews,
     related: getRelatedContent(item, catalog),

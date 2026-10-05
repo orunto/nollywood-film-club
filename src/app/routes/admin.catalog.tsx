@@ -77,6 +77,7 @@ interface ContentRow {
   viewingCategory: string | null;
   castMembers: CastMember[];
   isMovieOfTheWeek: boolean;
+  nfcCertified: boolean;
   catalogNumber: number | null;
 }
 
@@ -131,6 +132,7 @@ interface ContentRowInput {
   viewingCategory: string | null;
   castMembers: CastMember[] | null;
   isMovieOfTheWeek: boolean;
+  nfcCertified: boolean;
   catalogNumber: number | null;
 }
 
@@ -154,6 +156,7 @@ const mapRow = (row: ContentRowInput): ContentRow => ({
   viewingCategory: row.viewingCategory,
   castMembers: row.castMembers ?? [],
   isMovieOfTheWeek: row.isMovieOfTheWeek,
+  nfcCertified: row.nfcCertified,
   catalogNumber: row.catalogNumber,
 });
 
@@ -229,6 +232,7 @@ export default function AdminCatalogRoute() {
     otherPlatform: "",
     viewingCategory: "" as ViewingCategory | "",
     isMovieOfTheWeek: false,
+    nfcCertified: false,
   });
 
   useEffect(() => {
@@ -497,6 +501,7 @@ export default function AdminCatalogRoute() {
       otherPlatform: movie.otherPlatform || "",
       viewingCategory: (movie.viewingCategory as ViewingCategory | "") || "",
       isMovieOfTheWeek: movie.isMovieOfTheWeek,
+      nfcCertified: movie.nfcCertified,
     });
     setCastMembers(movie.castMembers);
     setJwQuery("");
@@ -567,6 +572,7 @@ export default function AdminCatalogRoute() {
       otherPlatform: "",
       viewingCategory: "",
       isMovieOfTheWeek: false,
+      nfcCertified: false,
     });
     setCastMembers(null);
     setJwQuery("");
@@ -1307,6 +1313,17 @@ return (
                   onCheckedChange={(checked) => setFormData({ ...formData, isMovieOfTheWeek: checked === true })}
                 />
                 <Label htmlFor="isMovieOfTheWeek">Movie of the Week</Label>
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="nfcCertified"
+                    checked={formData.nfcCertified}
+                    onCheckedChange={(checked) => setFormData({ ...formData, nfcCertified: checked === true })}
+                  />
+                  <Label htmlFor="nfcCertified">NFC certified</Label>
+                </div>
+                <p className="text-xs text-black/60">Editorial approval adds the NFC certification badge. The numerical score stays unchanged.</p>
               </div>
             </div>
 

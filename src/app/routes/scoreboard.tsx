@@ -9,7 +9,7 @@ export const meta: Route.MetaFunction = () =>
   pageMeta({
     title: "NFC Scoreboard | Nollywood Film Club",
     description:
-      "Every movie, TV show, and short film the club has rated, with its NFC score.",
+      "NFC percentage scores for movies, TV shows, and short films with at least 25 ratings.",
     path: "/scoreboard",
   });
 
@@ -30,11 +30,11 @@ export default function ScoreboardPage() {
             <div className="flex items-baseline justify-between gap-4 border-b border-black">
               <h1 className="pb-3 text-2xl font-semibold">NFC Scoreboard</h1>
               <span className="pb-3 text-sm text-black/60">
-                {ranked.length} {ranked.length === 1 ? "title" : "titles"} scored
+                {ranked.length} {ranked.length === 1 ? "title" : "titles"}
               </span>
             </div>
             <p className="pt-4 text-sm font-light text-black/60">
-              Every title the club has actually rated, with its NFC score attached. This is a
+              Every title with at least 25 ratings, with its average score shown as a percentage. This is a
               scoreboard, not a leaderboard: nobody is competing for first place, we are just
               keeping receipts.
             </p>
@@ -43,9 +43,9 @@ export default function ScoreboardPage() {
               <ScoreboardTable ranked={ranked} />
             ) : (
               <div className="flex flex-col items-center gap-4 py-20 text-center">
-                <h2 className="text-xl font-semibold">Nobody has rated anything yet</h2>
+                <h2 className="text-xl font-semibold">No titles have enough ratings yet</h2>
                 <p className="max-w-md text-sm font-light text-black/60">
-                  Once a title picks up its first rating, it&apos;ll show up here.
+                  Once a title reaches 25 ratings, it&apos;ll show up here.
                 </p>
               </div>
             )}

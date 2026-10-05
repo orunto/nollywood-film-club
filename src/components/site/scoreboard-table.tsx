@@ -8,6 +8,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "../ui/sheet";
 import { cn, contentPath, contentTypeLabel, nfcPercent, scoreBadgeClass } from "../../lib/utils";
 import { posterUrl } from "../../lib/media";
 import type { ScoreboardEntry } from "../../repositories/public-read";
+import { NfcCertificationBadge } from "./nfc-certification-badge";
 
 // Below `sm`, the grid collapses to just Title and Score — the columns that
 // answer "how did this one do." Everything else moves into the detail sheet
@@ -129,6 +130,7 @@ export default function ScoreboardTable({ ranked }: { ranked: ScoreboardEntry[] 
                       {item.title}
                     </span>
                   </Link>
+                  {item.nfcCertified && <NfcCertificationBadge className="mt-1" />}
                 </TableCell>
                 <TableCell className={cn("py-1.5 text-xs text-black/60", cellBorder, mobileHidden)}>
                   {contentTypeLabel(item.contentType)}
@@ -142,7 +144,7 @@ export default function ScoreboardTable({ ranked }: { ranked: ScoreboardEntry[] 
                 <TableCell className="py-1.5 text-right">
                   <span
                     className={cn(
-                      "inline-block rounded-[2px] px-1.5 py-0.5 font-mono text-xs font-semibold text-white",
+                      "inline-block max-w-full whitespace-normal break-all rounded-[2px] px-1.5 py-0.5 font-mono text-xs font-semibold text-white",
                       scoreBadgeClass(item.userRating),
                     )}
                   >
@@ -178,8 +180,8 @@ function ScoreboardDetailSheet({
   item: ScoreboardEntry | null;
   onOpenChange: (open: boolean) => void;
 }) {
-  const percent = item ? nfcPercent(item.userRating) : null;
   const year = item?.releaseDate ? new Date(item.releaseDate).getUTCFullYear() : null;
+  const percent = nfcPercent(item?.userRating ?? null);
 
   return (
     <Sheet open={item !== null} onOpenChange={onOpenChange}>
@@ -190,6 +192,7 @@ function ScoreboardDetailSheet({
               <SheetTitle>{item.title}</SheetTitle>
             </SheetHeader>
             <div className="flex flex-col gap-4 px-4 pb-6">
+              {item.nfcCertified && <NfcCertificationBadge className="w-fit" />}
               <div className="flex items-center gap-3">
                 {item.posterImage && (
                   <img
