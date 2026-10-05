@@ -4,14 +4,14 @@ import { appServicesContext } from "../context";
 import { getHomepageData } from "../../services/homepage";
 import Footer from "../../components/site/footer";
 import { Hero, MovieOfTheWeek, MoviesAndTVSeries, Reviews, Discussions } from "../../components/sections";
-import { pageMeta } from "../../lib/meta";
+import { pageMeta, SITE_TITLE, SITE_DESCRIPTION } from "../../lib/meta";
 import JsonLd from "../../components/site/json-ld";
 import { organizationStructuredData } from "../../lib/structured-data";
 
 export const meta: Route.MetaFunction = () =>
   pageMeta({
-    title: "Nollywood Film Club",
-    description: "Discover, watch, rate, and discuss Nollywood films.",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
     path: "/",
   });
 

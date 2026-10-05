@@ -30,6 +30,16 @@ test("SEO resources and structured data are present in server responses", async 
   expect(JSON.parse(homeJson![1])["@graph"].map((node: { "@type": string }) => node["@type"]))
     .toEqual(["Organization", "WebSite"]);
 
+  const search = await request.get("/movies-and-tv?q=film", { headers: { "User-Agent": "Googlebot" } });
+  expect(search.status()).toBe(200);
+  expect(search.headers()["x-robots-tag"]).toBe("noindex, follow");
+  const browse = await request.get("/movies-and-tv?page=2", { headers: { "User-Agent": "Googlebot" } });
+  expect(browse.status()).toBe(200);
+  expect(browse.headers()["x-robots-tag"]).toBeUndefined();
+  const browseHtml = await browse.text();
+  const hasSecondPage = /href="[^\"]*page=2"/.test(browseHtml);
+  expect(browseHtml).toContain(`rel="canonical" href="https://nollywoodfilm.club/movies-and-tv${hasSecondPage ? "?page=2" : ""}"`);
+
   if (index.includes("/sitemaps/content/1.xml")) {
     const catalogue = await request.get("/sitemaps/content/1.xml");
     expect(catalogue.status()).toBe(200);
@@ -37,7 +47,9 @@ test("SEO resources and structured data are present in server responses", async 
     expect(entry).not.toBeNull();
     const film = await request.get(new URL(entry![1]).pathname, { headers: { "User-Agent": "Googlebot" } });
     expect(film.status()).toBe(200);
-    const filmJson = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(await film.text());
+    const filmHtml = await film.text();
+    expect(filmHtml).toContain(`rel="canonical" href="${entry![1]}"`);
+    const filmJson = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(filmHtml);
     expect(filmJson).not.toBeNull();
     const graph = JSON.parse(filmJson![1])["@graph"];
     expect(["Movie", "TVSeries"]).toContain(graph[0]["@type"]);

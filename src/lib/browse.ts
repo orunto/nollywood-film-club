@@ -200,3 +200,27 @@ export function sortContent(items: Content[], sort: SortValue): Content[] {
   }
   return sorted;
 }
+
+export interface BrowseParams {
+  filters: FilterState;
+  query: string;
+  sort: SortValue;
+  page: number;
+}
+
+export function parseBrowseParams(params: URLSearchParams): BrowseParams {
+  const type = params.get("type");
+  const sort = params.get("sort");
+  const page = Number(params.get("page") ?? "1");
+  const split = (key: string) => params.get(key)?.split(",").filter(Boolean) ?? [];
+  return {
+    filters: {
+      type: type && ["movie", "tv_show", "short_film"].includes(type) ? type : null,
+      years: split("year"), platforms: split("platform"), genres: split("genre"),
+      scores: split("score"), viewingCategories: split("watch"),
+    },
+    query: params.get("q") ?? "",
+    sort: SORT_OPTIONS.some((option) => option.value === sort) ? sort as SortValue : "newest",
+    page: Number.isSafeInteger(page) && page > 0 ? page : 1,
+  };
+}

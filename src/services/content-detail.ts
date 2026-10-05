@@ -7,7 +7,8 @@ import type {
   UserRating,
   RatingDistribution,
 } from "../repositories/public-read";
-import { contentTypeLabel } from "../lib/utils";
+import { contentTypeLabel, markdownToPlainText, nfcPercent } from "../lib/utils";
+import { metaDescription } from "../lib/meta";
 import { mergeDiscussions } from "./homepage";
 
 const UUID_PATTERN =
@@ -129,10 +130,11 @@ export function contentMetadata(item: Content | null): {
   }
 
   const year = item.releaseDate ? new Date(item.releaseDate).getUTCFullYear() : null;
-  const title = `${item.title}${year ? ` (${year})` : ""} — Nollywood Film Club`;
-  const description =
-    item.synopsis ??
-    `${item.title} — ${contentTypeLabel(item.contentType)} on Nollywood Film Club.`;
+  const title = `${item.title}${year ? ` (${year})` : ""} Reviews & Ratings | Nollywood Film Club`;
+  const score = nfcPercent(item.userRating);
+  const details = `${score !== null ? `NFC score: ${score}%. ` : ""}${contentTypeLabel(item.contentType)} reviews${item.streamingUrl ? ", streaming links" : ""} and club discussions.`;
+  const synopsis = item.synopsis ? markdownToPlainText(item.synopsis) : item.title;
+  const description = `${metaDescription(synopsis, 159 - details.length)} ${details}`;
 
   return { title, description, canonical: contentPath(item) };
 }

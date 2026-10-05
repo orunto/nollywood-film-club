@@ -6,8 +6,32 @@ const UTILITY_PATHS = [
   "/account-claim", "/user-dashboard", "/admin",
 ];
 
-export function shouldNoIndex(pathname: string): boolean {
-  return UTILITY_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+const BROWSE_QUERY_KEYS = ["type", "year", "platform", "genre", "score", "watch", "sort", "q"];
+
+export function shouldNoIndex(pathname: string, search = ""): boolean {
+  if (UTILITY_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`))) return true;
+  if (pathname !== "/movies-and-tv") return false;
+  const params = new URLSearchParams(search);
+  return BROWSE_QUERY_KEYS.some((key) => {
+    const value = params.get(key)?.trim();
+    return Boolean(value && !(key === "sort" && value === "newest") && !(key === "type" && value === "all"));
+  });
+}
+
+export function paginatedPath(path: string, page: number, search = ""): string {
+  const params = new URLSearchParams();
+  if (path === "/movies-and-tv") {
+    const source = new URLSearchParams(search);
+    for (const key of BROWSE_QUERY_KEYS) {
+      const value = source.get(key)?.trim();
+      if (value && !(key === "sort" && value === "newest") && !(key === "type" && value === "all")) {
+        params.set(key, value);
+      }
+    }
+  }
+  if (page > 1) params.set("page", String(page));
+  const query = params.toString();
+  return query ? `${path}?${query}` : path;
 }
 
 export const ROBOTS_TXT = [

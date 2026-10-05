@@ -7,9 +7,9 @@ import { pageMeta } from "../../lib/meta";
 
 export const meta: Route.MetaFunction = () =>
   pageMeta({
-    title: "NFC Scoreboard | Nollywood Film Club",
+    title: "Nollywood Film Ratings & NFC Scores | Nollywood Film Club",
     description:
-      "NFC percentage scores for movies, TV shows, and short films with at least 25 ratings.",
+      "Compare Nollywood movies, TV shows and short films by NFC audience score. Every listed title has at least 25 ratings, counting every eligible vote equally.",
     path: "/scoreboard",
   });
 

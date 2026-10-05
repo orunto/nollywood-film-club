@@ -7,7 +7,7 @@ import ReviewCard from "../../components/custom/review-card";
 import CommentThread from "../../components/custom/comment-thread";
 import { getReviewPermalinkData } from "../../services/review-thread";
 import { markdownToPlainText } from "../../lib/utils";
-import { pageMeta } from "../../lib/meta";
+import { metaDescription, pageMeta } from "../../lib/meta";
 import JsonLd from "../../components/site/json-ld";
 import { reviewStructuredData } from "../../lib/structured-data";
 
@@ -25,7 +25,7 @@ export const meta: Route.MetaFunction = ({ matches, params }) => {
   return pageMeta({
     title: `${data.review.username} on ${film} | Nollywood Film Club`,
     description: data.review.review
-      ? markdownToPlainText(data.review.review).slice(0, 160)
+      ? metaDescription(markdownToPlainText(data.review.review))
       : undefined,
     path: `/reviews/${params.id ?? ""}`,
   });

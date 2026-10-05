@@ -2,49 +2,24 @@ import type { Route } from "./+types/movie.$slug";
 import { useLoaderData } from "react-router";
 import { redirect } from "react-router";
 import { appServicesContext } from "../context";
-import { getContentDetailData, isCanonicalFor } from "../../services/content-detail";
+import { contentMetadata, getContentDetailData, isCanonicalFor } from "../../services/content-detail";
 import { contentOpenGraphObjectKey, posterUrl } from "../../lib/media";
 import ContentDetailsClient from "../../components/sections/content-details-client";
 import Footer from "../../components/site/footer";
+import { pageMeta, routeLoaderData, SITE_URL } from "../../lib/meta";
 import JsonLd from "../../components/site/json-ld";
 import { contentStructuredData } from "../../lib/structured-data";
 
 export const meta: Route.MetaFunction = ({ matches }) => {
-  let self: { loaderData?: Route.ComponentProps["loaderData"] } | undefined;
-  for (const m of matches) {
-    if (m && m.id === "routes/movie.$slug") {
-      self = m as unknown as { loaderData?: Route.ComponentProps["loaderData"] };
-      break;
-    }
-  }
-  const data = self?.loaderData;
+  const data = routeLoaderData<Route.ComponentProps["loaderData"]>(matches, "routes/movie.$slug");
   const item = data?.item;
   if (!data || !item) return [{ title: "Not Found — Nollywood Film Club" }];
 
-  const year = item.releaseDate ? new Date(item.releaseDate).getUTCFullYear() : null;
-  const title = `${item.title}${year ? ` (${year})` : ""} — Nollywood Film Club`;
-  const description =
-    item.synopsis ?? `${item.title} — ${item.contentType} on Nollywood Film Club.`;
-
-  return [
-    { title },
-    { name: "description", content: description },
-    { tagName: "link", rel: "canonical", href: data.canonicalUrl },
-    { property: "og:description", content: description },
-    { property: "og:url", content: data.canonicalUrl },
-    { property: "og:title", content: title },
-    {
-      property: "og:image",
-      content: data.openGraphImageUrl,
-    },
-    { name: "twitter:card", content: "summary_large_image" },
-    { name: "twitter:description", content: description },
-    { name: "twitter:image", content: data.openGraphImageUrl },
-    { name: "twitter:title", content: title },
-  ];
+  const { title, description } = contentMetadata(item);
+  return pageMeta({ title, description, path: data.canonicalPath, image: data.openGraphImageUrl, type: "video.movie" });
 };
 
-export async function loader({ params, context, request }: Route.LoaderArgs) {
+export async function loader({ params, context }: Route.LoaderArgs) {
   const services = context.get(appServicesContext);
   const rawParam = params.slug ?? "";
 
@@ -55,10 +30,10 @@ export async function loader({ params, context, request }: Route.LoaderArgs) {
 
   // Legacy UUIDs, wrong-type paths, and stale slugs land on the canonical URL.
   if (!isCanonicalFor(data, rawParam, "/movie")) {
-    throw redirect(data.canonicalPath);
+    throw redirect(data.canonicalPath, 301);
   }
 
-  const canonicalUrl = new URL(data.canonicalPath, request.url).href;
+  const canonicalUrl = new URL(data.canonicalPath, SITE_URL).href;
   const openGraphObjectKey = contentOpenGraphObjectKey(data.item.id);
   const hasOpenGraphImage = await services.objects.exists(openGraphObjectKey);
   const imagePath = hasOpenGraphImage
@@ -69,7 +44,7 @@ export async function loader({ params, context, request }: Route.LoaderArgs) {
   return {
     ...data,
     canonicalUrl,
-    openGraphImageUrl: new URL(imagePath, request.url).href,
+    openGraphImageUrl: new URL(imagePath, SITE_URL).href,
   };
 }
 

@@ -4,7 +4,8 @@ import { appServicesContext } from "../context";
 import Footer from "../../components/site/footer";
 import ReviewCard from "../../components/custom/review-card";
 import { EmptyReviewsIllustration } from "../../components/graphics/empty-states";
-import { pageMeta } from "../../lib/meta";
+import { pageMeta, routeLoaderData } from "../../lib/meta";
+import { paginatedPath } from "../../lib/seo";
 import {
   Pagination,
   PaginationContent,
@@ -15,13 +16,15 @@ import {
 } from "../../components/ui/pagination";
 import { getReviewsPage } from "../../services/review-thread";
 
-export const meta: Route.MetaFunction = () =>
-  pageMeta({
-    title: "Reviews | Nollywood Film Club",
+export const meta: Route.MetaFunction = ({ matches }) => {
+  const data = routeLoaderData<Route.ComponentProps["loaderData"]>(matches, "routes/reviews");
+  return pageMeta({
+    title: `Nollywood Movie & TV Reviews${data && data.page > 1 ? ` — Page ${data.page}` : ""} | Nollywood Film Club`,
     description:
-      "What the club actually thinks, ranked by how much argument it started. Members review, members comment, nobody agrees.",
-    path: "/reviews",
+      "Read member reviews of Nollywood films and TV series, explore the opinions starting conversations, and add your own take at Nollywood Film Club.",
+    path: paginatedPath("/reviews", data?.page ?? 1),
   });
+};
 
 const PAGE_SIZE = 12;
 

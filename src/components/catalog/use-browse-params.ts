@@ -1,19 +1,12 @@
 "use client";
 import { useCallback, useMemo } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
-import { FilterState, SortValue, SORT_OPTIONS } from "../../lib/browse";
+import { parseBrowseParams } from "../../lib/browse";
+export type { BrowseParams } from "../../lib/browse";
 
-const CONTENT_TYPES = ["movie", "tv_show", "short_film"];
 const FILTER_KEYS = ["year", "platform", "genre", "score", "watch"] as const;
 
 export type FilterKey = (typeof FILTER_KEYS)[number];
-
-export interface BrowseParams {
-  filters: FilterState;
-  query: string; // free-text title search ("q" param)
-  sort: SortValue;
-  page: number; // parsed, >= 1; clamp against totalPages at render time
-}
 
 const splitParam = (value: string | null): string[] =>
   value ? value.split(",").filter(Boolean) : [];
@@ -23,25 +16,7 @@ export function useBrowseParams() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const state: BrowseParams = useMemo(() => {
-    const type = searchParams.get("type");
-    const sort = searchParams.get("sort");
-    const page = parseInt(searchParams.get("page") ?? "", 10);
-
-    return {
-      filters: {
-        type: type && CONTENT_TYPES.includes(type) ? type : null,
-        years: splitParam(searchParams.get("year")),
-        platforms: splitParam(searchParams.get("platform")),
-        genres: splitParam(searchParams.get("genre")),
-        scores: splitParam(searchParams.get("score")),
-        viewingCategories: splitParam(searchParams.get("watch")),
-      },
-      query: searchParams.get("q") ?? "",
-      sort: SORT_OPTIONS.some((o) => o.value === sort) ? (sort as SortValue) : "newest",
-      page: Number.isNaN(page) ? 1 : Math.max(page, 1),
-    };
-  }, [searchParams]);
+  const state = useMemo(() => parseBrowseParams(searchParams), [searchParams]);
 
   // Applies a patch of raw param values (null/""/default removes the param) and
   // navigates. Any change other than `page` itself resets pagination.

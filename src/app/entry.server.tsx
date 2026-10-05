@@ -35,7 +35,8 @@ export default async function handleRequest(
   }
 
   responseHeaders.set("Content-Type", "text/html");
-  if (shouldNoIndex(new URL(request.url).pathname) || responseStatusCode >= 400) {
+  const url = new URL(request.url);
+  if (shouldNoIndex(url.pathname, url.search) || responseStatusCode >= 400) {
     responseHeaders.set("X-Robots-Tag", "noindex, follow");
   }
   return new Response(body, {
