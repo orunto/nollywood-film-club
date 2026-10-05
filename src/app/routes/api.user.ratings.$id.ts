@@ -57,9 +57,9 @@ export async function action({ request, context, params }: Route.ActionArgs) {
         : typeof ratingData.rating === "string"
           ? Number(ratingData.rating)
           : NaN;
-    if (Number.isNaN(numericRating)) {
+    if (!Number.isInteger(numericRating) || numericRating < 0 || numericRating > 10 || ratingData.rating === "") {
       return Response.json(
-        { success: false, error: "Rating is required and must be a number" },
+        { success: false, error: "Choose a whole-number rating from 1 to 10 (legacy 0 is also supported)." },
         { status: 400 },
       );
     }
