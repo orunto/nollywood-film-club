@@ -24,32 +24,36 @@ export function mergeDiscussions(list: Discussion[]) {
   };
 }
 
-async function withFallback<T>(promise: Promise<T>, fallback: T): Promise<T> {
-  try {
-    return await promise;
-  } catch {
-    return fallback;
-  }
-}
-
 export async function getHomepageData(
   repository: PublicReadRepository,
   now = new Date(),
 ) {
+  let degraded = false;
+  async function readSection<T>(section: string, promise: Promise<T>, fallback: T): Promise<T> {
+    try {
+      return await promise;
+    } catch (error) {
+      degraded = true;
+      console.error("Homepage read failed", { section, error });
+      return fallback;
+    }
+  }
   const [movieOfTheWeek, moviesAndTVSeries, reviews, discussions] =
     await Promise.all([
-      withFallback(repository.getMovieOfTheWeek(), null),
-      withFallback(repository.getMoviesAndTVSeries(), []),
-      withFallback(
+      readSection("movieOfTheWeek", repository.getMovieOfTheWeek(), null),
+      readSection("moviesAndTVSeries", repository.getMoviesAndTVSeries(), []),
+      readSection(
+        "reviews",
         repository.getTrendingReviews({ limit: 4, now }),
         [] as FeedReview[],
       ),
-      withFallback(repository.getDiscussions({ now }), []),
+      readSection("discussions", repository.getDiscussions({ now }), []),
     ]);
 
   const movieOfTheWeekDiscussion = movieOfTheWeek
     ? mergeDiscussions(
-        await withFallback(
+        await readSection(
+          "movieOfTheWeekDiscussion",
           repository.getDiscussionsForContent(movieOfTheWeek.id),
           [],
         ),
@@ -62,5 +66,6 @@ export async function getHomepageData(
     moviesAndTVSeries,
     reviews,
     discussions,
+    degraded,
   };
 }

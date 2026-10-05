@@ -2,6 +2,7 @@ import { createRequestHandler, RouterContextProvider } from "react-router";
 import { appServicesContext } from "../src/app/context";
 import { createCloudflareServices } from "../src/services/cloudflare";
 import { withSecurityHeaders } from "../src/runtime/security-headers";
+import { canStorePublicResponse, publicCacheKey, revalidatingHtmlResponse } from "../src/runtime/public-cache";
 
 const MEDIA_PREFIX = "/media/";
 const ANONYMOUS_HTML_CACHE_SECONDS = 300;
@@ -96,12 +97,10 @@ async function rotateCacheVersions(env: Env, tags: string[]) {
 async function cacheKeyFor(request: Request, env: Env) {
   const { pathname } = new URL(request.url);
   const tags = tagsForPath(pathname);
-  if (tags.length === 0) return new Request(request.url, { method: "GET" });
   const versions = await Promise.all(tags.map((tag) => getVersion(env, tag)));
   const versionSuffix = tags.map((tag, i) => `${tag}-${versions[i]}`).join("_");
-  const url = new URL(request.url);
-  url.searchParams.set("__cache_version", versionSuffix);
-  return new Request(url.toString(), { method: "GET" });
+  const build = await import("virtual:react-router/server-build");
+  return publicCacheKey(request, versionSuffix, build.assets.version);
 }
 
 // Media requests never enter the SSR pipeline: they are served straight from
@@ -153,7 +152,7 @@ export default {
     const cache = cacheKey ? await caches.open(cacheName) : null;
     if (cacheKey && cache) {
       const cached = await cache.match(cacheKey);
-      if (cached) return withSecurityHeaders(cached);
+      if (cached) return withSecurityHeaders(isHtmlCacheable ? revalidatingHtmlResponse(cached) : cached);
     }
 
     const context = new RouterContextProvider();
@@ -174,14 +173,13 @@ export default {
     if (
       cacheKey &&
       cache &&
-      response.status === 200 &&
       isCacheableContent &&
-      !response.headers.has("Set-Cookie")
+      canStorePublicResponse(response)
     ) {
       const headers = new Headers(response.headers);
       headers.set(
         "Cache-Control",
-        `public, max-age=60, s-maxage=${cacheSeconds}`,
+        `public, max-age=${isHtmlCacheable ? cacheSeconds : 60}, s-maxage=${cacheSeconds}`,
       );
       const cacheableResponse = new Response(response.body, {
         status: response.status,
@@ -189,9 +187,9 @@ export default {
         headers,
       });
       ctx.waitUntil(cache.put(cacheKey, cacheableResponse.clone()));
-      return withSecurityHeaders(cacheableResponse);
+      return withSecurityHeaders(isHtmlCacheable ? revalidatingHtmlResponse(cacheableResponse) : cacheableResponse);
     }
 
-    return withSecurityHeaders(response);
+    return withSecurityHeaders(isHtmlCacheable && contentType.includes("text/html") ? revalidatingHtmlResponse(response) : response);
   },
 } satisfies ExportedHandler<Env>;

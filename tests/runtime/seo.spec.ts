@@ -23,6 +23,10 @@ test("SEO resources and structured data are present in server responses", async 
 
   const home = await request.get("/", { headers: { "User-Agent": "Googlebot" } });
   expect(home.status()).toBe(200);
+  if (process.env.RUNTIME_TARGET === "cloudflare") {
+    expect(home.headers()["cache-control"]).toBe("no-cache");
+    expect(home.headers()["cloudflare-cdn-cache-control"]).toBe("no-store");
+  }
   expect(home.headers()["x-robots-tag"]).toBeUndefined();
   const homeHtml = await home.text();
   const homeJson = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(homeHtml);

@@ -1,5 +1,5 @@
 import type { Route } from "./+types/home";
-import { useLoaderData } from "react-router";
+import { data, useLoaderData } from "react-router";
 import { appServicesContext } from "../context";
 import { getHomepageData } from "../../services/homepage";
 import Footer from "../../components/site/footer";
@@ -17,7 +17,7 @@ export const meta: Route.MetaFunction = () =>
 
 export async function loader({ context }: Route.LoaderArgs) {
   const services = context.get(appServicesContext);
-  const [{ movieOfTheWeek, movieOfTheWeekDiscussion, moviesAndTVSeries, reviews, discussions }, posters] =
+  const [{ movieOfTheWeek, movieOfTheWeekDiscussion, moviesAndTVSeries, reviews, discussions, degraded }, posters] =
     await Promise.all([
       getHomepageData(services.db.publicReads),
       services.db.publicReads.getContentPosters(),
@@ -32,7 +32,7 @@ export async function loader({ context }: Route.LoaderArgs) {
 
   // Only migrated catalogue posters in R2 feed the hero's poster wall. This
   // excludes legacy Cloudinary IDs and media stored outside media/nfc/.
-  return {
+  return data({
     movieOfTheWeek,
     movieOfTheWeekDiscussion,
     moviesAndTVSeries,
@@ -40,8 +40,10 @@ export async function loader({ context }: Route.LoaderArgs) {
     discussions,
     latestEpisode,
     posters,
-  };
+  }, { headers: degraded ? { "Cache-Control": "no-store" } : {} });
 }
+
+export const headers: Route.HeadersFunction = ({ loaderHeaders }) => loaderHeaders;
 
 export default function Home() {
   const {

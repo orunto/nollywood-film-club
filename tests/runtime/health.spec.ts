@@ -28,6 +28,9 @@ test("homepage loader runs through the selected database adapter", async ({
   const response = await request.get("/");
 
   expect(response.status()).toBe(200);
-  expect(response.headers()["cache-control"]).toContain("s-maxage=300");
+  if (process.env.RUNTIME_TARGET === "cloudflare") {
+    expect(response.headers()["cache-control"]).toBe("no-cache");
+    expect(response.headers()["cloudflare-cdn-cache-control"]).toBe("no-store");
+  }
   expect(await response.text()).toContain("Hello and welcome to Nollywood Film Club");
 });
