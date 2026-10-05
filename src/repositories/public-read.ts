@@ -17,6 +17,8 @@ import {
   type SQL,
 } from "drizzle-orm";
 import { MIN_NFC_RATINGS } from "../lib/nfc-rating";
+import { contentPath } from "../lib/utils";
+import type { SitemapEntry } from "../lib/seo";
 import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 import {
   CONTENT_TYPES,
@@ -378,6 +380,36 @@ function mapFeedReview(row: FeedReviewRow): FeedReview {
 
 export class PublicReadRepository {
   constructor(private readonly database: AsyncSQLiteDatabase) {}
+
+  async getSitemapCounts(): Promise<{ content: number; reviews: number }> {
+    const [[catalog], [writtenReviews]] = await Promise.all([
+      this.database.select({ total: count() }).from(content),
+      this.database.select({ total: count() }).from(userRatings)
+        .innerJoin(reviewFeedSummary, eq(reviewFeedSummary.reviewId, userRatings.id))
+        .innerJoin(content, eq(userRatings.contentId, content.id))
+        .where(and(eq(reviewFeedSummary.visible, true), eq(userRatings.restricted, false),
+          sql`trim(COALESCE(${userRatings.review}, '')) <> ''`)),
+    ]);
+    return { content: Number(catalog?.total ?? 0), reviews: Number(writtenReviews?.total ?? 0) };
+  }
+
+  async getSitemapEntries(kind: "content" | "reviews", limit: number, offset: number): Promise<SitemapEntry[]> {
+    if (kind === "content") {
+      const rows = await this.database.select({
+        title: content.title, contentType: content.contentType,
+        releaseDate: content.releaseDate, updatedAt: content.updatedAt,
+      }).from(content).orderBy(asc(content.id)).limit(limit).offset(offset);
+      return rows.map((row) => ({ path: contentPath(row), lastModified: row.updatedAt.toISOString() }));
+    }
+    const rows = await this.database.select({ id: userRatings.id, updatedAt: userRatings.updatedAt })
+      .from(userRatings)
+      .innerJoin(reviewFeedSummary, eq(reviewFeedSummary.reviewId, userRatings.id))
+      .innerJoin(content, eq(userRatings.contentId, content.id))
+      .where(and(eq(reviewFeedSummary.visible, true), eq(userRatings.restricted, false),
+        sql`trim(COALESCE(${userRatings.review}, '')) <> ''`))
+      .orderBy(asc(userRatings.id)).limit(limit).offset(offset);
+    return rows.map((row) => ({ path: `/reviews/${encodeURIComponent(row.id)}`, lastModified: row.updatedAt.toISOString() }));
+  }
 
   async getMovieOfTheWeek(): Promise<Content | null> {
     const [row] = await this.database

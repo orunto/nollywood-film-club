@@ -6,6 +6,8 @@ import { getContentDetailData, isCanonicalFor } from "../../services/content-det
 import { contentOpenGraphObjectKey, posterUrl } from "../../lib/media";
 import ContentDetailsClient from "../../components/sections/content-details-client";
 import Footer from "../../components/site/footer";
+import JsonLd from "../../components/site/json-ld";
+import { contentStructuredData } from "../../lib/structured-data";
 
 export const meta: Route.MetaFunction = ({ matches }) => {
   let self: { loaderData?: Route.ComponentProps["loaderData"] } | undefined;
@@ -76,6 +78,7 @@ export default function MoviePage() {
 
   return (
     <>
+      <JsonLd data={contentStructuredData(data.item)} />
       <main className="min-h-screen">
         <ContentDetailsClient
           movie={data.item}

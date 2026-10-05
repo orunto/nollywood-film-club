@@ -8,6 +8,8 @@ import CommentThread from "../../components/custom/comment-thread";
 import { getReviewPermalinkData } from "../../services/review-thread";
 import { markdownToPlainText } from "../../lib/utils";
 import { pageMeta } from "../../lib/meta";
+import JsonLd from "../../components/site/json-ld";
+import { reviewStructuredData } from "../../lib/structured-data";
 
 export const meta: Route.MetaFunction = ({ matches, params }) => {
   let self: { loaderData?: Route.ComponentProps["loaderData"] } | undefined;
@@ -49,6 +51,7 @@ export default function ReviewPermalinkPage() {
 
   return (
     <>
+      <JsonLd data={reviewStructuredData(data.review)} />
       <main className="min-h-screen">
         <div className="w-full bg-black text-white">
           <div className="flex items-center justify-between gap-4 px-6 py-3 lg:px-10">

@@ -1,4 +1,5 @@
 import { isbot } from "isbot";
+import { shouldNoIndex } from "../lib/seo";
 import { renderToReadableStream } from "react-dom/server";
 import {
   RouterContextProvider,
@@ -34,6 +35,9 @@ export default async function handleRequest(
   }
 
   responseHeaders.set("Content-Type", "text/html");
+  if (shouldNoIndex(new URL(request.url).pathname) || responseStatusCode >= 400) {
+    responseHeaders.set("X-Robots-Tag", "noindex, follow");
+  }
   return new Response(body, {
     headers: responseHeaders,
     status: responseStatusCode,
